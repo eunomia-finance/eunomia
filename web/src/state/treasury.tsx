@@ -39,6 +39,8 @@ import { logActivity } from "../lib/activity";
 import {
   clearSessionSecret,
   createSession,
+  isValidAgentKey,
+  registerAgentKey,
   loadSessionSecret,
   sessionIsActive,
   sessionPay,
@@ -437,16 +439,41 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
   );
 
   const startLeash = useCallback(
-    async (cap: string, hours: string): Promise<ActionOutcome> => {
+    async (cap: string, hours: string, agentPublicKey?: string): Promise<ActionOutcome> => {
       if (!address || !treasuryId) return fail("No treasury open.");
       const capV = parseXlmAmount(cap, "session cap");
       if (!capV.ok) return invalid(capV.msg);
       const hoursV = parseXlmAmount(hours, "duration");
       if (!hoursV.ok) return invalid(hoursV.msg);
+      // An external agent (eunomia-mcp) brings its own key: only the public half is
+      // registered, nothing is generated or funded here.
+      const externalKey = agentPublicKey?.trim() ?? "";
+      if (externalKey && !isValidAgentKey(externalKey)) {
+        return invalid("That is not a Stellar public key (G…, 56 characters) — copy it from `eunomia-mcp init`.");
+      }
       setBusy("session");
-      toast("info", "Starting the Leash session — confirm in your wallet…");
+      toast(
+        "info",
+        externalKey
+          ? "Authorising your agent's key — confirm in your wallet…"
+          : "Starting the Leash session — confirm in your wallet…",
+      );
       try {
         const t = makeTreasury(treasuryId, await executorFor(address));
+        if (externalKey) {
+          const res = await registerAgentKey(t, treasuryId, externalKey, capV.value, hoursV.value);
+          if (res.ok) {
+            setSessionSecret(null);
+            void logActivity({ walletAddress: address, treasuryId, action: "session_start", txHash: res.hash });
+            const msg = "Leash on ✓ — your agent can now pay within the cap, from its own machine.";
+            toast("success", msg, { hash: res.hash });
+            await loadState(treasuryId, address);
+            return { ok: true, msg, hash: res.hash };
+          }
+          const msg = `Blocked: ${res.errorMessage}`;
+          toast("error", msg);
+          return fail(msg);
+        }
         const res = await createSession(t, treasuryId, capV.value, hoursV.value, (phase) =>
           toast(
             "info",

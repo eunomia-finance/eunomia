@@ -11,6 +11,7 @@ export default function Agent() {
   const t = useTreasury();
   const [cap, setCap] = useState("25");
   const [hours, setHours] = useState("24");
+  const [agentKey, setAgentKey] = useState("");
   const [err, setErr] = useState("");
 
   const session = t.lifecycle?.session ?? null;
@@ -25,7 +26,7 @@ export default function Agent() {
 
   const doStart = async () => {
     setErr("");
-    const res = await t.startLeash(cap, hours);
+    const res = await t.startLeash(cap, hours, agentKey);
     if (!res.ok && res.validation) setErr(res.msg);
   };
 
@@ -58,8 +59,8 @@ export default function Agent() {
             </div>
             <div>
               <div style={label}>Key</div>
-              <div style={{ fontSize: 13, color: t.sessionSecret ? "var(--ink)" : "var(--red)" }}>
-                {t.sessionSecret ? "on this device" : "elsewhere"}
+              <div style={{ fontSize: 13, color: "var(--ink)" }}>
+                {t.sessionSecret ? "on this device" : "external agent"}
               </div>
             </div>
           </div>
@@ -90,8 +91,8 @@ export default function Agent() {
             </button>
           ) : (
             <div style={hint}>
-              The session key isn't on this device — revoke below and start a new session to
-              spend from here.
+              This Leash belongs to an external agent (eunomia-mcp) or another device. It pays
+              from its own machine, within the cap above. Revoke it here at any time.
             </div>
           )}
           <button
@@ -126,13 +127,27 @@ export default function Agent() {
             value={hours}
             onChange={(e) => setHours(e.target.value)}
           />
+          <div style={fieldLabel}>Agent public key (optional)</div>
+          <input
+            style={input}
+            aria-label="External agent public key"
+            placeholder="G… — printed by `eunomia-mcp init`"
+            spellCheck={false}
+            value={agentKey}
+            onChange={(e) => setAgentKey(e.target.value)}
+          />
+          <div style={hint}>
+            Leave empty to run the built-in demo agent on this device. Paste a key to authorise
+            an external agent (Claude via eunomia-mcp) — its secret never leaves the agent's
+            machine; you only sign the cap and the deadline.
+          </div>
           <button
             style={{ ...primaryBtn, opacity: t.busy ? 0.6 : 1 }}
             onClick={() => void doStart()}
             disabled={!!t.busy}
             type="button"
           >
-            {t.busy === "session" ? "Starting…" : "Start Leash"}
+            {t.busy === "session" ? "Starting…" : agentKey.trim() ? "Authorise agent" : "Start Leash"}
           </button>
           {err && <div style={inlineErr}>{err}</div>}
         </div>

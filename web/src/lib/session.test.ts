@@ -3,7 +3,9 @@ import { Keypair } from "@stellar/stellar-sdk";
 import {
   clearSessionSecret,
   createSession,
+  isValidAgentKey,
   loadSessionSecret,
+  registerAgentKey,
   saveSessionSecret,
   sessionIsActive,
   sessionSigner,
@@ -84,6 +86,37 @@ describe("sessionSigner", () => {
     const { publicKey, signer } = sessionSigner(kp.secret());
     expect(publicKey).toBe(kp.publicKey());
     expect(typeof signer.signTransaction).toBe("function");
+  });
+});
+
+describe("registerAgentKey (external agent, e.g. eunomia-mcp)", () => {
+  const PK = Keypair.random().publicKey();
+
+  it("registers the given public key and never generates or stores a secret", async () => {
+    saveSessionSecret("CT_EXT", "OLD_LOCAL_SECRET"); // a stale local key must not survive
+    const res = await registerAgentKey({} as never, "CT_EXT", `  ${PK}  `, 25, 24);
+    expect(res.ok).toBe(true);
+    expect(res.registered).toBe(true);
+    expect(res.sessionPk).toBe(PK);
+    const { setSession } = await import("./userTreasury");
+    expect(setSession).toHaveBeenLastCalledWith({}, PK, expect.any(BigInt), 25);
+    expect(loadSessionSecret("CT_EXT")).toBeNull();
+  });
+
+  it("rejects a malformed public key before touching the wallet", async () => {
+    const { setSession } = await import("./userTreasury");
+    const calls = vi.mocked(setSession).mock.calls.length;
+    const res = await registerAgentKey({} as never, "CT_EXT", "not-a-key", 25, 24);
+    expect(res.ok).toBe(false);
+    expect(res.errorMessage).toMatch(/public key/i);
+    expect(vi.mocked(setSession).mock.calls.length).toBe(calls);
+  });
+
+  it("isValidAgentKey accepts G… keys only", () => {
+    expect(isValidAgentKey(PK)).toBe(true);
+    expect(isValidAgentKey(Keypair.random().secret())).toBe(false);
+    expect(isValidAgentKey("CBCBYWUMRD7L6GFTRJME232JUAEJ2B263N5O7MDGCMDFG4FI6GJ5JN36")).toBe(false);
+    expect(isValidAgentKey("")).toBe(false);
   });
 });
 

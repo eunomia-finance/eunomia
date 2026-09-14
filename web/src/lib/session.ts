@@ -8,7 +8,7 @@
 // because the design's point is a bounded credential: cap + expiry + instant
 // revoke make a leak survivable. Mainnet needs fee sponsorship + hardened key
 // storage (roadmap M3); the demo key's non-testnet build guard applies there too.
-import { Keypair } from "@stellar/stellar-sdk";
+import { Keypair, StrKey } from "@stellar/stellar-sdk";
 import { basicNodeSigner } from "@stellar/stellar-sdk/contract";
 import { NETWORK_PASSPHRASE } from "../config";
 import { fundWithFriendbot } from "./funding";
@@ -97,6 +97,37 @@ export async function createSession(
     };
   }
   return { ...res, sessionPk: kp.publicKey(), registered: true };
+}
+
+/** A Stellar public key (G…) — what an external agent hands the owner. */
+export function isValidAgentKey(pk: string): boolean {
+  return StrKey.isValidEd25519PublicKey(pk.trim());
+}
+
+/** Put an EXTERNAL agent on the Leash: the agent (eunomia-mcp on the user's machine, or
+ *  any process holding its own key) generated the key itself and only its public half
+ *  arrives here. Nothing is generated, funded or stored on this device — the agent
+ *  already holds and funds its key — and a stale local secret is cleared so the UI does
+ *  not claim a key it no longer controls. */
+export async function registerAgentKey(
+  walletTreasury: Treasury,
+  treasuryId: string,
+  agentPublicKey: string,
+  capXlm: number,
+  durationHours: number,
+): Promise<PayResult & { sessionPk?: string; registered?: boolean }> {
+  const pk = agentPublicKey.trim();
+  if (!isValidAgentKey(pk)) {
+    return {
+      ok: false,
+      errorMessage: "That is not a Stellar public key (G…, 56 characters) — copy it from `eunomia-mcp init`.",
+    };
+  }
+  const validUntil = BigInt(Math.floor(Date.now() / 1000) + Math.round(durationHours * 3600));
+  const res = await setSession(walletTreasury, pk, validUntil, capXlm);
+  if (!res.ok) return res;
+  clearSessionSecret(treasuryId);
+  return { ...res, sessionPk: pk, registered: true };
 }
 
 /** A zero-popup payment signed by the session key — the autonomous-agent path. */

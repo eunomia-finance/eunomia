@@ -53,7 +53,9 @@ export interface TreasuryContextValue {
   whitelist: (payeeAddr: string) => Promise<ActionOutcome>;
   removePayeeAddr: (payeeAddr: string) => Promise<ActionOutcome>;
   spend: (to: string, amount: string) => Promise<ActionOutcome>;
-  startLeash: (cap: string, hours: string) => Promise<ActionOutcome>;
+  /** `agentPublicKey` (optional): authorise an external agent's own key instead of
+   *  generating a local session key — the eunomia-mcp handshake. */
+  startLeash: (cap: string, hours: string, agentPublicKey?: string) => Promise<ActionOutcome>;
   revokeLeash: () => Promise<ActionOutcome>;
   runAutonomousTask: (to?: string) => Promise<ActionOutcome>;
   togglePause: () => Promise<ActionOutcome>;
