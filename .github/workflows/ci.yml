@@ -95,3 +95,13 @@ jobs:
         run: |
           npm install
           npm test
+      # eunomia-mcp vendors the generated treasury client so it can be published on its
+      # own; the copy must stay byte-identical to the source of truth.
+      - name: mcp — vendored treasury binding in sync
+        run: cmp packages/treasury-client/src/index.ts packages/mcp/src/bindings/treasury.ts
+      - name: mcp — unit tests + build
+        working-directory: packages/mcp
+        run: |
+          npm install
+          npm test
+          npm run build
