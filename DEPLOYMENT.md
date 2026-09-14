@@ -228,3 +228,34 @@ tx `a13fdb5b…`). Funder in the demo = the `agent` key (stands in for a client 
 | Validation | `CC5USZRO26MOIAVNYTTJDS63C2OBBLREOAOET4CPF2EZWO3YFKLMO3SL` |
 
 SDK: `@trionlabs/8004-sdk` · Agent id format: `stellar:testnet:{identityRegistry}#{agentId}`
+
+## eunomia-mcp — Week-1 smoke (2026-09-14)
+
+The MCP surface (`packages/mcp`, npm `eunomia-mcp`) read against a fresh v3.5 treasury and
+the agent-credential handshake exercised end to end. The owner's signature is the `alice`
+CLI identity here; the dashboard's Agent page signs the same `set_session` with a passkey
+or wallet.
+
+| Step | Value |
+|---|---|
+| **W1 treasury** (v3.5 wasm `82447206…9641`, admin = agent = alice, XLM, daily 100 / per-payment 10) | [`CDVCLLGG…YNJ2`](https://stellar.expert/explorer/testnet/contract/CDVCLLGGMV6MJSJZYCPJI36BG6SGKSWVD44PORHVVFRBTSACEABBYNJ2) |
+| deploy tx | [`e40120a9…ffe8`](https://stellar.expert/explorer/testnet/tx/e40120a9f67214355e929e5b9c30062e28c4347605bfd20771d581593ca4ffe8) |
+| fund 20 XLM (SAC transfer) | [`5998358a…6ee8`](https://stellar.expert/explorer/testnet/tx/5998358ae35efc934d748c166b606fd10256fdfe34e3fe3ddfb6216bc7266ee8) |
+| `add_payee(service)` | [`3ed29c9a…27b2`](https://stellar.expert/explorer/testnet/tx/3ed29c9a5580d6dfecdc1640ba88a149c8159aadf93cb984b3c506e2e57027b2) |
+| agent credential (`eunomia-mcp init`, key generated locally, friendbot-funded) | `GB4GJNEZ6KLZNU3TE2CHQFNPOEQL5SHPQ246OMRZRLKVVQNLZCDX2QXZ` |
+| owner starts the Leash — `set_session(agent, +24h, 30 XLM)` | [`542b2f25…5c92`](https://stellar.expert/explorer/testnet/tx/542b2f253b0f5133c9d93c489bd887da9d0b8db2da51288c14332c7267455c92) |
+| owner revokes — `revoke_session` | [`f2e95670…2286`](https://stellar.expert/explorer/testnet/tx/f2e95670cbea720f07a27e08aa9d513a959203f37f4107cfed3a1d3bb65e2286) |
+
+`npm run smoke` (an MCP client spawning the built server over stdio) between those two
+transactions, then after the revoke:
+
+| Tool | Leash active | After revoke |
+|---|---|---|
+| `check_budget` | `canSpend: true` · `session.isThisAgent: true` · `spendableNow: "10"` · `decision(2.5).allowed: true` | `session: null` · `canSpend: false` · blocker *"No active Leash for this treasury — the owner must start one…"* |
+| `list_allowed_payees` | `["GDOMW4C3…QCRT"]` (from `payee_add` events, confirmed by `is_payee`) | same, now also from the local cache (`cachedKnown: 1`) |
+| `check_payee(attacker GAKSMBN6…)` / `(service)` | `allowed: false` | `allowed: true` |
+
+Found and fixed on the way: the public RPC's `getEvents` scans at most ~10 000 ledgers per
+call and returns an empty page **with a cursor**; a listing that stopped at "fewer events
+than the limit" missed every payee older than the last slice. The listing now walks the
+cursor to the tip (unit-tested with a fake pager).
