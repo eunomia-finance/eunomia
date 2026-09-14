@@ -161,6 +161,7 @@ packages/treasury-client/       generated TypeScript client (regen: `npm run gen
 packages/registry-client/       generated TypeScript client for the treasury registry
 packages/prover/                snarkjs → Soroban byte encoder + proof fixtures
 packages/x402/                  bounded x402 buyer (gate an x402 payment, settle via the treasury)
+packages/mcp/                   eunomia-mcp — MCP server + SDK: connect any AI agent to a treasury (Apache-2.0)
 web/                            landing + app (Vite · React 19 · TS) + docs site
 DEPLOYMENT.md                   live testnet addresses & verified results
 ```
