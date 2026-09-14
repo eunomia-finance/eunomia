@@ -1,0 +1,59 @@
+{
+  "name": "eunomia-mcp",
+  "version": "0.1.0",
+  "description": "MCP server + TypeScript SDK that lets any AI agent spend from a Eunomia treasury on Stellar — inside an owner-set on-chain budget, blocked by the contract when out of policy.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "eunomia-mcp": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eunomia-finance/eunomia.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://eunomia.finance",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "stellar",
+    "soroban",
+    "x402",
+    "ai-agent",
+    "treasury",
+    "spending-policy"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --import tsx --test src/*.test.ts",
+    "smoke": "tsx scripts/client-smoke.ts",
+    "sync:bindings": "cp ../treasury-client/src/index.ts src/bindings/treasury.ts",
+    "check:bindings": "cmp ../treasury-client/src/index.ts src/bindings/treasury.ts",
+    "prepublishOnly": "npm run check:bindings && npm test && npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@stellar/stellar-sdk": "^16.2.0",
+    "buffer": "6.0.3",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
