@@ -3,6 +3,7 @@
 // inactive state explains the model and starts one. The single-spender rule and the
 // "registered but unfunded key" recovery path live in the provider.
 import { useEffect, useState } from "react";
+import ExceptionRequests from "../components/ExceptionRequests";
 import { fmtXlm, shortAddr } from "../config";
 import { useNow } from "../lib/useNow";
 import { useTreasury } from "../state/useTreasury";
@@ -152,6 +153,9 @@ export default function Agent() {
           {err && <div style={inlineErr}>{err}</div>}
         </div>
       )}
+      {/* Requests the agent filed on its own account (eunomia-mcp request_exception). They
+          belong under the Leash they came from, on the page where the owner resolves them. */}
+      {session && <ExceptionRequests agent={session.agent} />}
       </div>
 
       {/* A Leash hands an agent the ability to spend without asking. The rules that still
