@@ -259,3 +259,35 @@ Found and fixed on the way: the public RPC's `getEvents` scans at most ~10 000 l
 call and returns an empty page **with a cursor**; a listing that stopped at "fewer events
 than the limit" missed every payee older than the last slice. The listing now walks the
 cursor to the tip (unit-tested with a fake pager).
+
+## eunomia-mcp — Week-2 live run (2026-09-15)
+
+`eunomia-mcp` 0.2.0 paying from the W1 treasury above with the Leash key, refused with the
+contract's own codes, and asking the owner for an exception — every step on testnet. The
+owner's signature is again the `alice` CLI identity; the dashboard's Agent page does the same
+with a passkey or wallet ("Approve payee" on the request card).
+
+| Step | Value |
+|---|---|
+| owner starts the Leash — `set_session(agent, +24h, 30 XLM)` | [`099dd99d…9206`](https://stellar.expert/explorer/testnet/tx/099dd99ddb88db95594c118d3cfcf55145119fd74ac29e596c7264ee20329206) |
+| **first autonomous in-budget payment** — `pay` 2.5 XLM → `service`, signed by the agent key over MCP | [`e8d564ba…c8ba`](https://stellar.expert/explorer/testnet/tx/e8d564ba222324b1633df25f259d9c7ea57f1836c07e3215b20fd66e5d7dc8ba) |
+| `pay` 15 XLM → `service` (per-payment cap 10) | refused in simulation, no fee: `stage: "simulation"`, `reasons: [{ code: 3, name: "ExceedsTaskLimit" }]` |
+| `pay` 1 XLM → `supplier` (not whitelisted) | refused in simulation: `reasons: [{ code: 2, name: "PayeeNotWhitelisted" }]` |
+| **first on-chain policy rejection** — `eunomia-mcp pay … --amount 15 --record-rejection` | [`24da989e…9055`](https://stellar.expert/explorer/testnet/tx/24da989ed9afe7739df315982c63523bec7cbe6124e5a1baf5ca7396ea9f9055) — ledger 4691756, **FAILED**, diagnostics `Error(Contract, #3)` |
+| `request_exception` 1 XLM → `supplier` — `manageData` on the agent account, id `CDVCLLGG.mu2rj4ft` | [`56317111…80be`](https://stellar.expert/explorer/testnet/tx/56317111675026de28a298c3ec0bd531efa89b6204c7780d1f4c7e604e0d80be) |
+| `check_exception` | `status: "pending"` · dashboard Agent page lists it with **Approve payee** |
+| owner approves — `add_payee(supplier)` | [`46db1da9…3f16`](https://stellar.expert/explorer/testnet/tx/46db1da953ccf48722c82d395d97dd45fa6f5ca31a4629852ec87fc4f6983f16) |
+| `check_exception` | `status: "approved"` — derived from the chain now accepting the payment |
+| `pay` 1 XLM → `supplier` | [`abd31c1c…6603`](https://stellar.expert/explorer/testnet/tx/abd31c1ce92bb9106736914e22a31003d1071f7f75a10f0c8f03249d92856603) |
+| `pay` closes the request it satisfied (`manageData` delete) | [`0cc83226…03c1`](https://stellar.expert/explorer/testnet/tx/0cc832263383f5925bbab2c4a9f2887c8d66186569016cac0c560283aeab03c1) · `check_exception` → `closed` |
+
+How the rejection got on the ledger: the RPC's simulation already refuses an over-limit
+`pay` (the contract runs in the host), so there is nothing to submit. `--record-rejection`
+borrows the footprint and resource fee from a passing 1-stroop probe, attaches the invoker
+auth entry bound to the real arguments, and submits — the transaction is included, fails
+with the contract's error, and the same `Error(Contract, #3)` is read back out of its
+diagnostic events. The MCP tool never does this on its own; it costs the agent a fee.
+
+Found and fixed on the way: the binding's `Err` for a refused simulation carries an empty
+message (the contract's error enum has no doc comments), so codes are read from the
+simulation's error text — the same `Error(Contract, #N)` the CLI prints.
