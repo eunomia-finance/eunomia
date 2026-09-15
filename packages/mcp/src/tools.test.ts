@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeBudget, type TreasurySnapshot } from "./budget.js";
-import { serializeBudget } from "./tools.js";
+import { ownerActionsFor, serializeBudget, serializeOutcome } from "./tools.js";
 
 const AGENT = "GAGENT";
 const NOW = 1_800_000_000;
@@ -49,4 +49,33 @@ test("serializeBudget keeps nulls explicit and reputation policy stringified", (
   assert.equal(out.canSpend, false);
   assert.ok(out.blockers.length >= 1);
   assert.doesNotThrow(() => JSON.stringify(out));
+});
+
+test("serializeOutcome is transport-safe and links the tx", () => {
+  const paid = serializeOutcome(
+    { paid: true, txHash: "ab".repeat(32), ledger: 9, to: "GPAYEE", amount: 25_000_000n, taskId: 0n },
+    "testnet",
+  ) as Record<string, any>;
+  assert.equal(paid.amount, "2.5");
+  assert.equal(paid.amountStroops, "25000000");
+  assert.equal(paid.taskId, "0");
+  assert.equal(paid.links.tx, `https://stellar.expert/explorer/testnet/tx/${"ab".repeat(32)}`);
+  assert.doesNotThrow(() => JSON.stringify(paid));
+  const refused = serializeOutcome(
+    {
+      paid: false, stage: "simulation", reasons: [{ code: 3, name: "ExceedsTaskLimit", detail: "d" }], blockers: [],
+      message: "m", to: "GPAYEE", amount: 1n, taskId: 0n,
+    },
+    "testnet",
+  ) as Record<string, any>;
+  assert.equal(refused.nextStep, "request_exception");
+  assert.equal(refused.links.tx, undefined);
+  assert.doesNotThrow(() => JSON.stringify(refused));
+});
+
+test("ownerActionsFor maps codes to what the dashboard can do", () => {
+  assert.match(ownerActionsFor([2]).join(" "), /Approve payee/);
+  assert.match(ownerActionsFor([3, 4]).join(" "), /limits/);
+  assert.match(ownerActionsFor([10]).join(" "), /Leash/);
+  assert.match(ownerActionsFor([9]).join(" "), /Resume/);
 });

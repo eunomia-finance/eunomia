@@ -1,13 +1,16 @@
 #!/usr/bin/env node
-// eunomia-mcp: `serve` (default — what an MCP client spawns), `init`, `status`, `config`.
-// `serve` must never write to stdout except MCP frames; diagnostics go to stderr.
+// eunomia-mcp: `serve` (default — what an MCP client spawns), `init`, `status`, `config`,
+// `pay`. `serve` must never write to stdout except MCP frames; diagnostics go to stderr.
 import { parseArgs } from "node:util";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { computeBudget } from "./budget.js";
 import { createCredential, fundOnTestnet, isValidContractId, saveCredential } from "./credential.js";
+import { toStroops, txUrl } from "./format.js";
 import { homeDir, resolveNetwork } from "./network.js";
+import { recordRejectionOnChain } from "./onchain.js";
+import { payFromTreasury } from "./pay.js";
 import { contextFromEnv, createServer, SERVER_VERSION } from "./server.js";
-import { serializeBudget } from "./tools.js";
+import { serializeBudget, serializeOutcome } from "./tools.js";
 import { makeClient, readTreasury } from "./treasury.js";
 
 const USAGE = `eunomia-mcp ${SERVER_VERSION} — connect an AI agent to a Eunomia treasury on Stellar
@@ -17,6 +20,11 @@ usage:
   eunomia-mcp init --treasury <C…> [--network testnet|pubnet] [--force] [--skip-fund]
                                             create this agent's credential and print the key the owner authorises
   eunomia-mcp status [--treasury <C…>]      what this agent may spend right now (JSON)
+  eunomia-mcp pay --to <G…|C…> --amount <decimal> [--task <n>] [--treasury <C…>] [--record-rejection]
+                                            pay from the treasury with this agent's Leash key (JSON);
+                                            exit 0 paid · 3 refused by policy · 1 error.
+                                            --record-rejection: if the contract refuses, submit anyway so the
+                                            refusal is recorded on the ledger with a tx hash (costs one fee)
   eunomia-mcp config [--client json|claude-code|claude-desktop] [--treasury <C…>]
                                             print the MCP client configuration for this treasury
 
@@ -30,6 +38,10 @@ const { values: opts, positionals } = parseArgs({
     treasury: { type: "string" },
     network: { type: "string" },
     client: { type: "string" },
+    to: { type: "string" },
+    amount: { type: "string" },
+    task: { type: "string" },
+    "record-rejection": { type: "boolean", default: false },
     force: { type: "boolean", default: false },
     "skip-fund": { type: "boolean", default: false },
     help: { type: "boolean", short: "h", default: false },
@@ -125,6 +137,30 @@ async function status(): Promise<void> {
   console.log(JSON.stringify({ agentPublicKey: ctx.credential?.agentPublicKey ?? null, ...serializeBudget(budget, ctx.net.name) }, null, 2));
 }
 
+async function pay(): Promise<void> {
+  const env = effectiveEnv();
+  const ctx = contextFromEnv(env);
+  requireTreasury(env);
+  if (!opts.to || !opts.amount) throw new Error("pay needs --to <address> and --amount <decimal>");
+  if (opts.task !== undefined && !/^\d+$/.test(opts.task)) throw new Error("--task must be a non-negative integer");
+  const args = { to: opts.to, amount: toStroops(opts.amount), taskId: BigInt(opts.task ?? "0") };
+  const outcome = await payFromTreasury(ctx, args);
+  const out: Record<string, unknown> = serializeOutcome(outcome, ctx.net.name);
+  if (!outcome.paid && outcome.reasons.length > 0 && opts["record-rejection"]) {
+    // The simulation's verdict has no tx hash. Submit anyway so the refusal is on the ledger.
+    const rec = await recordRejectionOnChain(ctx, args);
+    out.recordedOnChain = {
+      txHash: rec.txHash,
+      ledger: rec.ledger,
+      status: rec.status,
+      reasons: rec.reasons,
+      links: { tx: txUrl(ctx.net.name, rec.txHash) },
+    };
+  }
+  console.log(JSON.stringify(out, null, 2));
+  if (!outcome.paid) process.exitCode = outcome.reasons.length > 0 ? 3 : 1;
+}
+
 async function main(): Promise<void> {
   if (opts.help) {
     console.log(USAGE);
@@ -137,6 +173,8 @@ async function main(): Promise<void> {
       return init();
     case "status":
       return status();
+    case "pay":
+      return pay();
     case "config":
       console.log(configSnippet(effectiveEnv(), opts.client ?? "json"));
       return;
