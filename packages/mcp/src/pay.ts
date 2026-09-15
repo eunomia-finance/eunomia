@@ -85,22 +85,27 @@ export async function payFromTreasury(ctx: ServerContext, args: PayArgs, deps: P
   const client = deps.signingClient ?? makeSigningClient(ctx.net, treasuryId, ctx.credential);
   const tx = await client.pay({ task_id: args.taskId, to: args.to, amount: args.amount });
 
-  // The contract ran inside the RPC's host: its Result is the policy verdict.
-  let verdict: Verdict;
-  try {
-    verdict = tx.result as unknown as Verdict;
-  } catch (e) {
-    const code = contractCodeFromMessage(errText(e));
+  // The contract ran inside the RPC's host. A refusal arrives as a simulation error whose
+  // text carries `Error(Contract, #N)` — read the code from there. (The binding also wraps
+  // it as Err, but the error enum has no doc comments, so that message is empty.)
+  const refused = (msg: string): PayOutcome => {
+    const code = contractCodeFromMessage(msg);
     return {
       paid: false,
       stage: "simulation",
       reasons: code ? [reasonFromCode(code)] : [],
       blockers: [],
-      message: code
-        ? "Refused by the treasury contract (simulation)."
-        : `Simulation failed: ${errText(e).slice(0, 300)}`,
+      message: code ? "Refused by the treasury contract (simulation)." : `Simulation failed: ${msg.slice(0, 300)}`,
       ...base,
     };
+  };
+  const sim = tx.simulation;
+  if (sim && rpc.Api.isSimulationError(sim)) return refused(sim.error);
+  let verdict: Verdict;
+  try {
+    verdict = tx.result as unknown as Verdict;
+  } catch (e) {
+    return refused(errText(e));
   }
   if (verdict.isErr()) {
     const r = reasonFromErrorName(verdict.unwrapErr().message);

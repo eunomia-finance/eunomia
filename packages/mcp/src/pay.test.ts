@@ -88,10 +88,15 @@ test("no credential → preflight blocker, nothing simulated", async () => {
   }
 });
 
-test("the contract's Err from simulation becomes a coded reason", async () => {
+test("the contract's refusal in simulation becomes a coded reason — from the host's error text", async () => {
+  // What the live RPC returns (2026-09-15): the binding's Err carries an empty message
+  // because the contract's error enum has no doc comments; the code is in the text.
   const signing = {
     pay: async () => ({
-      result: new Err({ message: "ExceedsTaskLimit" }),
+      simulation: {
+        error: 'HostError: Error(Contract, #3)\n\nEvent log (newest first):\n   0: [Diagnostic Event] topics:[error, Error(Contract, #3)]',
+      },
+      result: new Err({ message: "" }),
       signAndSend: async () => {
         throw new Error("must not send");
       },
@@ -109,9 +114,26 @@ test("the contract's Err from simulation becomes a coded reason", async () => {
   }
 });
 
+test("a named Err from the binding is still understood when there is no simulation text", async () => {
+  const signing = {
+    pay: async () => ({
+      simulation: { id: "x" },
+      result: new Err({ message: "ExceedsSessionLimit" }),
+    }),
+  } as never;
+  const out = await payFromTreasury(
+    ctx(),
+    { to: "GPAYEE", amount: 1n, taskId: 0n },
+    { readClient: readClient(), signingClient: signing },
+  );
+  assert.equal(out.paid, false);
+  if (!out.paid) assert.deepEqual(out.reasons.map((r) => r.code), [10]);
+});
+
 test("a non-contract simulation failure is reported without inventing a code", async () => {
   const signing = {
     pay: async () => ({
+      simulation: { error: "HostError: Error(Auth, InvalidAction)" },
       get result() {
         throw new Error('Transaction simulation failed: "HostError: Error(Auth, InvalidAction)"');
       },
