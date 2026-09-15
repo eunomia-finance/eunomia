@@ -99,6 +99,9 @@ jobs:
       # own; the copy must stay byte-identical to the source of truth.
       - name: mcp — vendored treasury binding in sync
         run: cmp packages/treasury-client/src/index.ts packages/mcp/src/bindings/treasury.ts
+      # The dashboard decodes exception requests with a verbatim copy of the codec.
+      - name: mcp — exception codec copy in web in sync
+        run: cmp packages/mcp/src/exceptionCodec.ts web/src/lib/exceptionCodec.ts
       - name: mcp — unit tests + build
         working-directory: packages/mcp
         run: |

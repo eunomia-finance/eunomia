@@ -43,7 +43,8 @@
     "smoke": "tsx scripts/client-smoke.ts",
     "sync:bindings": "cp ../treasury-client/src/index.ts src/bindings/treasury.ts",
     "check:bindings": "cmp ../treasury-client/src/index.ts src/bindings/treasury.ts",
-    "prepublishOnly": "npm run check:bindings && npm test && npm run build"
+    "check:codec": "cmp src/exceptionCodec.ts ../../web/src/lib/exceptionCodec.ts",
+    "prepublishOnly": "npm run check:bindings && npm run check:codec && npm test && npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
