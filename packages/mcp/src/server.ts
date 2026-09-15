@@ -3,10 +3,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { fileCache, type KnownPayeeCache } from "./cache.js";
 import { resolveCredential, type Credential } from "./credential.js";
 import { homeDir, resolveNetwork, type NetworkConfig } from "./network.js";
+import { fileExceptionStore, type ExceptionStore } from "./store.js";
 import { registerTools } from "./tools.js";
 
 export const SERVER_NAME = "eunomia-mcp";
-export const SERVER_VERSION = "0.1.0";
+export const SERVER_VERSION = "0.2.0";
 
 export interface ServerContext {
   net: NetworkConfig;
@@ -14,6 +15,8 @@ export interface ServerContext {
   treasuryId: string | null;
   credential: Credential | null;
   cache: KnownPayeeCache;
+  /** exception requests this agent filed (bookmarks; the chain is the truth) */
+  exceptions: ExceptionStore;
   /** unix seconds; injectable for tests */
   now?: () => number;
 }
@@ -27,6 +30,7 @@ export function contextFromEnv(env: NodeJS.ProcessEnv): ServerContext {
     treasuryId,
     credential: treasuryId ? resolveCredential(env, home, net.name, treasuryId) : null,
     cache: fileCache(join(home, net.name)),
+    exceptions: fileExceptionStore(join(home, net.name)),
   };
 }
 
