@@ -1,7 +1,7 @@
 {
   "name": "eunomia-mcp",
-  "version": "0.1.0",
-  "description": "MCP server + TypeScript SDK that lets any AI agent spend from a Eunomia treasury on Stellar — inside an owner-set on-chain budget, blocked by the contract when out of policy.",
+  "version": "0.2.0",
+  "description": "MCP server + TypeScript SDK that lets any AI agent spend from a Eunomia treasury on Stellar — inside an owner-set on-chain budget, blocked by the contract when out of policy, with x402 payment requirements and owner-approved exceptions.",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {
