@@ -1708,6 +1708,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "treasury_factory"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "treasury_registry"
 version = "0.1.0"
 dependencies = [
