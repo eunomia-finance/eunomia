@@ -12,6 +12,7 @@ import {
   setActiveTreasury,
   setTreasuryId,
 } from "../lib/treasuryStore";
+import { waitForBalanceChange } from "../lib/balanceWait";
 import { createTreasury, type TreasurySetup } from "../lib/createTreasury";
 import {
   addPayee,
@@ -225,8 +226,15 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
     setBusy("friendbot");
     toast("info", "Requesting free testnet XLM…");
     try {
+      const before = walletXlm ?? null;
       await fundWithFriendbot(address);
-      await refreshWalletXlm(address);
+      // The dispenser answers when the transaction is accepted, not applied: read until
+      // the balance actually moves, or the page keeps saying 0.00 XLM to a funded wallet.
+      const after = await waitForBalanceChange(
+        () => (isValidContractId(address) ? getContractXlmBalance(address) : getXlmBalance(address)),
+        before,
+      );
+      setWalletXlm(after);
       const msg = "Wallet funded with testnet XLM ✓";
       toast("success", msg);
       return { ok: true, msg };
@@ -237,7 +245,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setBusy(null);
     }
-  }, [address, refreshWalletXlm, toast]);
+  }, [address, walletXlm, toast]);
 
   const deploy = useCallback(
     async (daily: string, perTask: string, extra: DeployExtras = {}): Promise<ActionOutcome> => {
@@ -267,11 +275,11 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
         if (cap.value > dailyLimit.value) return invalid("The Leash cap can't be above the daily limit.");
         leash = { agent: agentKey, capXlm: cap.value, hours };
       }
+      // Starting funds are not checked against the displayed balance on purpose: a smart
+      // wallet's reading can lag the faucet by a ledger or two, and the chain refuses an
+      // underfunded transfer anyway — atomically, so nothing half-created survives.
       const fund = parseXlmAmount(extra.fundXlm?.trim() || "0", "starting funds");
       if (!fund.ok) return invalid(fund.msg);
-      if (walletXlm != null && fund.value > walletXlm) {
-        return invalid(`Your wallet holds ${walletXlm.toFixed(2)} XLM — starting funds can't exceed that.`);
-      }
       setBusy("deploy");
       toast("info", "Creating your treasury — one confirmation in your wallet…");
       try {
@@ -315,7 +323,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
         setBusy(null);
       }
     },
-    [address, walletXlm, refreshWalletXlm, syncLocalIds, toast],
+    [address, refreshWalletXlm, syncLocalIds, toast],
   );
 
   const openExisting = useCallback(
