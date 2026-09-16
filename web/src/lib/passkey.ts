@@ -18,11 +18,15 @@ export interface PasskeyIdentity {
   keyId: string;
 }
 
+/** Answers "which wallet does this credential belong to?" when the kit's own derivation
+ *  finds nothing on-chain — a recovered wallet's new key id derives the WRONG address. */
+export type ResolveContractId = (keyId: string) => string | undefined;
+
 export interface PasskeyBackend {
   createWallet(app: string, user: string): Promise<PasskeyIdentity & { signedTx: string }>;
-  /** `contractHint` feeds the kit's `getContractId` lookup — a recovered wallet's new
-   *  key id derives the WRONG address, so the hint is what finds the right contract. */
-  connectWallet(keyId?: string, contractHint?: string): Promise<PasskeyIdentity>;
+  /** `resolve` feeds the kit's `getContractId` fallback (see ResolveContractId). With no
+   *  `keyId` the authenticator asks the user to pick a passkey — that is "sign in". */
+  connectWallet(keyId?: string, resolve?: ResolveContractId): Promise<PasskeyIdentity>;
   /** Whether the kit currently holds a connected wallet. A freshly built one does not. */
   connected(): boolean;
   sign<T>(tx: T): Promise<T>;
@@ -47,8 +51,8 @@ export interface PasskeyWallet {
   /** Register a passkey. The returned deploy transaction still has to be submitted. */
   create(user: string): Promise<PasskeyIdentity & { signedTx: string }>;
   /** Resolve the wallet behind an existing passkey. Pass a known key id to skip the
-   *  discovery ceremony. */
-  connect(keyId?: string): Promise<PasskeyIdentity>;
+   *  discovery ceremony; `resolve` finds wallets the key id does not derive. */
+  connect(keyId?: string, resolve?: ResolveContractId): Promise<PasskeyIdentity>;
   /** Attach a wallet to the kit if it has none.
    *
    *  passkey-kit refuses to sign anything until a wallet is connected, and a kit built
@@ -82,19 +86,23 @@ export interface PasskeyWallet {
 
 const CANCELLED = "Passkey prompt cancelled — try again.";
 const OWNERSHIP = "We couldn't open your wallet with that passkey. Try connecting a wallet instead.";
+const NOT_FOUND =
+  "No treasury wallet belongs to that passkey. Pick the passkey you created here, or use 'Lost your passkey? Restore access' with your recovery code.";
 const GENERIC = "Couldn't use your passkey. Try again or connect a wallet instead.";
 
 /** The browser reports a dismissed prompt and a timeout the same way (NotAllowedError), and
  *  neither is worth showing verbatim. An ownership failure is kept separate: telling that user
- *  "cancelled" would send them round in circles.
+ *  "cancelled" would send them round in circles. So is "no wallet for this passkey" — the
+ *  sign-in case where the user picked a passkey from another site or another account.
  *
- *  Every passkey step funnels into the same three sentences, so the original error is logged
+ *  Every passkey step funnels into the same few sentences, so the original error is logged
  *  with the step that raised it. Without this, a failure anywhere in the chain is indis-
  *  tinguishable from any other — which is exactly how one live failure cost a whole round. */
 function humanise(step: string, e: unknown): Error {
   const msg = e instanceof Error ? e.message : String(e);
   console.error(`[passkey] ${step} failed:`, e);
   if (/ownership/i.test(msg)) return new Error(OWNERSHIP);
+  if (/could not resolve a wallet|wallet_not_found/i.test(msg)) return new Error(NOT_FOUND);
   if (/notallowed|aborterror|timed out|cancel/i.test(msg)) return new Error(CANCELLED);
   return new Error(GENERIC);
 }
@@ -132,12 +140,14 @@ async function buildPasskeyBackend(): Promise<PasskeyBackend> {
       const { contractId, signedTx, keyIdBase64 } = await kit.createWallet(app, user);
       return { contractId, signedTx, keyId: keyIdBase64 };
     },
-    connectWallet: async (keyId, contractHint) => {
+    connectWallet: async (keyId, resolve) => {
+      // The kit derives the address from the key id and checks the chain; only when
+      // nothing is there does it ask `getContractId` — our device memory of wallets.
       const { contractId, keyIdBase64 } = await kit.connectWallet(
-        keyId || contractHint
+        keyId || resolve
           ? {
               ...(keyId ? { keyId } : {}),
-              ...(contractHint ? { getContractId: async () => contractHint } : {}),
+              ...(resolve ? { getContractId: async (k: string) => resolve(k) } : {}),
             }
           : undefined,
       );
@@ -182,9 +192,9 @@ export function makePasskeyWallet(be: PasskeyBackend, app: string): PasskeyWalle
         throw humanise("create wallet", e);
       }
     },
-    async connect(keyId) {
+    async connect(keyId, resolve) {
       try {
-        return await be.connectWallet(keyId);
+        return await be.connectWallet(keyId, resolve);
       } catch (e) {
         throw humanise("connect wallet", e);
       }
@@ -234,7 +244,7 @@ export function makePasskeyWallet(be: PasskeyBackend, app: string): PasskeyWalle
     },
     async connectRecovered(keyId, wallet) {
       try {
-        return await be.connectWallet(keyId, wallet);
+        return await be.connectWallet(keyId, () => wallet);
       } catch (e) {
         throw humanise("connect recovered wallet", e);
       }

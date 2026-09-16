@@ -1,10 +1,13 @@
 // The pre-treasury experience: a connect gate for visitors, then a two-step creation
 // wizard (limits → deploy) in human language — no bare form dump. "Open an existing
 // treasury" stays as the quiet secondary path.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTreasury } from "../state/useTreasury";
 import { needsFunding, MIN_XLM } from "../lib/funding";
+import { passkeyCapability } from "../lib/passkeySupport";
 import type { View } from "../lib/routes";
+import { errText } from "../lib/wallet-errors";
+import { connectPasskey } from "../lib/walletKit";
 
 export default function Setup({ onGo }: { onGo: (v: View) => void }) {
   const t = useTreasury();
@@ -13,6 +16,27 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
   const [existing, setExisting] = useState("");
   const [err, setErr] = useState("");
   const [openErr, setOpenErr] = useState("");
+  // The gate also has to let a passkey user back in: someone who lands on #overview with
+  // no session (new browser, cleared storage) must not be funnelled into a wallet modal.
+  const [passkeys, setPasskeys] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+  const [signInErr, setSignInErr] = useState("");
+  useEffect(() => {
+    void passkeyCapability(window).then((c) => setPasskeys(c !== "none"));
+  }, []);
+
+  const signInPasskey = async () => {
+    setSignInErr("");
+    setSigningIn(true);
+    try {
+      // The provider follows the shared address store, so the treasury opens by itself.
+      await connectPasskey("connect");
+    } catch (e) {
+      setSignInErr(errText(e) || "Couldn't open your wallet with that passkey.");
+    } finally {
+      setSigningIn(false);
+    }
+  };
 
   const doDeploy = async () => {
     setErr("");
@@ -37,14 +61,25 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
             Set the rules once. Every payment is checked and enforced on Stellar —
             anything outside the rules is blocked, automatically.
           </p>
+          {passkeys && (
+            <button
+              style={{ ...primaryBtn, opacity: signingIn ? 0.6 : 1 }}
+              onClick={() => void signInPasskey()}
+              disabled={signingIn || t.busy === "connect"}
+              type="button"
+            >
+              {signingIn ? "Opening…" : "Sign in with your passkey"}
+            </button>
+          )}
           <button
-            style={{ ...primaryBtn, opacity: t.busy === "connect" ? 0.6 : 1 }}
+            style={{ ...(passkeys ? ghostBtn : primaryBtn), opacity: t.busy === "connect" ? 0.6 : 1 }}
             onClick={() => void t.connect()}
-            disabled={t.busy === "connect"}
+            disabled={t.busy === "connect" || signingIn}
             type="button"
           >
             {t.busy === "connect" ? "Connecting…" : "Connect wallet"}
           </button>
+          {signInErr && <div style={inlineErr}>{signInErr}</div>}
           <button style={demoLink} onClick={() => onGo("dashboard")} type="button">
             watch the demo →
           </button>

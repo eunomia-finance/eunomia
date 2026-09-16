@@ -49,7 +49,7 @@ describe("makePasskeyWallet", () => {
 
     await w.connect(KEY_ID);
 
-    expect(be.connectWallet).toHaveBeenCalledWith(KEY_ID);
+    expect(be.connectWallet).toHaveBeenCalledWith(KEY_ID, undefined);
   });
 
   it("passes an assembled transaction through the kit's signer", async () => {
@@ -164,7 +164,19 @@ describe("makePasskeyWallet", () => {
 
       await w.connectRecovered(KEY_ID, CONTRACT);
 
-      expect(be.connectWallet).toHaveBeenCalledWith(KEY_ID, CONTRACT);
+      expect(be.connectWallet).toHaveBeenCalledWith(KEY_ID, expect.any(Function));
+      const resolve = vi.mocked(be.connectWallet).mock.calls[0][1]!;
+      expect(resolve(KEY_ID)).toBe(CONTRACT);
+    });
+
+    it("signs in with a device-remembered resolver so a recovered wallet is found again", async () => {
+      const be = backend();
+      const w = makePasskeyWallet(be, "Eunomia");
+      const resolve = (k: string) => (k === KEY_ID ? CONTRACT : undefined);
+
+      await w.connect(undefined, resolve);
+
+      expect(be.connectWallet).toHaveBeenCalledWith(undefined, resolve);
     });
 
     it("humanises recovery-path failures like every other passkey step", async () => {
@@ -189,5 +201,18 @@ describe("makePasskeyWallet", () => {
     const w = makePasskeyWallet(be, "Eunomia");
 
     await expect(w.connect()).rejects.toThrow(/couldn't open your wallet/i);
+  });
+
+  it("tells a signing-in user when the passkey has no wallet, instead of 'cancelled' or 'try again'", async () => {
+    // The kit's WALLET_NOT_FOUND: the picked passkey derives nothing on-chain and no
+    // device memory knows it — typically a passkey from another site or account.
+    const be = backend({
+      connectWallet: vi
+        .fn()
+        .mockRejectedValue(new Error("Could not resolve a wallet for the given passkey")),
+    });
+    const w = makePasskeyWallet(be, "Eunomia");
+
+    await expect(w.connect()).rejects.toThrow(/no treasury wallet belongs to that passkey/i);
   });
 });

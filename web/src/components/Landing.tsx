@@ -40,6 +40,13 @@ export default function Landing({
     setRecoveryFor(address);
   };
 
+  // Signing in reaches an existing wallet: its recovery code was minted when it was
+  // created, so there is nothing to show — straight into the workspace.
+  const signInPasskey = async () => {
+    await connectPasskey("connect");
+    onEnter();
+  };
+
   return (
     // `lp--pending` hides the reveal targets from the first paint; useReveal either animates
     // them in or removes the class outright. See landing.css for why it is not a media query.
@@ -47,6 +54,8 @@ export default function Landing({
       {/* The wallet chip now lives in the hero's nav — the scene owns the top of the page. */}
       <Hero
         onCreate={createPasskey}
+        onSignIn={signInPasskey}
+        onEnter={onEnter}
         onWallet={onWallet}
         onRecover={() => setRestoreOpen(true)}
       />

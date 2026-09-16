@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import { passkeyCapability, type PasskeyCapability } from "../../lib/passkeySupport";
+import { useWalletAddress } from "../../lib/useWalletAddress";
 import { errText } from "../../lib/wallet-errors";
 import { TRACTION } from "./traction";
 import Words from "./Words";
@@ -35,35 +36,44 @@ const loaderChars = (word: string, keyBase: string) =>
  *  The counter carries the evidence instead. */
 export default function Hero({
   onCreate,
+  onSignIn,
+  onEnter,
   onWallet,
   onRecover,
 }: {
   /** Registers the passkey and deploys — the recovery step that follows routes in. */
   onCreate: () => Promise<void>;
+  /** Picks an existing passkey and opens the wallet behind it — no deploy, no code. */
+  onSignIn: () => Promise<void>;
+  /** Straight into the workspace — for a session this device already remembers. */
+  onEnter: () => void;
   onWallet: () => void;
   /** Opens the paste-your-recovery-code flow. */
   onRecover: () => void;
 }) {
   const { theme, toggle } = useTheme();
+  const address = useWalletAddress();
   const [capability, setCapability] = useState<PasskeyCapability>("none");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"create" | "signin" | null>(null);
   const [err, setErr] = useState("");
 
   useEffect(() => {
     void passkeyCapability(window).then(setCapability);
   }, []);
 
-  const startPasskey = async () => {
+  const run = async (which: "create" | "signin", fn: () => Promise<void>, fallback: string) => {
     setErr("");
-    setBusy(true);
+    setBusy(which);
     try {
-      await onCreate();
+      await fn();
     } catch (e) {
-      setErr(errText(e) || "Couldn't create your passkey. Try again.");
+      setErr(errText(e) || fallback);
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
+  const startPasskey = () => run("create", onCreate, "Couldn't create your passkey. Try again.");
+  const signIn = () => run("signin", onSignIn, "Couldn't open your wallet with that passkey.");
 
   return (
     <section className="lp__section lp__hero">
@@ -166,18 +176,42 @@ export default function Hero({
 
         <div className="lp__rise-box">
           <div className="lp__actions lp__rise">
-            {/* Hidden entirely when WebAuthn is absent: the wallet path still works. */}
-            {capability !== "none" && (
-              <button className="lp__cta" onClick={() => void startPasskey()} disabled={busy}>
-                {busy ? "Creating…" : "Create your treasury with a passkey"}
-                <span className="lp__cta-hint">
-                  {capability === "platform" ? "Fingerprint, face or PIN" : "Pair with your phone"}
-                </span>
+            {address ? (
+              // This device remembers a session: the only sensible door is the one in.
+              // The chip in the nav names the wallet; disconnecting there brings the
+              // create / sign-in pair back.
+              <button className="lp__cta" onClick={onEnter} type="button">
+                Open your treasury
+                <span className="lp__cta-hint">signed in with your passkey</span>
               </button>
+            ) : (
+              <>
+                {/* Hidden entirely when WebAuthn is absent: the wallet path still works. */}
+                {capability !== "none" && (
+                  <button className="lp__cta" onClick={() => void startPasskey()} disabled={busy !== null}>
+                    {busy === "create" ? "Creating…" : "Create your treasury with a passkey"}
+                    <span className="lp__cta-hint">
+                      {capability === "platform" ? "Fingerprint, face or PIN" : "Pair with your phone"}
+                    </span>
+                  </button>
+                )}
+                {/* The door back in for a returning user. One touch, no new wallet, no code. */}
+                {capability !== "none" && (
+                  <button
+                    className="lp__cta lp__cta--ghost"
+                    onClick={() => void signIn()}
+                    disabled={busy !== null}
+                    type="button"
+                  >
+                    {busy === "signin" ? "Opening…" : "Sign in with your passkey"}
+                    <span className="lp__cta-hint">already made a treasury here</span>
+                  </button>
+                )}
+                <button className="lp__cta lp__cta--ghost" onClick={onWallet} type="button">
+                  I have a wallet
+                </button>
+              </>
             )}
-            <button className="lp__cta lp__cta--ghost" onClick={onWallet}>
-              I have a wallet
-            </button>
           </div>
         </div>
 

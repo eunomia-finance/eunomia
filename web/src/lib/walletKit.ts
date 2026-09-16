@@ -27,6 +27,13 @@ import { testSignerAvailable, getTestSigner } from "./testSigner";
 import { makePasskeyWallet, realPasskeyBackend, resetPasskeyBackend } from "./passkey";
 import { makePasskeyExecutor, makeWalletExecutor, type TxExecutor } from "./executor";
 import {
+  forgetPasskeySession,
+  lookupPasskeyWallet,
+  readPasskeySession,
+  rememberPasskeySession,
+  type KV,
+} from "./passkeySession";
+import {
   relayEnvelope,
   relayHostFunction,
   relayTx,
@@ -148,10 +155,26 @@ const PASSKEY_ID = "passkey";
 /** The passkey credential a smart-wallet session is signing with. Kept so a reload can
  *  re-attach the kit to the same wallet without asking the user to pick a passkey again. */
 const KEY_ID_KEY = "prism_passkey_key_id";
-let connectedAddress: string | null =
-  typeof sessionStorage !== "undefined"
-    ? sessionStorage.getItem(ADDR_KEY)
-    : null;
+
+const local = (): KV | undefined => (typeof localStorage !== "undefined" ? localStorage : undefined);
+
+/** Seed this tab's session from the device's remembered passkey session. A returning
+ *  passkey user used to land on a blank page and — with only a "create" button in sight —
+ *  mint a brand-new wallet. Re-attaching by key id raises no WebAuthn prompt; every
+ *  signature still does. Browser-wallet sessions stay tab-scoped as before. */
+function restorePasskeySession(): string | null {
+  if (typeof sessionStorage === "undefined") return null;
+  const inTab = sessionStorage.getItem(ADDR_KEY);
+  if (inTab) return inTab;
+  const remembered = readPasskeySession(local());
+  if (!remembered) return null;
+  sessionStorage.setItem(ADDR_KEY, remembered.address);
+  sessionStorage.setItem(WALLET_ID_KEY, PASSKEY_ID);
+  sessionStorage.setItem(KEY_ID_KEY, remembered.keyId);
+  return remembered.address;
+}
+
+let connectedAddress: string | null = restorePasskeySession();
 
 // Reload persistence for the SELECTED MODULE, not just the address: the kit routes
 // `signTransaction` through its selected module, and `init` above resets that selection
@@ -254,7 +277,18 @@ export async function disconnect(): Promise<void> {
   sessionStorage.removeItem(ADDR_KEY);
   sessionStorage.removeItem(WALLET_ID_KEY);
   sessionStorage.removeItem(KEY_ID_KEY);
+  forgetPasskeySession(local());
   resetPasskeyBackend();
+  notifyAddress();
+}
+
+/** Adopt a passkey smart wallet as the session — in this tab and on this device. */
+function adoptPasskeySession(contractId: string, keyId: string): void {
+  connectedAddress = contractId;
+  sessionStorage.setItem(ADDR_KEY, contractId);
+  sessionStorage.setItem(WALLET_ID_KEY, PASSKEY_ID);
+  sessionStorage.setItem(KEY_ID_KEY, keyId);
+  rememberPasskeySession(local(), { address: contractId, keyId });
   notifyAddress();
 }
 
@@ -278,14 +312,12 @@ export async function connectPasskey(
       ({ contractId, keyId } = created);
       await relayEnvelope(fetch as unknown as FetchLike, created.signedTx);
     } else {
-      ({ contractId, keyId } = await wallet.connect());
+      // Sign in: the authenticator asks the user to pick a passkey; the kit derives the
+      // wallet from it, and the device's wallet memory covers recovered wallets.
+      ({ contractId, keyId } = await wallet.connect(undefined, (k) => lookupPasskeyWallet(local(), k)));
     }
 
-    connectedAddress = contractId;
-    sessionStorage.setItem(ADDR_KEY, contractId);
-    sessionStorage.setItem(WALLET_ID_KEY, PASSKEY_ID);
-    sessionStorage.setItem(KEY_ID_KEY, keyId);
-    notifyAddress();
+    adoptPasskeySession(contractId, keyId);
     logFunnel({ event: "connect_result", outcome: "success", walletId: PASSKEY_ID });
     return contractId;
   } catch (e) {
@@ -332,11 +364,9 @@ export async function connectPasskeyRecovery(
   try {
     const { contractId, keyId } = await recoverWallet(await recoveryDeps(), code, userLabel);
 
-    connectedAddress = contractId;
-    sessionStorage.setItem(ADDR_KEY, contractId);
-    sessionStorage.setItem(WALLET_ID_KEY, PASSKEY_ID);
-    sessionStorage.setItem(KEY_ID_KEY, keyId);
-    notifyAddress();
+    // The recovered wallet's address is NOT derivable from this new passkey; the device
+    // memory written here is what lets a plain "sign in" find it next time.
+    adoptPasskeySession(contractId, keyId);
     logFunnel({ event: "connect_result", outcome: "success", walletId: PASSKEY_RECOVERY_ID });
     return contractId;
   } catch (e) {
