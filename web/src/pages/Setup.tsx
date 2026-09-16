@@ -13,6 +13,11 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
   const t = useTreasury();
   const [daily, setDaily] = useState("50");
   const [perTask, setPerTask] = useState("10");
+  const [payee, setPayee] = useState("");
+  const [agentKey, setAgentKey] = useState("");
+  const [cap, setCap] = useState("25");
+  const [hours, setHours] = useState("24");
+  const [fundXlm, setFundXlm] = useState("20");
   const [existing, setExisting] = useState("");
   const [err, setErr] = useState("");
   const [openErr, setOpenErr] = useState("");
@@ -40,7 +45,7 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
 
   const doDeploy = async () => {
     setErr("");
-    const res = await t.deploy(daily, perTask);
+    const res = await t.deploy(daily, perTask, { payee, agentKey, capXlm: cap, hours, fundXlm });
     if (!res.ok && res.validation) setErr(res.msg);
   };
 
@@ -97,16 +102,16 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
         </button>
       )}
       <h1 style={wizTitle}>Set up your treasury</h1>
-      <p style={wizSub}>Two steps: set your rules, then create it. Enforcement is automatic.</p>
+      <p style={wizSub}>Rules, first payee, agent, starting funds — created together with one signature.</p>
 
       {t.walletXlm !== undefined && needsFunding(t.walletXlm) && (
         <div style={stepCard}>
-          <div style={stepTag}>Step 0 — testnet XLM</div>
+          <div style={stepTag}>Testnet XLM</div>
           <div style={stepBody}>
             {t.walletXlm === null
               ? "Your wallet doesn't exist on testnet yet (0 XLM). "
               : `Your wallet holds ${t.walletXlm.toFixed(2)} XLM on testnet. `}
-            You need ~{MIN_XLM} XLM to deploy and fund a treasury — it's free.
+            You need ~{MIN_XLM} XLM to create and fund a treasury — it's free.
           </div>
           <button
             style={{ ...primaryBtn, opacity: t.busy ? 0.6 : 1 }}
@@ -120,7 +125,7 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
       )}
 
       <div style={stepCard}>
-        <div style={stepTag}>Step 1 — set your rules</div>
+        <div style={stepTag}>Rules</div>
         <div style={fieldLabel}>Daily limit (XLM)</div>
         <input
           style={input}
@@ -141,23 +146,76 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
           Your agent can never spend past the daily cap in any rolling 24 hours, and never
           more than the per-payment cap at once — enforced on Stellar, not by promise.
         </div>
-      </div>
 
-      <div style={stepCard}>
-        <div style={stepTag}>Step 2 — create</div>
+        <div style={fieldLabel}>First approved payee (optional)</div>
+        <input
+          style={input}
+          aria-label="First approved payee address"
+          placeholder="G… or C… — anyone else is refused"
+          spellCheck={false}
+          value={payee}
+          onChange={(e) => setPayee(e.target.value)}
+        />
+
+        <div style={fieldLabel}>Agent public key (optional)</div>
+        <input
+          style={input}
+          aria-label="Agent public key for the Leash"
+          placeholder="G… — printed by `eunomia-mcp init`"
+          spellCheck={false}
+          value={agentKey}
+          onChange={(e) => setAgentKey(e.target.value)}
+        />
+        {agentKey.trim() && (
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={fieldLabel}>Leash cap (XLM)</div>
+              <input
+                style={input}
+                inputMode="decimal"
+                aria-label="Leash spending cap in XLM"
+                value={cap}
+                onChange={(e) => setCap(e.target.value)}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={fieldLabel}>Duration (hours)</div>
+              <input
+                style={input}
+                inputMode="decimal"
+                aria-label="Leash duration in hours"
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        <div style={fieldLabel}>Starting funds (XLM)</div>
+        <input
+          style={input}
+          inputMode="decimal"
+          aria-label="Starting funds in XLM"
+          value={fundXlm}
+          onChange={(e) => setFundXlm(e.target.value)}
+        />
+        <div style={stepBody}>
+          Moved from your wallet into the treasury in the same transaction. Leave 0 to fund later.
+        </div>
+
         <button
           style={{ ...primaryBtn, opacity: t.busy ? 0.6 : 1 }}
           onClick={() => void doDeploy()}
           disabled={!!t.busy}
           type="button"
         >
-          {t.busy === "deploy" ? "Creating…" : "Create treasury"}
+          {t.busy === "deploy" ? "Creating…" : "Create treasury — one signature"}
         </button>
         {err && <div style={inlineErr}>{err}</div>}
         <div style={hint}>
-          Creating asks for <strong>two</strong> wallet approvals: ① create your treasury,
-          ② back it up on Stellar so you can open it from any device — ② is optional;
-          skip it and your treasury ID is the only key: save it.
+          One confirmation covers everything above and backs the treasury up on Stellar so
+          you can open it from any device. Nothing is created half-way: if any part is
+          refused, nothing happens.
         </div>
       </div>
 

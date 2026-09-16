@@ -94,6 +94,12 @@ export async function transferFromSmartWallet(
   );
 }
 
+/** Any contract call as the wallet — the factory's one-signature setup rides on this: the
+ *  wallet authorises the root call and every sub-call under it in one signed entry. */
+export async function invokeFromSmartWallet(deps: SmartWalletDeps, op: xdr.Operation): Promise<xdr.ScVal> {
+  return runAsSmartWallet(deps, op);
+}
+
 /** Simulate an operation as the wallet, have the passkey sign the auth it requires, and hand
  *  the result to the relay. Returns whatever the call returned. */
 async function runAsSmartWallet(

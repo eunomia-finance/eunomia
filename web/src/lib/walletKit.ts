@@ -42,6 +42,7 @@ import {
 } from "./relayer";
 import {
   deployFromSmartWallet,
+  invokeFromSmartWallet,
   transferFromSmartWallet,
   type SmartWalletDeps,
 } from "./smartWalletTx";
@@ -412,6 +413,7 @@ export async function executorFor(address: string): Promise<TxExecutor> {
         deployFromSmartWallet(asWallet, address, wasmHash, constructorArgs),
       (to, amountStroops) =>
         transferFromSmartWallet(asWallet, address, XLM_SAC, to, amountStroops),
+      (op) => invokeFromSmartWallet(asWallet, op),
     );
   }
   return makeWalletExecutor(address, walletSignerFor(address));

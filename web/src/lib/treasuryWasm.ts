@@ -13,6 +13,12 @@
 export const TREASURY_WASM_HASH =
   "824472060b3abec7c6c64e8985fa5d0c5a39ea277fbb67eab3125a483d059641";
 
+/** The treasury factory (testnet, 2026-09-16): one owner signature deploys a v3.5 treasury
+ *  with its policy, payees, Leash, funding and registry entry (contracts/treasury_factory).
+ *  Pinned to TREASURY_WASM_HASH and the registry at its own deploy; it has no admin. The
+ *  relay admits it by address, so a passkey user's single call is sponsored like any other. */
+export const TREASURY_FACTORY_ID = "CAWLFTQ4V3ZPUWRVL5RGXBBA7FMJ26EXW37GGKCGKOXO4TKABEHF2OMS";
+
 /** Treasury code this app deployed in the past and must keep able to spend.
  *
  *  Contracts are immutable: a treasury created last week still runs last week's wasm, and

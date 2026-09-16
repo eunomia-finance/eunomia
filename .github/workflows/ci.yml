@@ -82,6 +82,8 @@ jobs:
         run: cmp packages/treasury-client/src/index.ts web/src/lib/treasuryClient.ts
       - name: registry-client — web copy in sync
         run: cmp packages/registry-client/src/index.ts web/src/lib/registryClient.ts
+      - name: factory-client — web copy in sync
+        run: cmp packages/factory-client/src/index.ts web/src/lib/factoryClient.ts
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22

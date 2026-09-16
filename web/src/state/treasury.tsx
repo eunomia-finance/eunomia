@@ -12,10 +12,10 @@ import {
   setActiveTreasury,
   setTreasuryId,
 } from "../lib/treasuryStore";
+import { createTreasury, type TreasurySetup } from "../lib/createTreasury";
 import {
   addPayee,
   adminWithdraw,
-  deployTreasury,
   fundTreasury,
   isValidContractId,
   isOwnedBy,
@@ -33,7 +33,7 @@ import {
 import { SERVICE, shortAddr } from "../config";
 import { fundWithFriendbot, getContractXlmBalance, getXlmBalance } from "../lib/funding";
 import { connectErr, errText, sendErr } from "../lib/wallet-errors";
-import { checkLimits, parseXlmAmount } from "../lib/validate";
+import { checkLimits, isValidPaymentDest, parseXlmAmount } from "../lib/validate";
 import { trackError, trackViolation } from "../lib/analytics";
 import { logActivity } from "../lib/activity";
 import {
@@ -49,7 +49,13 @@ import { discoverTreasuries, registerTreasury } from "../lib/registry";
 import { testSignerAvailable } from "../lib/testSigner";
 import { mergeTreasuries } from "../lib/treasuryList";
 import { useToast } from "./toastContext";
-import { TreasuryContext, type ActionOutcome, type Busy, type TreasuryContextValue } from "./treasuryContext";
+import {
+  TreasuryContext,
+  type ActionOutcome,
+  type Busy,
+  type DeployExtras,
+  type TreasuryContextValue,
+} from "./treasuryContext";
 
 const fail = (msg: string): ActionOutcome => ({ ok: false, msg });
 const invalid = (msg: string): ActionOutcome => ({ ok: false, msg, validation: true });
@@ -234,7 +240,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
   }, [address, refreshWalletXlm, toast]);
 
   const deploy = useCallback(
-    async (daily: string, perTask: string): Promise<ActionOutcome> => {
+    async (daily: string, perTask: string, extra: DeployExtras = {}): Promise<ActionOutcome> => {
       if (!address) return fail("Connect a wallet first.");
       // Validate before the wallet popup — an empty/NaN field would otherwise reach
       // toStroops(NaN) and throw an opaque "must be a non-negative number".
@@ -246,34 +252,59 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
       // the user gets a clear message instead of a failed deploy.
       const coherent = checkLimits(dailyLimit.value, perTaskLimit.value);
       if (!coherent.ok) return invalid(coherent.msg);
+      const payee = (extra.payee ?? "").trim();
+      if (payee && !isValidPaymentDest(payee)) return invalid("That payee isn't a Stellar address (G… or C…).");
+      const agentKey = (extra.agentKey ?? "").trim();
+      let leash: TreasurySetup["leash"];
+      if (agentKey) {
+        if (!isValidAgentKey(agentKey)) {
+          return invalid("That is not a Stellar public key (G…, 56 characters) — copy it from `eunomia-mcp init`.");
+        }
+        const cap = parseXlmAmount(extra.capXlm ?? "", "Leash cap");
+        if (!cap.ok) return invalid(cap.msg);
+        const hours = Number(extra.hours ?? "");
+        if (!Number.isFinite(hours) || hours <= 0) return invalid("Enter how many hours the Leash lasts.");
+        if (cap.value > dailyLimit.value) return invalid("The Leash cap can't be above the daily limit.");
+        leash = { agent: agentKey, capXlm: cap.value, hours };
+      }
+      const fund = parseXlmAmount(extra.fundXlm?.trim() || "0", "starting funds");
+      if (!fund.ok) return invalid(fund.msg);
+      if (walletXlm != null && fund.value > walletXlm) {
+        return invalid(`Your wallet holds ${walletXlm.toFixed(2)} XLM — starting funds can't exceed that.`);
+      }
       setBusy("deploy");
-      toast("info", "Creating your treasury — confirm in your wallet…");
+      toast("info", "Creating your treasury — one confirmation in your wallet…");
       try {
-        const id = await deployTreasury(await executorFor(address), dailyLimit.value, perTaskLimit.value);
+        // One signature: deploy + policy + payee + Leash + funding + registry, atomically.
+        // E2E runs must never touch the registry — it feeds the user-count evidence, and
+        // throwaway Playwright wallets were inflating it (docs/metrics/e2e-exclude.json).
+        const register = !testSignerAvailable();
+        const id = await createTreasury(await executorFor(address), {
+          dailyXlm: dailyLimit.value,
+          perTaskXlm: perTaskLimit.value,
+          payees: payee ? [payee] : [],
+          leash,
+          fundXlm: fund.value,
+          register,
+        });
         setTreasuryId(address, id);
         setTreasuryIdState(id);
         setCreatingNew(false);
         syncLocalIds(address);
+        if (register) setRegistryIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
         void logActivity({ walletAddress: address, treasuryId: id, action: "deploy" });
-        // Best-effort on-chain registration (a second wallet prompt). A decline only
-        // means this device's localStorage stays the sole copy of the id.
-        // E2E runs must never touch the registry — it feeds the user-count evidence,
-        // and throwaway Playwright wallets were inflating it (docs/metrics/e2e-exclude.json).
-        let registered = false;
-        if (!testSignerAvailable()) {
-          try {
-            toast("info", "Backing it up on Stellar so you can open it from any device — confirm in your wallet…");
-            await registerTreasury(await executorFor(address), id);
-            registered = true;
-            setRegistryIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
-            void logActivity({ walletAddress: address, treasuryId: id, action: "register" });
-          } catch {
-            /* declined / RPC hiccup — the localStorage mapping still works */
-          }
-        }
-        const msg = registered
-          ? "Treasury created ✓ and backed up on Stellar — open it from any device."
-          : "Treasury created ✓ — backup was skipped, so your ID is the only key to this treasury: copy it now.";
+        if (register) void logActivity({ walletAddress: address, treasuryId: id, action: "register" });
+        if (fund.value > 0) void logActivity({ walletAddress: address, treasuryId: id, action: "fund", amountXlm: fund.value });
+        if (payee) void logActivity({ walletAddress: address, treasuryId: id, action: "whitelist" });
+        if (leash) void logActivity({ walletAddress: address, treasuryId: id, action: "session_start" });
+        if (fund.value > 0) void refreshWalletXlm(address);
+        const parts = [
+          fund.value > 0 ? `funded with ${fund.value} XLM` : null,
+          payee ? "first payee approved" : null,
+          leash ? "Leash started" : null,
+          register ? "backed up on Stellar" : null,
+        ].filter(Boolean);
+        const msg = `Treasury created ✓${parts.length ? " — " + parts.join(", ") : ""}. One signature.`;
         toast("success", msg);
         return { ok: true, msg };
       } catch (e) {
@@ -284,7 +315,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
         setBusy(null);
       }
     },
-    [address, syncLocalIds, toast],
+    [address, walletXlm, refreshWalletXlm, syncLocalIds, toast],
   );
 
   const openExisting = useCallback(

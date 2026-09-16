@@ -31,6 +31,15 @@ export interface ActionOutcome {
   validation?: boolean;
 }
 
+/** The optional parts of a one-signature setup; every field is raw form text. */
+export interface DeployExtras {
+  payee?: string;
+  agentKey?: string;
+  capXlm?: string;
+  hours?: string;
+  fundXlm?: string;
+}
+
 export interface TreasuryContextValue {
   address: string | null;
   treasuryId: string | null;
@@ -47,7 +56,8 @@ export interface TreasuryContextValue {
   refresh: (opts?: { markLoading?: boolean }) => Promise<void>;
   connect: () => Promise<void>;
   friendbot: () => Promise<ActionOutcome>;
-  deploy: (daily: string, perTask: string) => Promise<ActionOutcome>;
+  /** One signature: deploy + policy + first payee + Leash + funding + registry. */
+  deploy: (daily: string, perTask: string, extra?: DeployExtras) => Promise<ActionOutcome>;
   openExisting: (id: string) => ActionOutcome;
   fund: (amount: string) => Promise<ActionOutcome>;
   whitelist: (payeeAddr: string) => Promise<ActionOutcome>;

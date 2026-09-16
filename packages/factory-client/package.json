@@ -1,0 +1,20 @@
+{
+  "version": "0.0.0",
+  "name": "factory-client",
+  "type": "module",
+  "exports": "./dist/index.js",
+  "typings": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "generate": "stellar contract bindings typescript --wasm ../../target/wasm32v1-none/release/treasury_factory.wasm --output-dir \"${TMPDIR:-/tmp}/factory-bindings\" --overwrite && cp \"${TMPDIR:-/tmp}/factory-bindings/src/index.ts\" src/index.ts && npm run sync:web",
+    "sync:web": "cp src/index.ts ../../web/src/lib/factoryClient.ts",
+    "check:sync": "cmp src/index.ts ../../web/src/lib/factoryClient.ts"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^16.2.0",
+    "buffer": "6.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2"
+  }
+}
