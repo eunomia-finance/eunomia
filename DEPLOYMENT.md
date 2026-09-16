@@ -291,3 +291,24 @@ diagnostic events. The MCP tool never does this on its own; it costs the agent a
 Found and fixed on the way: the binding's `Err` for a refused simulation carries an empty
 message (the contract's error enum has no doc comments), so codes are read from the
 simulation's error text — the same `Error(Contract, #N)` the CLI prints.
+
+## Treasury factory — one signature from zero to a Leashed treasury (2026-09-16)
+
+Creating a treasury used to be five owner-signed transactions (deploy, register, fund,
+approve payee, start the Leash): seven passkey prompts for a new user. `treasury_factory`
+does all of it in one `create(setup)` call under a single owner authorisation; its tests
+assert exactly one root auth with four sub-invocations. It has no admin: the treasury wasm
+(v3.5 `82447206…9641`) and the registry are pinned at deploy.
+
+| Item | Value |
+|---|---|
+| **Factory** (wasm `14c205cb…7d4f`) | [`CAWLFTQ4…2OMS`](https://stellar.expert/explorer/testnet/contract/CAWLFTQ4V3ZPUWRVL5RGXBBA7FMJ26EXW37GGKCGKOXO4TKABEHF2OMS) |
+| upload · deploy | [`64c76a7e…2561`](https://stellar.expert/explorer/testnet/tx/64c76a7e368172026288d891d0fbc1d83f5a60f94249cc356176601ed7d32561) · [`82044bfc…eb00`](https://stellar.expert/explorer/testnet/tx/82044bfc697f8141604184d6415098f3e9e8caba98483fa2ba46f4358f3beb00) |
+| **wallet path** — `alice` (G-address) creates with policy 100/10, payee `service`, Leash for `GB4G…2QXZ` (24h, 30 XLM), 5 XLM funding, registry | one tx [`f20587e5…2004`](https://stellar.expert/explorer/testnet/tx/f20587e568eb16c2c01a067943f6f8392c67168fa6de0c420dff958fcf612004) → treasury [`CAIH6DW5…M4AT`](https://stellar.expert/explorer/testnet/contract/CAIH6DW5MBTPRBPJHISLVJJCDHKSD4AXEQW327IBM2K67ZHROQ76M4AT) — events `payee_add`, `session`, `transfer`, `regd`, `created` in that transaction |
+| **passkey path** — a new smart wallet `CAW4DEJP…JKRV` on eunomia.finance (live Playwright run, virtual authenticator, relay-sponsored): policy 50/10, payee, Leash (25 XLM/24h), 5 XLM | one tx [`a24f01a1…f637`](https://stellar.expert/explorer/testnet/tx/a24f01a15ec6606d63e406b3fcd5efd597074513e188d97c17e9b8badabaf637) → treasury [`CBA6WVNB…QILT`](https://stellar.expert/explorer/testnet/contract/CBA6WVNBH7ECHQFVEYL6SY6SAEQKQVTUM4FXMLN5BJ5BJBVR74WKQILT); the authenticator's signature counter moved by **exactly one** across the create step |
+
+`web/tests/e2e/passkey.live.spec.ts` (`npx playwright test --config playwright.live.config.ts passkey.live`)
+drives that passkey path against production and reads policy, payee, Leash, balance, registry
+entry and the running wasm hash back from the chain. Red since 08-07, green from this run.
+The relay admits the factory by address (`web/src/lib/treasuryWasm.ts`), so the treasury it
+deploys inside the call needs no separate sponsorship.
