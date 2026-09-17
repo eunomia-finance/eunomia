@@ -131,6 +131,10 @@ test.describe.serial("Live passkey onboarding", () => {
     //    funds. One button, one signature.
     await page.getByLabel(/daily limit.*xlm/i).first().fill("50");
     await page.getByLabel(/per-payment limit.*xlm/i).first().fill("10");
+    // The payee and the agent are folded behind two chips; a first-time owner sees only
+    // the three numbers. Open both to exercise the full one-signature setup.
+    await page.getByRole("button", { name: /approve a payee now/i }).first().click();
+    await page.getByRole("button", { name: /connect an agent now/i }).first().click();
     await page.getByLabel(/first approved payee/i).first().fill(PAYEE);
     await page.getByLabel(/agent public key/i).first().fill(AGENT_KEY);
     await page.getByLabel(/leash spending cap/i).first().fill("25");
