@@ -53,7 +53,7 @@
 .ledger__counts{ display:flex; gap:8px; flex-wrap:wrap; }
 .count{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:100px; background:var(--raise); font-size:12px; white-space:nowrap; }
 .ledger__row{
-  display:grid; grid-template-columns:64px 96px minmax(0,1fr) 110px 110px; gap:12px; align-items:center;
+  display:grid; grid-template-columns:76px 96px minmax(0,1fr) 110px 110px; gap:12px; align-items:center;
   padding:0 20px; min-height:44px; border-bottom:1px solid var(--line); font-size:13.5px;
 }
 .ledger__row--wide{ grid-template-columns:96px 96px minmax(0,1fr) 110px 110px; }
@@ -123,7 +123,9 @@
 .rowline{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
 
 @media(max-width:1023px){
-  .ledger__row, .ledger__row--wide, .ledger__row--feed{ grid-template-columns:56px minmax(0,1fr) 88px; }
+  /* phones keep time · verdict · what; amount, treasury and proof are desktop columns */
+  .ledger__row, .ledger__row--wide, .ledger__row--feed{ grid-template-columns:72px 80px minmax(0,1fr); gap:8px; padding:0 14px; }
+  .ledger__head, .ledger__foot, .ledger__more, .ledger__empty{ padding-left:14px; padding-right:14px; }
   .ledger__row > .sm-hide{ display:none; }
   .verdict{ grid-template-columns:minmax(0,1fr); }
   .verdict__side{ align-items:flex-start; }
