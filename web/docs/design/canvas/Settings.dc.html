@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Questrial&family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+  <style>
+    body { margin: 0; background: #fcffd5; }
+    a { color: #223e05; } a:hover { color: #55693f; }
+    .num { font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: #55693f; }
+    .panel { border-radius: 14px; border: 1px solid rgba(34,62,5,0.16); background: #f4fadc; }
+    .field { width: 100%; box-sizing: border-box; padding: 11px 13px; border-radius: 10px; background: #fcffd5; border: 1px solid rgba(34,62,5,0.16); font-size: 13.5px; }
+    .chip { padding: 6px 12px; border-radius: 9px; border: 1px solid rgba(34,62,5,0.16); font-size: 12.5px; font-weight: 500; color: #223e05; }
+  </style>
+</helmet>
+<div style="width: 1440px; height: 900px; display: grid; grid-template-columns: 236px minmax(0, 1fr); background: #fcffd5; color: #223e05; font-family: 'Geist', system-ui, sans-serif; font-size: 13.5px; line-height: 1.5; overflow: hidden;">
+
+  <div style="display: flex; flex-direction: column; padding: 22px 14px 16px; border-right: 1px solid rgba(34,62,5,0.16); background: #f4fadc;">
+    <div style="display: flex; align-items: center; gap: 9px; margin: 2px 6px 24px; font-family: 'Questrial', system-ui, sans-serif; font-size: 19px; letter-spacing: -0.01em;">
+      <span style="display: inline-block; width: 24px; height: 24px; border-radius: 6px; background: #223e05; color: #fcffd5; font-family: 'Questrial', sans-serif; font-size: 15px; line-height: 24px; text-align: center;">E</span>
+      <span>Eunomia</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; color: #55693f; font-weight: 500;">Overview</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; color: #55693f; font-weight: 500;">Payments</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; color: #55693f; font-weight: 500;">Agent</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; color: #55693f; font-weight: 500;">Activity</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; background: rgba(34,62,5,0.05); color: #223e05; font-weight: 600; box-shadow: inset 3px 0 0 #a2cb28;">Settings</div>
+    </div>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px; font-size: 12.5px; color: #55693f;">
+      <div style="padding: 10px 12px; border: 1px solid rgba(34,62,5,0.16); border-radius: 9px; background: #fcffd5;">Testnet — free test XLM, no real funds.</div>
+      <div>Docs ↗</div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; min-width: 0;">
+    <div style="height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid rgba(34,62,5,0.16);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="num" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid rgba(34,62,5,0.16); border-radius: 100px; font-size: 12.5px; background: #f4fadc;">CAIH…M4AT <span style="color: #55693f;">▾</span></span>
+        <span class="num" style="font-size: 12px; color: #55693f;">XLM · rules live · Leash active</span>
+      </div>
+      <span class="num" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid rgba(34,62,5,0.16); border-radius: 100px; font-size: 12.5px; background: #f4fadc;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #a2cb28;"></span>GDPK…NXP6</span>
+    </div>
+
+    <div style="padding: 24px; display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: 16px; align-content: start;">
+
+      <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+        <div class="panel" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="eyebrow">Treasury</div>
+            <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #55693f;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #a2cb28;"></span>backed up on Stellar · open it from any device</span>
+          </div>
+          <div class="num" style="font-size: 15px; padding: 12px 14px; border-radius: 10px; background: #fcffd5; border: 1px solid rgba(34,62,5,0.16); letter-spacing: 0.01em;">CAIH6DW5MBTPRBPJHISLVJJCDHKSD4AXEQW327IBM2K67ZHROQ76M4AT</div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span class="chip">Copy ID</span>
+            <span class="chip">View on explorer ↗</span>
+            <span class="num" style="margin-left: auto; font-size: 12.5px; color: #55693f;">owner GDPK…NXP6 · token XLM · code v3.5</span>
+          </div>
+        </div>
+
+        <div class="panel" style="padding: 20px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px;">
+          <div style="grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline;">
+            <div class="eyebrow">Limits</div>
+            <span class="num" style="font-size: 12.5px; color: #55693f;">now 100 XLM / day · ≤ 10 XLM / payment</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div class="eyebrow">New daily limit (XLM)</div>
+            <div class="field num">100</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div class="eyebrow">New per-payment limit (XLM)</div>
+            <div class="field num">10</div>
+          </div>
+          <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 14px;">
+            <span style="padding: 10px 16px; border-radius: 9px; background: #223e05; color: #fcffd5; font-size: 13px; font-weight: 600;">Update limits — one signature</span>
+            <span style="color: #55693f;">Effective on the next payment. A daily limit above 16× the per-payment cap is refused: the proof can't cover it.</span>
+          </div>
+        </div>
+
+        <div class="panel" style="padding: 20px; display: flex; flex-direction: column; gap: 10px;">
+          <div class="eyebrow">Compliance proof</div>
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center;">
+            <div style="color: #55693f;">Last period attested in-policy on 7 Aug · amounts never revealed. One command re-runs the on-chain verify() for anyone checking.</div>
+            <span class="num" style="font-size: 12px; color: #55693f;">426e55…4606 ↗</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+        <div class="panel" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; border-color: #a62021;">
+          <div class="eyebrow" style="color: #a62021;">Owner exits · work while paused</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+            <div style="display: flex; flex-direction: column;"><span>Pause spending</span><span style="font-size: 12.5px; color: #55693f;">Every payment refused until you resume.</span></div>
+            <span class="chip">Pause</span>
+          </div>
+          <div style="height: 1px; background: rgba(34,62,5,0.16);"></div>
+          <div class="eyebrow">Withdraw free balance</div>
+          <div class="field num" style="color: #55693f;">To · default your wallet GDPK…NXP6</div>
+          <div class="field num" style="color: #55693f;">Amount (XLM) · 16.5 free</div>
+          <span style="width: fit-content; padding: 9px 14px; border-radius: 9px; border: 1px solid #a62021; color: #a62021; font-size: 13px; font-weight: 500;">Withdraw</span>
+        </div>
+        <div class="panel" style="padding: 20px; display: flex; flex-direction: column; gap: 8px;">
+          <div class="eyebrow">This treasury</div>
+          <div style="display: flex; justify-content: space-between;"><span>Created</span><span class="num" style="font-size: 13.5px;">16 Sep 2026</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>Payments</span><span class="num" style="font-size: 13.5px;">4 · 14 XLM</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>Refusals</span><span class="num" style="font-size: 13.5px;">4</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>Registry</span><span class="num" style="font-size: 13.5px;">CBEP…4ZE7 ↗</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

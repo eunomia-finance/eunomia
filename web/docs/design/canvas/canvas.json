@@ -1,14 +1,26 @@
 {
+  "pages": [
+    { "id": "page-1", "name": "Kontrol odası" },
+    { "id": "page-2", "name": "Alternatifler (B, C)" }
+  ],
   "artboards": [
-    { "file": "Main.dc.html", "title": "A · Defter (control room, by the book)", "x": 0, "y": 0, "w": 1440, "h": 900 },
-    { "file": "ZamanSeridi.dc.html", "title": "B · Zaman şeridi (the 24h window is the page)", "x": 1560, "y": 0, "w": 1440, "h": 900 },
-    { "file": "KaranlikKule.dc.html", "title": "C · Karanlık kule (dark, denser, one glow)", "x": 3120, "y": 0, "w": 1440, "h": 900 }
+    { "file": "Main.dc.html", "title": "Overview", "x": 0, "y": 0, "w": 1440, "h": 900, "page": "page-1" },
+    { "file": "Payments.dc.html", "title": "Payments", "x": 1560, "y": 0, "w": 1440, "h": 900, "page": "page-1" },
+    { "file": "Agent.dc.html", "title": "Agent", "x": 3120, "y": 0, "w": 1440, "h": 900, "page": "page-1" },
+    { "file": "Activity.dc.html", "title": "Activity", "x": 0, "y": 1100, "w": 1440, "h": 900, "page": "page-1" },
+    { "file": "Settings.dc.html", "title": "Settings", "x": 1560, "y": 1100, "w": 1440, "h": 900, "page": "page-1" },
+    { "file": "Setup.dc.html", "title": "Setup (no treasury yet)", "x": 3120, "y": 1100, "w": 1440, "h": 900, "page": "page-1" },
+    { "file": "ZamanSeridi.dc.html", "title": "B · Zaman şeridi", "x": 0, "y": 0, "w": 1440, "h": 900, "page": "page-2" },
+    { "file": "KaranlikKule.dc.html", "title": "C · Karanlık kule", "x": 1560, "y": 0, "w": 1440, "h": 900, "page": "page-2" }
   ],
   "annotations": [
-    { "id": "brief", "x": 0, "y": -220, "w": 640, "text": "Eunomia Overview — concept 'Kontrol odası' (Bekir, 17 Eyl).\nVarsayım: statik mockup, 1440×900, mevcut krem/yeşil marka; veri = 15-16 Eylül'deki gerçek testnet olayları (CAIH…M4AT kasası).\nYapısal düzeltme her üçünde aynı: Overview 'kuralların ne yaptığını' raporlar, elle ödeme yok; Leash/kurallar yan sütunda.\nDNA: design-dna.md (repo kökü)." },
-    { "id": "a-why", "x": 700, "y": -220, "w": 420, "text": "A · Defter — kalıba uygun kontrol odası. Tek koyu panel = son karar (glow yalnız burada). Ana sütun karar defteri, yan sütun sayaç + Leash + kurallar, altta 7 gün.\nRisk: en tanıdık, en az sürpriz." },
-    { "id": "b-why", "x": 1560, "y": -220, "w": 480, "text": "B · Zaman şeridi — yeni metafor: 24 saatlik pencere sayfanın kendisi. Her saat bir hücre, kararlar hücreye düşer, 'now' hücresi mürekkep.\nRisk: az olay olduğunda şerit boş görünür; sayacı okumak için şeridi anlamak gerekir." },
-    { "id": "c-why", "x": 3120, "y": -220, "w": 480, "text": "C · Karanlık kule — koyu tema, 36px satır, tx sütunu, sayaç conic halka (animasyonlu, tek glow).\nRisk: landing'in krem diliyle kopuş; koyu yüzeyde yeşil metin yasağı sürüyor (halka fill, metin krem)." }
+    { "id": "brief", "x": 0, "y": -240, "w": 720, "page": "page-1", "text": "Eunomia — 'Kontrol odası' (A seçildi, 17 Eyl). Beş bölüm + kurulum, 1440×900, mevcut krem/yeşil marka, gerçek testnet verisi (CAIH…M4AT).\nOverview'a eklenen: proof (tx) sütunu, 'Waiting for you' istisna kartı, 7 günü defterin ayağına aldım (boşluk kapandı).\nHer sayfada tek koyu panel: Overview'da son karar, Agent'ta Leash, Setup'ta 'tek imza ne yapar'. Payments = ajanın ödemeleri + retler; elle ödeme kaçış kapısı." },
+    { "id": "pay-why", "x": 1560, "y": -240, "w": 520, "page": "page-1", "text": "Payments: tek defter, filtre çipleri (All/Allowed/Blocked/7 days), her satırda kanıt. Sağda payee yönetimi ve 'Pay by hand' (sen imzalarsın, kurallar yine kontrol eder)." },
+    { "id": "agent-why", "x": 3120, "y": -240, "w": 520, "page": "page-1", "text": "Agent: Leash koyu panelde kahraman (anahtar, harcama, süre, revoke). Altında gerçek özellik: exception requests (Approve payee). Sağda 'connect another agent' 3 adım ve 'rules still apply'." },
+    { "id": "act-why", "x": 0, "y": 860, "w": 520, "page": "page-1", "text": "Activity: platform genelinde tek defter (treasury sütunu), 'my treasury only' çipi, sağda filtre + 7 günlük platform sayaçları. Kind sütunu: Paid yeşil dolgu, Blocked kırmızı çerçeve, gerisi mürekkep." },
+    { "id": "set-why", "x": 1560, "y": 860, "w": 520, "page": "page-1", "text": "Settings: kimlik + limitler + compliance proof solda; sağda sahibin çıkış yolları (kırmızı ÇERÇEVE, dolgu değil) ve kasa özeti." },
+    { "id": "setup-why", "x": 3120, "y": 860, "w": 520, "page": "page-1", "text": "Setup: bugün kodladığımız tek ekran. Sağdaki koyu panel 'o tek imza ne yapar' — kullanıcının kafasındaki 7 adımı 1'e indirdiğimizi görünür kılar." },
+    { "id": "alt", "x": 0, "y": -200, "w": 640, "page": "page-2", "text": "Seçilmeyen iki yön, referans için: B (24h penceresi sayfanın kendisi) ve C (koyu tema, conic halka). A'ya taşınabilecek parçalar: B'nin saat şeridi → Overview'daki 7-gün ayağının yerine; C'nin ledger 4711368 canlılık göstergesi → topbar (alındı)." }
   ],
-  "launch": { "view": "canvas" }
+  "launch": { "view": "canvas", "page": "page-1" }
 }

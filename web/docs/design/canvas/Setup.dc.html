@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Questrial&family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+  <style>
+    body { margin: 0; background: #fcffd5; }
+    a { color: #223e05; } a:hover { color: #55693f; }
+    .num { font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: #55693f; }
+    .panel { border-radius: 14px; border: 1px solid rgba(34,62,5,0.16); background: #f4fadc; }
+    .field { width: 100%; box-sizing: border-box; padding: 11px 13px; border-radius: 10px; background: #fcffd5; border: 1px solid rgba(34,62,5,0.16); font-size: 13.5px; }
+    .lab { display: flex; flex-direction: column; gap: 8px; }
+  </style>
+</helmet>
+<div style="width: 1440px; height: 900px; display: grid; grid-template-columns: 236px minmax(0, 1fr); background: #fcffd5; color: #223e05; font-family: 'Geist', system-ui, sans-serif; font-size: 13.5px; line-height: 1.5; overflow: hidden;">
+
+  <div style="display: flex; flex-direction: column; padding: 22px 14px 16px; border-right: 1px solid rgba(34,62,5,0.16); background: #f4fadc;">
+    <div style="display: flex; align-items: center; gap: 9px; margin: 2px 6px 24px; font-family: 'Questrial', system-ui, sans-serif; font-size: 19px; letter-spacing: -0.01em;">
+      <span style="display: inline-block; width: 24px; height: 24px; border-radius: 6px; background: #223e05; color: #fcffd5; font-family: 'Questrial', sans-serif; font-size: 15px; line-height: 24px; text-align: center;">E</span>
+      <span>Eunomia</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; background: rgba(34,62,5,0.05); color: #223e05; font-weight: 600; box-shadow: inset 3px 0 0 #a2cb28;">Overview</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; color: #55693f; font-weight: 500; opacity: 0.5;">Payments</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; color: #55693f; font-weight: 500; opacity: 0.5;">Agent</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; color: #55693f; font-weight: 500;">Activity</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; color: #55693f; font-weight: 500; opacity: 0.5;">Settings</div>
+    </div>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px; font-size: 12.5px; color: #55693f;">
+      <div style="padding: 10px 12px; border: 1px solid rgba(34,62,5,0.16); border-radius: 9px; background: #fcffd5;">Testnet — free test XLM, no real funds.</div>
+      <div>Docs ↗</div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; min-width: 0;">
+    <div style="height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid rgba(34,62,5,0.16);">
+      <span style="font-size: 12.5px; color: #55693f;">No treasury yet</span>
+      <span class="num" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid rgba(34,62,5,0.16); border-radius: 100px; font-size: 12.5px; background: #f4fadc;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #a2cb28;"></span>CAW4…JKRV</span>
+    </div>
+
+    <div style="padding: 24px; display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: 16px; align-content: start;">
+
+      <div class="panel" style="padding: 24px; display: flex; flex-direction: column; gap: 18px; min-width: 0;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-family: 'Questrial', system-ui, sans-serif; font-size: 26px; letter-spacing: -0.02em;">Set up your treasury</span>
+          <span style="color: #55693f;">Rules, first payee, agent, starting funds — created together, one signature.</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px;">
+          <div class="lab"><div class="eyebrow">Daily limit (XLM)</div><div class="field num">50</div></div>
+          <div class="lab"><div class="eyebrow">Per-payment limit (XLM)</div><div class="field num">10</div></div>
+        </div>
+        <div style="color: #55693f; margin-top: -8px;">Your agent can never spend past the daily cap in any rolling 24 hours, and never more than the per-payment cap at once — enforced on Stellar, not by promise.</div>
+
+        <div class="lab"><div class="eyebrow">First approved payee (optional)</div><div class="field num" style="color: #55693f;">G… or C… — anyone else is refused</div></div>
+
+        <div class="lab"><div class="eyebrow">Agent public key (optional)</div><div class="field num">GB4GJNEZ6KLZNU3TE2CHQFNPOEQL5SHPQ246OMRZRLKVVQNLZCDX2QXZ</div></div>
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px;">
+          <div class="lab"><div class="eyebrow">Leash cap (XLM)</div><div class="field num">25</div></div>
+          <div class="lab"><div class="eyebrow">Duration (hours)</div><div class="field num">24</div></div>
+        </div>
+
+        <div class="lab"><div class="eyebrow">Starting funds (XLM)</div><div class="field num">5</div></div>
+
+        <div style="display: flex; align-items: center; gap: 14px; margin-top: 4px;">
+          <span style="padding: 12px 18px; border-radius: 11px; background: #223e05; color: #fcffd5; font-size: 14.5px; font-weight: 600;">Create treasury — one signature</span>
+          <span style="color: #55693f;">Nothing is created half-way: if any part is refused, nothing happens.</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+        <div style="padding: 20px 22px; border-radius: 14px; background: #223e05; color: #fcffd5; box-shadow: 0 24px 60px -30px rgba(34,62,5,0.55); display: flex; flex-direction: column; gap: 12px;">
+          <div class="eyebrow" style="color: #94a87a;">That one signature does</div>
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; color: #edf6d2;">
+            <div style="display: flex; gap: 10px;"><span class="num" style="color: #94a87a;">1</span><span>Creates the treasury with your rules</span></div>
+            <div style="display: flex; gap: 10px;"><span class="num" style="color: #94a87a;">2</span><span>Approves the first payee</span></div>
+            <div style="display: flex; gap: 10px;"><span class="num" style="color: #94a87a;">3</span><span>Starts the Leash for your agent's key</span></div>
+            <div style="display: flex; gap: 10px;"><span class="num" style="color: #94a87a;">4</span><span>Moves 5 XLM from your wallet into it</span></div>
+            <div style="display: flex; gap: 10px;"><span class="num" style="color: #94a87a;">5</span><span>Backs it up on Stellar — open it from any device</span></div>
+          </div>
+          <div class="num" style="font-size: 12px; color: #94a87a;">then the agent pays on its own, inside the rules</div>
+        </div>
+
+        <div class="panel" style="padding: 20px; display: flex; flex-direction: column; gap: 10px;">
+          <div class="eyebrow">Testnet XLM</div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline;"><span>Your wallet holds</span><span class="num" style="font-size: 14px;">10.00 XLM</span></div>
+          <div style="color: #55693f;">Enough for this setup. Free top-up any time.</div>
+          <span style="width: fit-content; padding: 8px 12px; border-radius: 9px; border: 1px solid rgba(34,62,5,0.16); font-size: 13px; color: #223e05;">Get free testnet XLM</span>
+        </div>
+
+        <div class="panel" style="padding: 20px; display: flex; flex-direction: column; gap: 10px;">
+          <div class="eyebrow">Already have a treasury?</div>
+          <div class="field num" style="color: #55693f;">Treasury contract id (C…)</div>
+          <span style="width: fit-content; padding: 8px 12px; border-radius: 9px; border: 1px solid rgba(34,62,5,0.16); font-size: 13px; color: #223e05;">Open it</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

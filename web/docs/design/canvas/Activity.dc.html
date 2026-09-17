@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Questrial&family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+  <style>
+    body { margin: 0; background: #fcffd5; }
+    a { color: #223e05; } a:hover { color: #55693f; }
+    .num { font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .row { display: grid; grid-template-columns: 110px 96px 104px minmax(0, 1fr) 108px; gap: 12px; align-items: center; padding: 0 20px; height: 44px; border-bottom: 1px solid rgba(34,62,5,0.16); }
+    .eyebrow { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: #55693f; }
+    .panel { border-radius: 14px; border: 1px solid rgba(34,62,5,0.16); background: #f4fadc; }
+    .kind { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+    .chip { padding: 5px 11px; border-radius: 100px; border: 1px solid rgba(34,62,5,0.16); font-size: 12px; font-weight: 500; color: #55693f; }
+  </style>
+</helmet>
+<div style="width: 1440px; height: 900px; display: grid; grid-template-columns: 236px minmax(0, 1fr); background: #fcffd5; color: #223e05; font-family: 'Geist', system-ui, sans-serif; font-size: 13.5px; line-height: 1.5; overflow: hidden;">
+
+  <div style="display: flex; flex-direction: column; padding: 22px 14px 16px; border-right: 1px solid rgba(34,62,5,0.16); background: #f4fadc;">
+    <div style="display: flex; align-items: center; gap: 9px; margin: 2px 6px 24px; font-family: 'Questrial', system-ui, sans-serif; font-size: 19px; letter-spacing: -0.01em;">
+      <span style="display: inline-block; width: 24px; height: 24px; border-radius: 6px; background: #223e05; color: #fcffd5; font-family: 'Questrial', sans-serif; font-size: 15px; line-height: 24px; text-align: center;">E</span>
+      <span>Eunomia</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; color: #55693f; font-weight: 500;">Overview</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; color: #55693f; font-weight: 500;">Payments</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; color: #55693f; font-weight: 500;">Agent</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; background: rgba(34,62,5,0.05); color: #223e05; font-weight: 600; box-shadow: inset 3px 0 0 #a2cb28;">Activity</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; color: #55693f; font-weight: 500;">Settings</div>
+    </div>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px; font-size: 12.5px; color: #55693f;">
+      <div style="padding: 10px 12px; border: 1px solid rgba(34,62,5,0.16); border-radius: 9px; background: #fcffd5;">Testnet — free test XLM, no real funds.</div>
+      <div>Docs ↗</div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; min-width: 0;">
+    <div style="height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid rgba(34,62,5,0.16);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="num" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid rgba(34,62,5,0.16); border-radius: 100px; font-size: 12.5px; background: #f4fadc;">CAIH…M4AT <span style="color: #55693f;">▾</span></span>
+        <span class="num" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #55693f;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #a2cb28;"></span>streaming · ledger 4711368 · 4s ago</span>
+      </div>
+      <span class="num" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid rgba(34,62,5,0.16); border-radius: 100px; font-size: 12.5px; background: #f4fadc;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #a2cb28;"></span>GDPK…NXP6</span>
+    </div>
+
+    <div style="padding: 24px; display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: 16px; align-content: start;">
+
+      <div class="panel" style="overflow: hidden; min-width: 0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px;">
+          <div style="display: flex; align-items: baseline; gap: 12px;">
+            <span style="font-family: 'Questrial', system-ui, sans-serif; font-size: 26px; letter-spacing: -0.02em;">Activity</span>
+            <span class="num" style="font-size: 12px; color: #55693f;">every treasury on Eunomia · full history, live</span>
+          </div>
+          <span class="chip" style="background: rgba(34,62,5,0.05); color: #223e05; border-color: #a2cb28;">my treasury only</span>
+        </div>
+        <div class="row eyebrow" style="height: 32px; border-top: 1px solid rgba(34,62,5,0.16);">
+          <span>When</span><span>Treasury</span><span>Kind</span><span>What happened</span><span style="text-align: right;">Proof</span>
+        </div>
+        <div class="row"><span class="num" style="font-size: 12.5px; color: #55693f;">Today 17:41</span><span class="num" style="font-size: 12.5px;">CAIH…M4AT</span><span class="kind"><span style="width: 8px; height: 8px; border-radius: 2px; background: #a2cb28;"></span>Paid</span><span>Leash-signed agent payment · 1 XLM → GAF7…VCEZ</span><span class="num" style="text-align: right; font-size: 12px; color: #55693f;">abd31c…6603 ↗</span></div>
+        <div class="row"><span class="num" style="font-size: 12.5px; color: #55693f;">Today 17:38</span><span class="num" style="font-size: 12.5px;">CAIH…M4AT</span><span class="kind"><span style="width: 8px; height: 8px; border-radius: 2px; background: #223e05;"></span>Payees</span><span>Owner approved a payee · GAF7…VCEZ</span><span class="num" style="text-align: right; font-size: 12px; color: #55693f;">46db1d…3f16 ↗</span></div>
+        <div class="row"><span class="num" style="font-size: 12.5px; color: #55693f;">Today 17:24</span><span class="num" style="font-size: 12.5px;">CAIH…M4AT</span><span class="kind"><span style="width: 8px; height: 8px; border-radius: 2px; border: 1.5px solid #a62021; box-sizing: border-box;"></span><span style="color: #a62021;">Blocked</span></span><span>Payee not approved · agent asked for an exception</span><span class="num" style="text-align: right; font-size: 12px; color: #55693f;">563171…80be ↗</span></div>
+        <div class="row"><span class="num" style="font-size: 12.5px; color: #55693f;">Today 17:19</span><span class="num" style="font-size: 12.5px;">CAIH…M4AT</span><span class="kind"><span style="width: 8px; height: 8px; border-radius: 2px; border: 1.5px solid #a62021; box-sizing: border-box;"></span><span style="color: #a62021;">Blocked</span></span><span>15 XLM over the 10 XLM cap · refused on-chain</span><span class="num" style="text-align: right; font-size: 12px; color: #55693f;">24da98…9055 ↗</span></div>
+        <div class="row"><span class="num" style="font-size: 12.5px; color: #55693f;">Today 17:12</span><span class="num" style="font-size: 12.5px;">CAIH…M4AT</span><span class="kind"><span style="width: 8px; height: 8px; border-radius: 2px; background: #a2cb28;"></span>Paid</span><span>Leash-signed agent payment · 2.5 XLM → GDOM…QCRT</span><span class="num" style="text-align: right; font-size: 12px; color: #55693f;">e8d564…c8ba ↗</span></div>
+        <div class="row"><span class="num" style="font-size: 12.5px; color: #55693f;">Today 16:58</span><span class="num" style="font-size: 12.5px;">CAIH…M4AT</span><span class="kind"><span style="width: 8px; height: 8px; border-radius: 2px; background: #223e05;"></span>Leash</span><span>Owner started a Leash · GB4G…2QXZ · 30 XLM · 24h</span><span class="num" style="text-align: right; font-size: 12px; color: #55693f;">099dd9…9206 ↗</span></div>
+        <div class="row"><span class="num" style="font-size: 12.5px; color: #55693f;">Today 16:51</span><span class="num" style="font-size: 12.5px;">CAIH…M4AT</span><span class="kind"><span style="width: 8px; height: 8px; border-radius: 2px; background: #223e05;"></span>Create</span><span>Treasury created, funded and Leashed in one signature</span><span class="num" style="text-align: right; font-size: 12px; color: #55693f;">f20587…2004 ↗</span></div>
+        <div class="row" style="color: #55693f;"><span class="num" style="font-size: 12.5px;">Mon 21:04</span><span class="num" style="font-size: 12.5px;">CBA6…QILT</span><span class="kind"><span style="width: 8px; height: 8px; border-radius: 2px; background: #223e05;"></span>Create</span><span>A new treasury on Eunomia · 50 / 10 · funded</span><span class="num" style="text-align: right; font-size: 12px;">a24f01…f637 ↗</span></div>
+        <div class="row" style="color: #55693f; border-bottom: none;"><span class="num" style="font-size: 12.5px;">Mon 20:40</span><span class="num" style="font-size: 12.5px;">CBCB…JN36</span><span class="kind"><span style="width: 8px; height: 8px; border-radius: 2px; background: #223e05;"></span>ZK</span><span>Period attested in-policy · amounts never revealed</span><span class="num" style="text-align: right; font-size: 12px;">426e55…4606 ↗</span></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-top: 1px solid rgba(34,62,5,0.16); background: rgba(34,62,5,0.03);">
+          <span class="num" style="font-size: 12.5px; color: #55693f;">showing 9 of 118</span>
+          <span class="num" style="font-size: 12.5px; color: #55693f;">older ↓</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+        <div class="panel" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+          <div class="eyebrow">Show</div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <span class="chip" style="background: rgba(34,62,5,0.05); color: #223e05; border-color: #a2cb28;">All</span>
+            <span class="chip">Payments</span>
+            <span class="chip">Blocked</span>
+            <span class="chip">Fund</span>
+            <span class="chip">Create</span>
+            <span class="chip">Payees</span>
+            <span class="chip">Leash</span>
+            <span class="chip">Lifecycle</span>
+            <span class="chip">ZK</span>
+          </div>
+        </div>
+        <div class="panel" style="padding: 20px; display: flex; flex-direction: column; gap: 8px;">
+          <div class="eyebrow">Across Eunomia · 7 days</div>
+          <div style="display: flex; justify-content: space-between;"><span>Treasuries created</span><span class="num" style="font-size: 14px;">6</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>Agent payments</span><span class="num" style="font-size: 14px;">31</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>Refused by policy</span><span class="num" style="font-size: 14px;">9</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>Periods attested</span><span class="num" style="font-size: 14px;">2</span></div>
+          <div style="color: #55693f; margin-top: 4px;">Addresses and hashes are already public on Stellar; this is the same record, readable.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
