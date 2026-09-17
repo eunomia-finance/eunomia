@@ -4,6 +4,7 @@ import WalletChip from "../WalletChip";
 import TreasurySwitcher from "./TreasurySwitcher";
 import { APP_PAGES, type AppPage, type View } from "../../lib/routes";
 import "./shell.css";
+import "./ledger.css";
 
 const NAV: Record<AppPage, { label: string; icon: string }> = {
   overview: { label: "Overview", icon: "◈" },
