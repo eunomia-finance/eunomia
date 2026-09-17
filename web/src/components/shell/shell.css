@@ -371,8 +371,10 @@
   background:var(--surface); border:1px solid var(--line);
   box-shadow:0 16px 40px -18px rgba(34,62,5,0.35);
 }
-.shell .anav__mitem{ color:var(--ink); }
-.shell .anav__mitem:hover{ background:var(--raise); }
+/* the menu's items are plain <button>s (appnav.css paints them for the dark landing nav);
+   inside the shell they have to write in ink or they vanish on the cream menu */
+.shell .anav__menu button{ color:var(--ink); }
+.shell .anav__menu button:hover{ background:var(--raise); }
 
 /* skeleton pulse for loading states */
 @keyframes shellPulse{ 0%,100%{ opacity:.5; } 50%{ opacity:.2; } }
