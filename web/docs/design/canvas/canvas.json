@@ -1,0 +1,14 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "A · Defter (control room, by the book)", "x": 0, "y": 0, "w": 1440, "h": 900 },
+    { "file": "ZamanSeridi.dc.html", "title": "B · Zaman şeridi (the 24h window is the page)", "x": 1560, "y": 0, "w": 1440, "h": 900 },
+    { "file": "KaranlikKule.dc.html", "title": "C · Karanlık kule (dark, denser, one glow)", "x": 3120, "y": 0, "w": 1440, "h": 900 }
+  ],
+  "annotations": [
+    { "id": "brief", "x": 0, "y": -220, "w": 640, "text": "Eunomia Overview — concept 'Kontrol odası' (Bekir, 17 Eyl).\nVarsayım: statik mockup, 1440×900, mevcut krem/yeşil marka; veri = 15-16 Eylül'deki gerçek testnet olayları (CAIH…M4AT kasası).\nYapısal düzeltme her üçünde aynı: Overview 'kuralların ne yaptığını' raporlar, elle ödeme yok; Leash/kurallar yan sütunda.\nDNA: design-dna.md (repo kökü)." },
+    { "id": "a-why", "x": 700, "y": -220, "w": 420, "text": "A · Defter — kalıba uygun kontrol odası. Tek koyu panel = son karar (glow yalnız burada). Ana sütun karar defteri, yan sütun sayaç + Leash + kurallar, altta 7 gün.\nRisk: en tanıdık, en az sürpriz." },
+    { "id": "b-why", "x": 1560, "y": -220, "w": 480, "text": "B · Zaman şeridi — yeni metafor: 24 saatlik pencere sayfanın kendisi. Her saat bir hücre, kararlar hücreye düşer, 'now' hücresi mürekkep.\nRisk: az olay olduğunda şerit boş görünür; sayacı okumak için şeridi anlamak gerekir." },
+    { "id": "c-why", "x": 3120, "y": -220, "w": 480, "text": "C · Karanlık kule — koyu tema, 36px satır, tx sütunu, sayaç conic halka (animasyonlu, tek glow).\nRisk: landing'in krem diliyle kopuş; koyu yüzeyde yeşil metin yasağı sürüyor (halka fill, metin krem)." }
+  ],
+  "launch": { "view": "canvas" }
+}

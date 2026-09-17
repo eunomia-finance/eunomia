@@ -35,3 +35,6 @@ web/.design-audit/
 
 
 .vercel
+
+# Assembled design canvases (2 MB editor payload) - re-seed from the .dc.html artboards
+web/docs/design/canvas/eunomia-*.html
