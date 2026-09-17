@@ -4,16 +4,31 @@
 // logged, (3) the original Soroban RPC cursor-poll for richer on-chain event labels.
 import { useEffect, useMemo, useState } from "react";
 import { rpc } from "@stellar/stellar-sdk";
-import { EXPLORER, RPC_URL, TREASURY_ID, VERIFIER_ID } from "../config";
+import { EXPLORER, RPC_URL, TREASURY_ID, VERIFIER_ID, shortAddr } from "../config";
 import { dedupeById, fetchAllEvents, fetchEventsPage, type FeedEvent } from "../lib/events";
 import { fetchActivityHistory, mergeFeedEvents, subscribeActivity } from "../lib/activity";
 import { filterFeed, type FeedFilter } from "../lib/feedFilter";
 import { getTreasuryId } from "../lib/treasuryStore";
 import { useWalletAddress } from "../lib/useWalletAddress";
+import { whenOf } from "./shell/ledgerFormat";
 
 const POLL_MS = 6000; // ~1 testnet ledger
 const MAX_ITEMS = 120;
 const PAGE = 30; // rows revealed per "Load more"
+
+// The kind column. Only two kinds carry colour — a refusal writes in red, a payment the
+// rules let through gets the green mark — the rest are neutral words.
+function kindOf(kind: string): { cls: string; text: string; mark: string | null } {
+  if (kind === "blocked") return { cls: "ledger__kind is-no", text: "Blocked", mark: "mark--no" };
+  if (kind === "paid") return { cls: "ledger__kind", text: "Allowed", mark: "mark--ok" };
+  if (kind === "fund") return { cls: "ledger__kind", text: "Funded", mark: null };
+  if (kind === "deploy") return { cls: "ledger__kind", text: "Created", mark: null };
+  if (kind === "whitelist" || kind === "payee_add") return { cls: "ledger__kind", text: "Payee +", mark: null };
+  if (kind === "payee_rm") return { cls: "ledger__kind", text: "Payee −", mark: null };
+  if (kind === "leash") return { cls: "ledger__kind", text: "Leash", mark: null };
+  if (kind === "revoked") return { cls: "ledger__kind", text: "Revoked", mark: null };
+  return { cls: "ledger__kind", text: kind.replace(/_/g, " "), mark: null };
+}
 
 export default function ActivityFeed({ filter }: { filter?: FeedFilter }) {
   const [events, setEvents] = useState<FeedEvent[]>([]);
@@ -99,106 +114,65 @@ export default function ActivityFeed({ filter }: { filter?: FeedFilter }) {
   }, [events, filter, visible]);
 
   return (
-    <div style={card}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0, fontSize: 24, letterSpacing: "-0.02em" }}>◭ Activity</h1>
-        <span style={dot(state)}>
-          {state === "live" ? "● live" : state === "connecting" ? "○ connecting" : "○ offline"}
+    <section className="panel ledger">
+      <div className="ledger__head">
+        <div>
+          <div className="eyebrow">Every decision on Eunomia</div>
+          <div className="panel__title" style={{ marginTop: 4 }}>Activity</div>
+        </div>
+        <span className="count">
+          <i className={`mark ${state === "live" ? "mark--ok" : state === "error" ? "mark--no" : "mark--ink"}`} style={{ borderRadius: "50%", width: 7, height: 7 }} />
+          {state === "live" ? "live" : state === "connecting" ? "connecting" : "offline — retrying"}
         </span>
       </div>
-      <p style={{ color: "var(--ink-2)", marginTop: 6, fontSize: 14 }}>
-        Every treasury action across Eunomia — full history, streamed live. On-chain events
-        from the demo treasury, the ZK verifier and your own treasury ride on top.
-      </p>
-
-      <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 8 }}>
-        {shown.list.length === 0 ? (
-          <div style={{ color: "var(--ink-2)", fontSize: 14, padding: "20px 0" }}>
-            {state === "error"
-              ? "Couldn't reach the network — retrying…"
-              : state === "connecting"
-                ? "Loading platform activity…"
-                : filter && events.length > 0
-                  ? "Nothing matches these filters."
-                  : "No activity yet — the first treasury action lands here live."}
-          </div>
-        ) : (
-          shown.list.map((e) => {
-            const inner = (
-              <>
-                <span style={kindTag(e.kind)}>{e.kind}</span>
-                <span style={{ flex: 1, fontSize: 13.5 }}>{e.label}</span>
-                <span style={{ color: "var(--ink-2)", fontSize: 11.5 }}>{timeAgo(e.at)}</span>
-              </>
-            );
-            return e.txHash ? (
-              <a key={e.id} style={item} href={`${EXPLORER}/tx/${e.txHash}`} target="_blank" rel="noreferrer">
-                {inner}
-              </a>
-            ) : (
-              <div key={e.id} style={item}>
-                {inner}
-              </div>
-            );
-          })
-        )}
+      <div className="ledger__row ledger__row--feed ledger__row--head">
+        <span className="eyebrow">Time</span>
+        <span className="eyebrow">Kind</span>
+        <span className="eyebrow sm-hide">Treasury</span>
+        <span className="eyebrow">What</span>
+        <span className="eyebrow sm-hide" style={{ textAlign: "right" }}>Proof</span>
       </div>
-      {shown.total > visible && (
-        <button style={loadMore} onClick={() => setVisible((v) => v + PAGE)} type="button">
-          Load more ({shown.total - shown.list.length} older)
-        </button>
+
+      {shown.list.length === 0 ? (
+        <div className="ledger__empty">
+          {state === "error"
+            ? "Couldn't reach the network — retrying…"
+            : state === "connecting"
+              ? "Loading platform activity…"
+              : filter && events.length > 0
+                ? "Nothing matches these filters."
+                : "No activity yet — the first treasury action lands here live."}
+        </div>
+      ) : (
+        shown.list.map((e) => {
+          const k = kindOf(e.kind);
+          const decision = e.kind === "paid" || e.kind === "blocked";
+          return (
+            <div key={e.id} className={`ledger__row ledger__row--feed${decision ? "" : " ledger__row--quiet"}`}>
+              <span className="ledger__when">{whenOf(e.at)}</span>
+              <span className={k.cls}>
+                {k.mark && <i className={`mark ${k.mark}`} />}
+                {k.text}
+              </span>
+              <span className="ledger__when sm-hide" title={e.treasuryId ?? undefined}>{e.treasuryId ? shortAddr(e.treasuryId) : "—"}</span>
+              <span className={`ledger__what${decision ? "" : " is-muted"}`} title={e.label}>{e.label}</span>
+              {e.txHash ? (
+                <a className="ledger__tx sm-hide" href={`${EXPLORER}/tx/${e.txHash}`} target="_blank" rel="noreferrer">
+                  {shortAddr(e.txHash)} ↗
+                </a>
+              ) : (
+                <span className="ledger__tx sm-hide">—</span>
+              )}
+            </div>
+          );
+        })
       )}
-    </div>
+      {shown.total > visible && (
+        <div className="ledger__more">
+          <span>{shown.total - shown.list.length} older</span>
+          <button onClick={() => setVisible((v) => v + PAGE)} type="button">Load more</button>
+        </div>
+      )}
+    </section>
   );
 }
-
-function timeAgo(iso: string): string {
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return "";
-  const s = Math.max(0, Math.floor((Date.now() - t) / 1000));
-  if (s < 60) return `${s}s ago`;
-  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
-}
-
-// Shell-embedded: the AppShell provides page padding/centering; the card fills its slot.
-const card: React.CSSProperties = {
-  width: "100%", boxSizing: "border-box", padding: 24, borderRadius: 18,
-  background: "var(--surface)", border: "1px solid var(--line)",
-  color: "var(--ink)",
-};
-const loadMore: React.CSSProperties = {
-  marginTop: 12, width: "100%", padding: "9px 14px", borderRadius: 10, cursor: "pointer",
-  background: "transparent", border: "1px solid var(--line)", color: "var(--ink-2)",
-  fontSize: 13, fontFamily: "inherit",
-};
-const item: React.CSSProperties = {
-  display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 11,
-  background: "var(--line)", border: "1px solid var(--line)",
-  color: "var(--ink)", textDecoration: "none",
-};
-// A tag per event kind used to mean six different hues. Only two of them ever carried
-// information — a rejection and something the rules let through — so the rest are neutral
-// now. Green is fill only (1.84:1 on cream), so a tag that fills with it writes in ink.
-const ALLOWED: [string, string] = ["color-mix(in oklab, var(--green) 34%, transparent)", "var(--ink)"];
-const NEUTRAL: [string, string] = ["var(--raise)", "var(--ink-2)"];
-const KIND_COLORS: Record<string, [string, string]> = {
-  blocked: ["color-mix(in oklab, var(--red) 14%, transparent)", "var(--red)"],
-  paid: ALLOWED,
-  fund: ALLOWED,
-  deploy: ALLOWED,
-  whitelist: ALLOWED,
-};
-const kindTag = (kind: string): React.CSSProperties => {
-  const [bg, fg] = KIND_COLORS[kind] ?? NEUTRAL;
-  return {
-    fontSize: 10.5, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700,
-    padding: "3px 7px", borderRadius: 6, whiteSpace: "nowrap",
-    background: bg, color: fg,
-  };
-};
-const dot = (state: string): React.CSSProperties => ({
-  fontSize: 12, fontWeight: 600,
-  color: state === "live" ? "var(--ink)" : state === "error" ? "var(--red)" : "var(--ink-2)",
-});

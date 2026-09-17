@@ -163,10 +163,9 @@ export class EunomiaPage {
     await this.page.goto("/#overview");
     await this.page.waitForLoadState("networkidle");
 
-    const toggle = this.page
-      .getByRole("button", { name: /fund/i })
-      .filter({ hasText: /^(\+\s*)?Fund$/i })
-      .first();
+    // The rules panel opens the fund form behind "Add funds"; the submit inside it is
+    // named exactly "Fund", so /^fund$/ below resolves to one button.
+    const toggle = this.page.getByRole("button", { name: /^add funds$/i }).first();
     await toggle.waitFor({ state: "visible" });
     await toggle.click();
 
@@ -174,8 +173,6 @@ export class EunomiaPage {
     await input.waitFor({ state: "visible" });
     await input.fill(amountXlm);
 
-    // The submit inside the fund panel is named exactly "Fund" — the toggle above it
-    // is "+ Fund", which /^fund/ does not match, so this resolves to one button.
     const fundBtn = this.page.getByRole("button", { name: /^fund$/i }).first();
     await fundBtn.click();
 
@@ -197,16 +194,16 @@ export class EunomiaPage {
     await this.page.waitForLoadState("networkidle");
   }
 
+  // Payees live in a standing side panel now (no tab); the hand-payment form is folded
+  // behind "Pay by hand" — the product is the agent paying, this is the escape hatch.
   async switchToPayeesTab(): Promise<void> {
-    const tab = this.page.getByRole("button", { name: /^payees/i }).first();
-    await tab.waitFor({ state: "visible" });
-    await tab.click();
+    await this.page.getByLabel(/^payee address$/i).first().waitFor({ state: "visible" });
   }
 
   async switchToSendTab(): Promise<void> {
-    const tab = this.page.getByRole("button", { name: /^send$/i }).first();
-    await tab.waitFor({ state: "visible" });
-    await tab.click();
+    const open = this.page.getByRole("button", { name: /^pay by hand$/i }).first();
+    await open.waitFor({ state: "visible" });
+    await open.click();
   }
 
   async whitelistPayee(address: string): Promise<void> {
