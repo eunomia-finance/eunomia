@@ -184,7 +184,7 @@ equal that total (public signals 12 → 13, new `.zkey`, new verifier address).
 
 | Item | Value |
 |------|-------|
-| **Compliance verifier (current)** | [`CCZKA3K4…D5Q`](https://stellar.expert/explorer/testnet/contract/CCZKA3K4SPIFWG7UBIY2CE7LPKPMCWROCHXZO2JAMYVVGU6TUKOWMD5Q) |
+| **Compliance verifier (13 public signals, 2026-08-06)** — superseded on 2026-08-07 by the 16-payment-batch verifier [`CD3TB3F4…DYZ3`](https://stellar.expert/explorer/testnet/contract/CD3TB3F4VQF2H56IQC4KV3YLA6QRIF272W5D6PK2SWVTYPXHS4NFDYZ3) (21 public signals — the one the app reads, `web/src/config.ts`); proofs are not portable between the two | [`CCZKA3K4…D5Q`](https://stellar.expert/explorer/testnet/contract/CCZKA3K4SPIFWG7UBIY2CE7LPKPMCWROCHXZO2JAMYVVGU6TUKOWMD5Q) |
 | verifier wasm hash | `84bdc367ff9abfcc00994b7480653135367a26b2a6ffee7e1a52650bad88a00d` |
 | deploy tx | [`7e9ca5e5…115c`](https://stellar.expert/explorer/testnet/tx/7e9ca5e50d4e623a96904ea21651e13d373d5e970a16e05d4cf50bd26b53115c) |
 | live attestation (`attested`, period 20670) | [`426e55d6…4606`](https://stellar.expert/explorer/testnet/tx/426e55d6ce0a9157c156190cee39dc2a1d302cf4c7f4f98cc930da5ad63b4606) |
