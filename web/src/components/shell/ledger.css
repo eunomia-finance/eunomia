@@ -135,7 +135,7 @@
 .shell .steps{ display:flex; flex-direction:column; gap:14px; }
 .shell .step{ display:grid; grid-template-columns:28px minmax(0,1fr); gap:12px; align-items:start; }
 .shell .step__n{ width:24px; height:24px; border-radius:50%; border:1px solid var(--line); display:grid; place-items:center; font-size:12px; color:var(--ink); }
-.shell .code{ font-family:var(--code); font-size:12.5px; padding:8px 10px; border-radius:8px; background:var(--bg); border:1px solid var(--line); display:inline-block; word-break:break-all; }
+.shell .code{ font-family:var(--code); font-size:12.5px; padding:8px 10px; border-radius:8px; background:var(--bg); border:1px solid var(--line); display:inline-block; overflow-wrap:anywhere; }
 .shell .notice{ padding:12px 16px; border-radius:11px; font-size:13.5px; line-height:1.5; background:var(--surface); border:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
 .shell .notice--warn{ color:var(--red); }
 .shell .notice button.linkbtn{ font-size:13.5px; color:var(--ink); }

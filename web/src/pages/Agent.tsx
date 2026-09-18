@@ -14,6 +14,14 @@ export default function Agent() {
   const [hours, setHours] = useState("24");
   const [agentKey, setAgentKey] = useState("");
   const [err, setErr] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const initCommand = `npx -y eunomia-mcp init --treasury ${t.treasuryId ?? "<treasury id>"}`;
+  const copyInit = () => {
+    void navigator.clipboard?.writeText(initCommand);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1400);
+  };
 
   const session = t.lifecycle?.session ?? null;
   const active = t.sessionActive && session;
@@ -155,8 +163,15 @@ export default function Agent() {
             <div className="step">
               <span className="step__n">1</span>
               <div>
-                <div style={{ fontSize: 13.5 }}>On the agent's machine, print its key.</div>
-                <span className="code" style={{ marginTop: 6 }}>npx eunomia-mcp init</span>
+                <div style={{ fontSize: 13.5 }}>On the agent's machine, make its key. It prints the key and the MCP client config.</div>
+                {/* The whole command, with this treasury's id in it: `init` refuses to run without
+                    one, and an id typed by hand from another screen is how a first try fails. */}
+                <span className="code" style={{ marginTop: 6 }}>{initCommand}</span>
+                <div>
+                  <button className="linkbtn" onClick={copyInit} type="button" aria-live="polite">
+                    {copied ? "copied" : "copy command"}
+                  </button>
+                </div>
               </div>
             </div>
             <div className="step">

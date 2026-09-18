@@ -1,6 +1,10 @@
 // The hackathon's core claim, driven through the real UI against the real anchor: a new
 // owner creates a USDC treasury and fills it with TRY — a bank transfer in, USDC out, with no
 // wallet prompt on the funding leg.
+import { execSync } from "node:child_process";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test as base } from "@playwright/test";
 import { Keypair } from "@stellar/stellar-sdk";
 import { getTestSigner, injectTestSigner, EunomiaPage, expect } from "./eunomiaTest";
@@ -95,6 +99,34 @@ test("a USDC treasury is funded with TRY through the anchor", async ({ eunomia, 
   await page.getByRole("button", { name: /move it in/i }).click();
   await expect(page.getByText(/is waiting outside the treasury/i)).toHaveCount(0, { timeout: 120_000 });
   await expect.poll(async () => Number(((await balance.textContent()) ?? "0").split(" ")[0]), { timeout: 60_000 }).toBeGreaterThan(5);
+
+  // Connect an external agent the way the Agent page tells a newcomer to: run the command
+  // exactly as the page prints it — the published package, from an empty directory — paste
+  // the key it prints, authorise, and ask the package whether it may spend.
+  await page.goto("/#agent");
+  const command = ((await page.locator(".code", { hasText: "eunomia-mcp init" }).textContent()) ?? "").trim();
+  expect(command).toMatch(/^npx -y eunomia-mcp init --treasury C[A-Z2-7]{55}$/);
+  const treasuryId = command.split(" ").at(-1) as string;
+
+  const home = mkdtempSync(join(tmpdir(), "eunomia-e2e-"));
+  const run = (cmd: string) => execSync(cmd, { cwd: home, env: { ...process.env, EUNOMIA_HOME: home }, encoding: "utf8", timeout: 240_000 });
+  const agentKey = /Agent public key:\s+(G[A-Z2-7]{55})/.exec(run(command))?.[1];
+  expect(agentKey, "init printed no agent key").toBeTruthy();
+
+  const before = JSON.parse(run(`npx -y eunomia-mcp status --treasury ${treasuryId}`)) as { canSpend: boolean };
+  expect(before.canSpend).toBe(false);
+
+  await page.getByLabel(/external agent public key/i).fill(agentKey as string);
+  await page.getByRole("button", { name: /authorise agent/i }).click();
+  await expect(page.getByText(/leash · active/i)).toBeVisible({ timeout: 180_000 });
+  await page.screenshot({ path: "test-results/try-7-agent.png" });
+
+  const after = JSON.parse(run(`npx -y eunomia-mcp status --treasury ${treasuryId}`)) as {
+    canSpend: boolean;
+    session: { isThisAgent: boolean; cap: string };
+  };
+  expect(after.canSpend).toBe(true);
+  expect(after.session.isThisAgent).toBe(true);
 
   expect(pageErrors).toEqual([]);
 });
