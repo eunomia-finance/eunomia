@@ -4,19 +4,24 @@
 import { supabase, supabaseConfigured } from "./supabase";
 import type { FeedEvent } from "./events";
 
-export type ActivityAction =
-  | "deploy"
-  | "fund"
-  | "whitelist"
-  | "pay"
-  | "reject"
-  | "pause"
-  | "withdraw"
-  | "limits"
-  | "session_start"
-  | "session_revoke"
-  | "agent_pay"
-  | "register";
+/** Every verb the app can log. The database's CHECK allowlist
+ *  (supabase/migrations/0005_activity_action_verbs.sql) must carry the same set —
+ *  activity.migration.test.ts holds the two together. */
+export const ACTIVITY_ACTIONS = [
+  "deploy",
+  "fund",
+  "whitelist",
+  "pay",
+  "reject",
+  "pause",
+  "withdraw",
+  "limits",
+  "session_start",
+  "session_revoke",
+  "agent_pay",
+  "register",
+] as const;
+export type ActivityAction = (typeof ACTIVITY_ACTIONS)[number];
 
 export interface ActivityInput {
   walletAddress: string;
