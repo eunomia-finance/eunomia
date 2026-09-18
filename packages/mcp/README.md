@@ -44,7 +44,7 @@ claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -e EUNOMIA_NETWORK=testnet -- 
 | `request_exception` | `to`, `amount` (+ `taskId?`) | Files a request the owner sees on the dashboard's Agent page (see below); returns its `id`, the request `txHash`, the `reasons` and what the owner can do about each. Refuses to file when the payment is already inside policy. |
 | `check_exception` | `id` (+ `close?`) | `approved` when the treasury would now accept that payment (then call `pay`), `pending` while it would still refuse, `closed` when the entry is gone. `close: true` removes the entry. |
 
-Every call reads the chain fresh. Amounts are decimal strings in the treasury's token (XLM or USDC — both 7 decimals), with raw stroops alongside where an agent would compute with them.
+Every call reads the chain fresh. Amounts are decimal strings in the treasury's token, with raw stroops alongside where an agent would compute with them. Which token that is comes back as **`unit`** next to every amount (`"USDC"`, `"XLM"`) — read from the token contract's own `symbol()`, so it is right for whatever the treasury holds; `token` carries the contract id, which is what an x402 requirement is matched against. `unit` is `null` only when the chain could not be asked, and never blocks a payment.
 
 ### Refusals are coded, at every stage
 

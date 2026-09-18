@@ -7,7 +7,7 @@ import { fileExceptionStore, type ExceptionStore } from "./store.js";
 import { registerTools } from "./tools.js";
 
 export const SERVER_NAME = "eunomia-mcp";
-export const SERVER_VERSION = "0.2.0";
+export const SERVER_VERSION = "0.2.1";
 
 export interface ServerContext {
   net: NetworkConfig;

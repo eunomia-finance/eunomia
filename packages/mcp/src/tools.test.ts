@@ -73,6 +73,23 @@ test("serializeOutcome is transport-safe and links the tx", () => {
   assert.doesNotThrow(() => JSON.stringify(refused));
 });
 
+test("every amount says what it is an amount of — and says null when nobody could be asked", () => {
+  const budget = computeBudget(snap(), AGENT, NOW);
+  const named = serializeBudget(budget, "testnet", "USDC") as Record<string, any>;
+  assert.equal(named.unit, "USDC");
+  assert.match(named.note, /decimal string in USDC/);
+  // `token` stays: the unit is for reading, the contract id is what x402 matching compares.
+  assert.equal(named.token, "CTOKEN");
+
+  const unnamed = serializeBudget(budget, "testnet") as Record<string, any>;
+  assert.equal(unnamed.unit, null);
+  assert.match(unnamed.note, /in the treasury's token/);
+
+  const outcome = { paid: true as const, txHash: "ab".repeat(32), ledger: 9, to: "GPAYEE", amount: 15_000_000n, taskId: 0n };
+  assert.equal((serializeOutcome(outcome, "testnet", "USDC") as Record<string, any>).unit, "USDC");
+  assert.equal((serializeOutcome(outcome, "testnet") as Record<string, any>).unit, null);
+});
+
 test("ownerActionsFor maps codes to what the dashboard can do", () => {
   assert.match(ownerActionsFor([2]).join(" "), /Approve payee/);
   assert.match(ownerActionsFor([3, 4]).join(" "), /limits/);

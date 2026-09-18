@@ -12,6 +12,7 @@ import { payFromTreasury } from "./pay.js";
 import { contextFromEnv, createServer, SERVER_VERSION } from "./server.js";
 import { serializeBudget, serializeOutcome } from "./tools.js";
 import { makeClient, readTreasury } from "./treasury.js";
+import { treasuryUnit } from "./unit.js";
 
 const USAGE = `eunomia-mcp ${SERVER_VERSION} — connect an AI agent to a Eunomia treasury on Stellar
 
@@ -134,7 +135,8 @@ async function status(): Promise<void> {
   const client = makeClient(ctx.net, treasury);
   const snap = await readTreasury(client, treasury);
   const budget = computeBudget(snap, ctx.credential?.agentPublicKey ?? null, Math.floor(Date.now() / 1000));
-  console.log(JSON.stringify({ agentPublicKey: ctx.credential?.agentPublicKey ?? null, ...serializeBudget(budget, ctx.net.name) }, null, 2));
+  const unit = await treasuryUnit(ctx.net, treasury, snap.config.token);
+  console.log(JSON.stringify({ agentPublicKey: ctx.credential?.agentPublicKey ?? null, ...serializeBudget(budget, ctx.net.name, unit) }, null, 2));
 }
 
 async function pay(): Promise<void> {
@@ -145,7 +147,7 @@ async function pay(): Promise<void> {
   if (opts.task !== undefined && !/^\d+$/.test(opts.task)) throw new Error("--task must be a non-negative integer");
   const args = { to: opts.to, amount: toStroops(opts.amount), taskId: BigInt(opts.task ?? "0") };
   const outcome = await payFromTreasury(ctx, args);
-  const out: Record<string, unknown> = serializeOutcome(outcome, ctx.net.name);
+  const out: Record<string, unknown> = serializeOutcome(outcome, ctx.net.name, await treasuryUnit(ctx.net, requireTreasury(env)));
   if (!outcome.paid && outcome.reasons.length > 0 && opts["record-rejection"]) {
     // The simulation's verdict has no tx hash. Submit anyway so the refusal is on the ledger.
     const rec = await recordRejectionOnChain(ctx, args);

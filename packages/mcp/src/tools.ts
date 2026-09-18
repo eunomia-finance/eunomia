@@ -14,16 +14,19 @@ import { payFromTreasury, preflightReasons, type PayOutcome } from "./pay.js";
 import { listAllowedPayees } from "./payees.js";
 import type { ServerContext } from "./server.js";
 import { isPayee, makeClient, readTreasury } from "./treasury.js";
+import { treasuryUnit } from "./unit.js";
 import { checkRequirement, type PaymentRequirements } from "./x402.js";
 
 const amt = (v: bigint) => fromStroops(v);
 
 /** Budget → transport-safe JSON: every bigint becomes a decimal string in the token's
- *  units, with the raw stroops kept alongside where an agent would compute with them. */
-export function serializeBudget(b: Budget, net: NetworkName): Record<string, unknown> {
+ *  units, with the raw stroops kept alongside where an agent would compute with them.
+ *  `unit` names that token ("USDC", "XLM"); null when the chain could not be asked. */
+export function serializeBudget(b: Budget, net: NetworkName, unit: string | null = null): Record<string, unknown> {
   return {
     treasury: b.contractId,
     token: b.token,
+    unit,
     paused: b.paused,
     perPaymentCap: amt(b.perPaymentCap),
     perPaymentCapStroops: b.perPaymentCap.toString(),
@@ -55,7 +58,7 @@ export function serializeBudget(b: Budget, net: NetworkName): Record<string, unk
       reasons: b.decision.reasons,
     },
     links: { contract: contractUrl(net, b.contractId) },
-    note: "Numbers are pre-flight reads; the treasury contract enforces the same rules on-chain at payment time.",
+    note: `Every amount here is a decimal string${unit ? ` in ${unit}` : " in the treasury's token"}. Numbers are pre-flight reads; the treasury contract enforces the same rules on-chain at payment time.`,
   };
 }
 
@@ -73,8 +76,8 @@ export const ownerActionsFor = (codes: number[]): string[] =>
   codes.map((c) => OWNER_ACTION[c] ?? `Resolve contract error #${c}.`);
 
 /** PayOutcome → transport-safe JSON with the explorer link and the agent's next step. */
-export function serializeOutcome(o: PayOutcome, net: NetworkName): Record<string, unknown> {
-  const base = { paid: o.paid, to: o.to, amount: amt(o.amount), amountStroops: o.amount.toString(), taskId: o.taskId.toString() };
+export function serializeOutcome(o: PayOutcome, net: NetworkName, unit: string | null = null): Record<string, unknown> {
+  const base = { paid: o.paid, to: o.to, amount: amt(o.amount), unit, amountStroops: o.amount.toString(), taskId: o.taskId.toString() };
   if (o.paid) return { ...base, txHash: o.txHash, ledger: o.ledger, links: { tx: txUrl(net, o.txHash) } };
   const policyRefusal = o.reasons.length > 0;
   return {
@@ -127,7 +130,7 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
     {
       title: "Check budget",
       description:
-        "What this agent may spend from its Eunomia treasury right now: per-payment cap, rolling 24h limit, Leash session cap and expiry, pause state, free balance. Pass `amount` (e.g. \"2.5\") to pre-flight a specific payment and get the contract's rejection reasons before paying.",
+        "What this agent may spend from its Eunomia treasury right now: per-payment cap, rolling 24h limit, Leash session cap and expiry, pause state, free balance — all in the treasury's token, named in `unit` (e.g. \"USDC\"). Pass `amount` (e.g. \"2.5\") to pre-flight a specific payment and get the contract's rejection reasons before paying.",
       inputSchema: {
         amount: z.string().optional().describe('Amount in the treasury\'s token (7 decimals), e.g. "2.5"'),
       },
@@ -143,7 +146,8 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
           now(),
           amount !== undefined ? toStroops(amount) : undefined,
         );
-        return ok({ agentPublicKey: ctx.credential?.agentPublicKey ?? null, ...serializeBudget(budget, ctx.net.name) });
+        const unit = await treasuryUnit(ctx.net, ctx.treasuryId, snap.config.token);
+        return ok({ agentPublicKey: ctx.credential?.agentPublicKey ?? null, ...serializeBudget(budget, ctx.net.name, unit) });
       } catch (e) {
         return fail(`check_budget failed: ${errText(e)}`);
       }
@@ -220,7 +224,7 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
         'Pay a payee from the Eunomia treasury with this agent\'s Leash key. Give `to` + `amount` (treasury token, e.g. "2.5"), or pass an x402 payment option (`x402` = one element of a 402 response\'s `accepts[]`: scheme "exact", this network, the treasury\'s asset) and it is settled through the treasury\'s on-chain pay(). Refusals come back with the contract\'s own error codes — they are policy, not failures; call request_exception to ask the owner.',
       inputSchema: {
         to: z.string().optional().describe("Payee address (G… or C…)"),
-        amount: z.string().optional().describe('Amount in the treasury\'s token, e.g. "2.5"'),
+        amount: z.string().optional().describe('Amount in the treasury\'s token (the `unit` check_budget reports), e.g. "2.5"'),
         taskId: z.number().int().nonnegative().optional().describe("Attribution id recorded on-chain (task_spent); default 0"),
         x402: x402Schema
           .optional()
@@ -272,7 +276,7 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
         }
         return ok({
           agentPublicKey: ctx.credential?.agentPublicKey ?? null,
-          ...serializeOutcome(outcome, ctx.net.name),
+          ...serializeOutcome(outcome, ctx.net.name, await treasuryUnit(ctx.net, ctx.treasuryId)),
           closedExceptions: closed,
         });
       } catch (e) {
@@ -318,6 +322,7 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
           ledger: filed.ledger,
           to,
           amount: amt(stroops),
+          unit: await treasuryUnit(ctx.net, ctx.treasuryId, pre.budget.token),
           amountStroops: stroops.toString(),
           taskId: task.toString(),
           reasons: pre.reasons,
@@ -364,6 +369,7 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
           request: {
             to: entry.payee,
             amount: amt(entry.amount),
+            unit: await treasuryUnit(ctx.net, ctx.treasuryId, pre.budget.token),
             amountStroops: entry.amount.toString(),
             taskId: entry.taskId.toString(),
             requestedAt: new Date(entry.requestedAt * 1000).toISOString(),
