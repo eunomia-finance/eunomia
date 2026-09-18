@@ -18,9 +18,10 @@ import { needsFunding, MIN_XLM } from "../lib/funding";
 import { useNow } from "../lib/useNow";
 import type { View } from "../lib/routes";
 import RecentActivity from "../components/shell/RecentActivity";
-import { amountOf, whenOf } from "../components/shell/ledgerFormat";
+import { amountOf, inToken, whenOf } from "../components/shell/ledgerFormat";
 import ExceptionRequests from "../components/ExceptionRequests";
 import BottomSheet from "../components/shell/BottomSheet";
+import AddFundsTry from "../components/AddFundsTry";
 import { decisionsByDay } from "../lib/insights";
 import { useIsMobile } from "../lib/useIsMobile";
 
@@ -55,7 +56,9 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
   const t = useTreasury();
   const treasuryId = t.treasuryId as string; // the shell only renders Overview with one open
   const analytics = useAnalyticsScore(treasuryId, t.refreshKey);
-  const { rows, freshId } = useTreasuryActivity(treasuryId, t.refreshKey);
+  const { rows: written, freshId } = useTreasuryActivity(treasuryId, t.refreshKey);
+  // One list feeds the verdict, the ledger and the bars — set the unit once, here.
+  const rows = useMemo(() => written.map((e) => inToken(e, t.tokenCode)), [written, t.tokenCode]);
 
   const [fundOpen, setFundOpen] = useState(false);
   const fundPanel = useRef<HTMLDivElement>(null);
@@ -115,7 +118,7 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
     });
   };
 
-  const fundForm = (inSheet: boolean) => (
+  const xlmFundForm = (inSheet: boolean) => (
     <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
       <input
         className="field field--mono"
@@ -155,6 +158,9 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
     setFundOpen(false);
     setFundErr("");
   };
+  // A USDC treasury is funded with TRY through the anchor; an XLM one from the wallet.
+  const fundForm = (inSheet: boolean) =>
+    t.tokenCode === "USDC" ? <AddFundsTry onDone={closeFund} /> : xlmFundForm(inSheet);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -175,7 +181,7 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
 
       {/* A low wallet only matters while the treasury itself is empty: after a one-signature
           setup moved everything in, "you need 20 XLM to fund a treasury" is just noise. */}
-      {t.address && t.walletXlm !== undefined && needsFunding(t.walletXlm) && s && s.balance === 0n && (
+      {t.address && t.tokenCode === "XLM" && t.walletXlm !== undefined && needsFunding(t.walletXlm) && s && s.balance === 0n && (
         <div className="notice">
           <span>
             {t.walletXlm === null ? "Your wallet holds no testnet XLM yet." : `Your wallet holds ${t.walletXlm.toFixed(2)} XLM.`}{" "}
@@ -208,7 +214,7 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
                   <div className="eyebrow">Latest decision · {whenOf(latest.at)}</div>
                   <div className="verdict__line">
-                    <span className="verdict__amount">{amountOf(latest) ? `${Number(amountOf(latest))} XLM` : latest.kind === "blocked" ? "Refused" : "Paid"}</span>
+                    <span className="verdict__amount">{amountOf(latest) ? `${Number(amountOf(latest))} ${t.tokenCode}` : latest.kind === "blocked" ? "Refused" : "Paid"}</span>
                   </div>
                   <div className="verdict__why">{latest.label}</div>
                 </div>
@@ -248,11 +254,11 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
               <>
                 <div className="meter__big">
                   <span className="num">{fmtXlm(s.daySpent)}</span>
-                  <small>/ {fmtXlm(s.dailyLimit)} XLM</small>
+                  <small>/ {fmtXlm(s.dailyLimit)} {t.tokenCode}</small>
                 </div>
                 <div className="bar"><div className="bar__fill" style={{ width: `${dayPct}%` }} /></div>
                 <div className="meter__line">
-                  <span>≤ {fmtXlm(s.perTaskLimit)} XLM per payment</span>
+                  <span>≤ {fmtXlm(s.perTaskLimit)} {t.tokenCode} per payment</span>
                   <span className="num">{fmtXlm(remaining)} left</span>
                 </div>
               </>
@@ -278,7 +284,7 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
                 </div>
                 <div className="bar bar--thin"><div className="bar__fill bar__fill--ink" style={{ width: `${leashPct}%` }} /></div>
                 <div className="meter__line">
-                  <span className="num">{fmtXlm(session.spent)} / {fmtXlm(session.limit)} XLM</span>
+                  <span className="num">{fmtXlm(session.spent)} / {fmtXlm(session.limit)} {t.tokenCode}</span>
                   <span className="num">expires in {countdown(Number(session.valid_until) * 1000 - now)}</span>
                 </div>
               </>
@@ -298,10 +304,10 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
             </div>
             {s ? (
               <>
-                <div className="panel__kv"><span>Per day</span><span className="num">{fmtXlm(s.dailyLimit)} XLM</span></div>
-                <div className="panel__kv"><span>Per payment</span><span className="num">{fmtXlm(s.perTaskLimit)} XLM</span></div>
+                <div className="panel__kv"><span>Per day</span><span className="num">{fmtXlm(s.dailyLimit)} {t.tokenCode}</span></div>
+                <div className="panel__kv"><span>Per payment</span><span className="num">{fmtXlm(s.perTaskLimit)} {t.tokenCode}</span></div>
                 <div className="panel__kv"><span>Approved payees</span><span className="num">{payeeCount ?? "—"}</span></div>
-                <div className="panel__kv"><span>Balance</span><span className="num">{fmtXlm(s.balance)} XLM</span></div>
+                <div className="panel__kv"><span>Balance</span><span className="num" data-testid="treasury-balance">{fmtXlm(s.balance)} {t.tokenCode}</span></div>
                 {t.lifecycle?.paused && <div className="err">Spending is paused — every payment is refused until you resume.</div>}
               </>
             ) : (

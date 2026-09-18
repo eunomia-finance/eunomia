@@ -76,7 +76,7 @@ export default function ExceptionRequests({ agent }: { agent: string }) {
           <div key={r.id} style={{ paddingTop: 12, borderTop: "1px solid var(--line)", display: "flex", flexDirection: "column", gap: 8 }}>
             <div className="rowline">
               <span className="num" style={{ fontSize: 14 }}>
-                {fmtXlm(r.amount)} XLM <span style={{ color: "var(--ink-2)" }}>→</span> {shortAddr(r.payee)}
+                {fmtXlm(r.amount)} {t.tokenCode} <span style={{ color: "var(--ink-2)" }}>→</span> {shortAddr(r.payee)}
               </span>
               <span className={status === "resolved" ? "pill pill--ok" : "pill pill--rule"}>
                 {status === "resolved" ? "allowed now" : "pending"}

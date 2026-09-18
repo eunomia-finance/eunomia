@@ -3,6 +3,7 @@
 import { createContext } from "react";
 import type { Lifecycle, EunomiaState } from "../lib/userTreasury";
 import type { TreasuryRef } from "../lib/treasuryList";
+import type { TokenCode } from "../lib/token";
 
 // One in-flight wallet action at a time (a wallet signs one tx at a time) — the key
 // names WHICH action runs, so its button can show progress while the rest stay locked.
@@ -38,12 +39,17 @@ export interface DeployExtras {
   capXlm?: string;
   hours?: string;
   fundXlm?: string;
+  /** What the treasury holds. USDC opens empty — it is funded with TRY afterwards, because
+   *  the owner's wallet holds none to move in. XLM when left out. */
+  token?: TokenCode;
 }
 
 export interface TreasuryContextValue {
   address: string | null;
   treasuryId: string | null;
   state: EunomiaState | null;
+  /** The label for every amount on the open treasury: the token it holds. */
+  tokenCode: TokenCode;
   lifecycle: Lifecycle | null;
   legacy: boolean;
   sessionActive: boolean;

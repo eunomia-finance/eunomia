@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseXlmAmount, isValidPaymentDest } from "./validate";
+import { parseOptionalXlmAmount, parseXlmAmount, isValidPaymentDest } from "./validate";
 
 describe("parseXlmAmount", () => {
   it("accepts a positive number", () => {
@@ -20,6 +20,24 @@ describe("parseXlmAmount", () => {
   });
   it("uses the given label in its message", () => {
     expect(parseXlmAmount("", "daily limit")).toEqual({ ok: false, msg: "Enter a daily limit." });
+  });
+});
+
+describe("parseOptionalXlmAmount", () => {
+  it("reads blank and zero as none — the form promises that 0 opens the treasury empty", () => {
+    for (const none of ["", "  ", "0", "0.0", "0.0000000"]) {
+      expect(parseOptionalXlmAmount(none, "starting funds")).toEqual({ ok: true, value: 0 });
+    }
+  });
+  it("accepts a real amount", () => {
+    expect(parseOptionalXlmAmount(" 20 ")).toEqual({ ok: true, value: 20 });
+  });
+  it("still rejects what is not an amount", () => {
+    expect(parseOptionalXlmAmount("-5").ok).toBe(false);
+    expect(parseOptionalXlmAmount("abc", "starting funds")).toEqual({
+      ok: false,
+      msg: "Enter a valid starting funds greater than zero.",
+    });
   });
 });
 

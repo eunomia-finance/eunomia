@@ -13,7 +13,7 @@ import { loadPayeeBook, mergePayees, payeesFromEvents, rememberPayee, forgetPaye
 import { fetchActivityHistory, mergeFeedEvents, subscribeActivity } from "../lib/activity";
 import { filterFeed } from "../lib/feedFilter";
 import type { FeedEvent } from "../lib/events";
-import { amountOf, verdictOf, whenOf } from "../components/shell/ledgerFormat";
+import { amountOf, inToken, verdictOf, whenOf } from "../components/shell/ledgerFormat";
 
 type Verify = Record<string, boolean | undefined>; // address -> on-chain whitelist truth
 type Slice = "all" | "paid" | "blocked";
@@ -126,8 +126,9 @@ export default function Payments() {
   }, [treasuryId, t.refreshKey]);
 
   const decisions = useMemo(
-    () => filterFeed(history, { groups: new Set(["payments", "blocked"]), treasuryId }),
-    [history, treasuryId],
+    () =>
+      filterFeed(history, { groups: new Set(["payments", "blocked"]), treasuryId }).map((e) => inToken(e, t.tokenCode)),
+    [history, treasuryId, t.tokenCode],
   );
   const [slice, setSlice] = useState<Slice>("all");
   const shown = useMemo(
@@ -303,14 +304,14 @@ export default function Payments() {
                 <input
                   className="field field--mono"
                   inputMode="decimal"
-                  placeholder="XLM"
-                  aria-label="Payment amount in XLM"
+                  placeholder={t.tokenCode}
+                  aria-label={`Payment amount in ${t.tokenCode}`}
                   value={payAmt}
                   onChange={(e) => setPayAmt(e.target.value)}
                 />
                 {s && (
                   <div className={overPerTask || overDaily ? "err" : "panel__note"}>
-                    ≤ {fmtXlm(s.perTaskLimit)} XLM per payment · {remaining !== null ? fmtXlm(remaining) : "—"} XLM left today
+                    ≤ {fmtXlm(s.perTaskLimit)} {t.tokenCode} per payment · {remaining !== null ? fmtXlm(remaining) : "—"} {t.tokenCode} left today
                     {overPerTask && " — above your per-payment cap; it will be blocked"}
                     {!overPerTask && overDaily && " — above what's left today; it will be blocked"}
                   </div>

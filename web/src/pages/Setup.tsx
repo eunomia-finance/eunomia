@@ -8,6 +8,7 @@ import { useTreasury } from "../state/useTreasury";
 import { needsFunding, MIN_XLM } from "../lib/funding";
 import { passkeyCapability } from "../lib/passkeySupport";
 import type { View } from "../lib/routes";
+import type { TokenCode } from "../lib/token";
 import { errText } from "../lib/wallet-errors";
 import { connectPasskey } from "../lib/walletKit";
 import { shortAddr } from "../config";
@@ -21,6 +22,9 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
   const [cap, setCap] = useState("25");
   const [hours, setHours] = useState("24");
   const [fundXlm, setFundXlm] = useState("20");
+  // What the treasury holds is fixed at creation. USDC first: it is the one funded with TRY,
+  // and the one a passkey owner can fill without ever needing XLM.
+  const [token, setToken] = useState<TokenCode>("USDC");
   const [existing, setExisting] = useState("");
   const [err, setErr] = useState("");
   const [openErr, setOpenErr] = useState("");
@@ -53,7 +57,7 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
 
   const doDeploy = async () => {
     setErr("");
-    const res = await t.deploy(daily, perTask, { payee, agentKey, capXlm: cap, hours, fundXlm });
+    const res = await t.deploy(daily, perTask, { payee, agentKey, capXlm: cap, hours, fundXlm, token });
     if (!res.ok && res.validation) setErr(res.msg);
   };
 
@@ -106,7 +110,10 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
   // ---- one-screen creation --------------------------------------------------------
   const payeeOn = withPayee && payee.trim() !== "";
   const agentOn = withAgent && agentKey.trim() !== "";
-  const fundOn = Number(fundXlm) > 0;
+  const fundOn = token === "XLM" && Number(fundXlm) > 0;
+  // A smart wallet never pays a fee — the relay does — so with a USDC treasury it needs no
+  // XLM at all. Everyone else needs some: for fees, and for the starting funds of an XLM one.
+  const wantsXlm = token === "XLM" || !t.address.startsWith("C");
 
   return (
     <div className="page">
@@ -117,7 +124,7 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
           </div>
         )}
 
-        {t.walletXlm !== undefined && needsFunding(t.walletXlm) && (
+        {wantsXlm && t.walletXlm !== undefined && needsFunding(t.walletXlm) && (
           <div className="notice">
             <span>
               {t.walletXlm === null ? "Your wallet doesn't exist on testnet yet (0 XLM). " : `Your wallet holds ${t.walletXlm.toFixed(2)} XLM on testnet. `}
@@ -137,22 +144,41 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
             per-payment cap at once. Enforced on Stellar, not by promise.
           </div>
 
-          <div className="two" style={{ marginTop: 6 }}>
+          <div className="lab" style={{ marginTop: 6 }}>
+            <span className="eyebrow">The treasury holds</span>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} role="group" aria-label="Treasury currency">
+              <button className={`chip${token === "USDC" ? " is-on" : ""}`} onClick={() => setToken("USDC")} aria-pressed={token === "USDC"} type="button">
+                USDC · funded with TRY
+              </button>
+              <button className={`chip${token === "XLM" ? " is-on" : ""}`} onClick={() => setToken("XLM")} aria-pressed={token === "XLM"} type="button">
+                XLM · funded from your wallet
+              </button>
+            </div>
+          </div>
+
+          <div className="two">
             <label className="lab">
-              <span className="eyebrow">Daily limit (XLM)</span>
-              <input className="field field--mono" inputMode="decimal" aria-label="Daily limit in XLM" value={daily} onChange={(e) => setDaily(e.target.value)} />
+              <span className="eyebrow">Daily limit ({token})</span>
+              <input className="field field--mono" inputMode="decimal" aria-label={`Daily limit in ${token}`} value={daily} onChange={(e) => setDaily(e.target.value)} />
             </label>
             <label className="lab">
-              <span className="eyebrow">Per-payment limit (XLM)</span>
-              <input className="field field--mono" inputMode="decimal" aria-label="Per-payment limit in XLM" value={perTask} onChange={(e) => setPerTask(e.target.value)} />
+              <span className="eyebrow">Per-payment limit ({token})</span>
+              <input className="field field--mono" inputMode="decimal" aria-label={`Per-payment limit in ${token}`} value={perTask} onChange={(e) => setPerTask(e.target.value)} />
             </label>
           </div>
 
-          <label className="lab">
-            <span className="eyebrow">Starting funds (XLM)</span>
-            <input className="field field--mono" inputMode="decimal" aria-label="Starting funds in XLM" value={fundXlm} onChange={(e) => setFundXlm(e.target.value)} />
-            <span className="panel__note">Moved from your wallet into the treasury in the same signature. 0 opens it empty; you can add funds any time.</span>
-          </label>
+          {token === "XLM" ? (
+            <label className="lab">
+              <span className="eyebrow">Starting funds (XLM)</span>
+              <input className="field field--mono" inputMode="decimal" aria-label="Starting funds in XLM" value={fundXlm} onChange={(e) => setFundXlm(e.target.value)} />
+              <span className="panel__note">Moved from your wallet into the treasury in the same signature. 0 opens it empty; you can add funds any time.</span>
+            </label>
+          ) : (
+            <div className="panel__note">
+              It opens empty. Right after, you add funds with TRY: a bank transfer goes in, USDC comes out into the
+              treasury — with no wallet prompt.
+            </div>
+          )}
 
           {/* the optional parts, folded */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
@@ -197,8 +223,8 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
               </label>
               <div className="two">
                 <label className="lab">
-                  <span className="eyebrow">Leash cap (XLM)</span>
-                  <input className="field field--mono" inputMode="decimal" aria-label="Leash spending cap in XLM" value={cap} onChange={(e) => setCap(e.target.value)} />
+                  <span className="eyebrow">Leash cap ({token})</span>
+                  <input className="field field--mono" inputMode="decimal" aria-label={`Leash spending cap in ${token}`} value={cap} onChange={(e) => setCap(e.target.value)} />
                 </label>
                 <label className="lab">
                   <span className="eyebrow">Duration (hours)</span>
@@ -260,10 +286,10 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
             <div className="eyebrow">One signature</div>
             <div className="verdict__line"><span className="verdict__amount" style={{ fontSize: 34 }}>does all of this</span></div>
             <ol style={{ margin: 0, padding: "0 0 0 18px", display: "flex", flexDirection: "column", gap: 8, fontSize: 13.5, lineHeight: 1.5 }}>
-              <li>Creates the treasury: at most <span className="num">{daily || "0"} XLM</span> a day, <span className="num">{perTask || "0"} XLM</span> per payment.</li>
-              <li>{fundOn ? <>Moves <span className="num">{fundXlm} XLM</span> in from your wallet.</> : "Opens it empty; you add funds later."}</li>
+              <li>Creates the treasury: at most <span className="num">{daily || "0"} {token}</span> a day, <span className="num">{perTask || "0"} {token}</span> per payment.</li>
+              <li>{fundOn ? <>Moves <span className="num">{fundXlm} XLM</span> in from your wallet.</> : token === "USDC" ? "Opens it empty; you add funds with TRY next." : "Opens it empty; you add funds later."}</li>
               {payeeOn && <li>Approves <span className="num">{shortAddr(payee.trim())}</span> as a payee.</li>}
-              {agentOn && <li>Puts agent <span className="num">{shortAddr(agentKey.trim())}</span> on a <span className="num">{cap || "0"} XLM</span> / <span className="num">{hours || "0"} h</span> Leash.</li>}
+              {agentOn && <li>Puts agent <span className="num">{shortAddr(agentKey.trim())}</span> on a <span className="num">{cap || "0"} {token}</span> / <span className="num">{hours || "0"} h</span> Leash.</li>}
               <li>Backs the treasury up on Stellar, so you can open it from any device.</li>
             </ol>
             <div className="verdict__why">Nothing is created half-way: if any part is refused, nothing happens.</div>

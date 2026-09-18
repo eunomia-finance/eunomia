@@ -17,6 +17,15 @@ export function parseXlmAmount(raw: string, label = "amount"): AmountResult {
   return { ok: true, value };
 }
 
+/** Parse an amount that may be left out: blank and zero both mean "none". Anything else has
+ *  to be a real amount. Starting funds are the case — the form says "0 opens it empty", and
+ *  the strict parser above made that sentence false by refusing the zero. */
+export function parseOptionalXlmAmount(raw: string, label = "amount"): AmountResult {
+  const s = raw.trim();
+  if (!s || Number(s) === 0) return { ok: true, value: 0 };
+  return parseXlmAmount(s, label);
+}
+
 /** How many payments the compliance circuit can attest to in one period. Mirrors the
  *  treasury's `MAX_BATCH`, which rejects a policy that breaks this on-chain. */
 export const MAX_BATCH = 16;

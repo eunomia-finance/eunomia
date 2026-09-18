@@ -58,7 +58,7 @@ export default function Agent() {
             <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
               <div className="eyebrow">Leash · active · expires in {countdown(Number(session.valid_until) * 1000 - now)}</div>
               <div className="verdict__line">
-                <span className="verdict__amount">{fmtXlm(left)} XLM</span>
+                <span className="verdict__amount">{fmtXlm(left)} {t.tokenCode}</span>
                 <span className="verdict__arrow">left of {fmtXlm(session.limit)}</span>
               </div>
               <div className="bar bar--thin"><div className="bar__fill" style={{ width: `${pct}%` }} /></div>
@@ -72,7 +72,7 @@ export default function Agent() {
             <div className="verdict__side">
               {t.sessionSecret ? (
                 <button className="btn btn--inv" onClick={() => void t.runAutonomousTask()} disabled={!!t.busy} type="button">
-                  {t.busy === "task" ? "Agent paying…" : "Run autonomous task (1 XLM, no popup)"}
+                  {t.busy === "task" ? "Agent paying…" : `Run autonomous task (1 ${t.tokenCode}, no popup)`}
                 </button>
               ) : (
                 <a className="verdict__tx" href={`${EXPLORER}/account/${session.agent}`} target="_blank" rel="noreferrer">
@@ -94,8 +94,8 @@ export default function Agent() {
             </div>
             <div className="two" style={{ marginTop: 6 }}>
               <label className="lab">
-                <span className="eyebrow">Cap (XLM)</span>
-                <input className="field field--mono" inputMode="decimal" aria-label="Session spending cap in XLM" value={cap} onChange={(e) => setCap(e.target.value)} />
+                <span className="eyebrow">Cap ({t.tokenCode})</span>
+                <input className="field field--mono" inputMode="decimal" aria-label={`Session spending cap in ${t.tokenCode}`} value={cap} onChange={(e) => setCap(e.target.value)} />
               </label>
               <label className="lab">
                 <span className="eyebrow">Hours</span>
@@ -138,8 +138,8 @@ export default function Agent() {
           <div className="eyebrow">Your rules still apply</div>
           {t.state ? (
             <>
-              <div className="panel__kv"><span>Per day, at most</span><span className="num">{fmtXlm(t.state.dailyLimit)} XLM</span></div>
-              <div className="panel__kv"><span>Per payment, at most</span><span className="num">{fmtXlm(t.state.perTaskLimit)} XLM</span></div>
+              <div className="panel__kv"><span>Per day, at most</span><span className="num">{fmtXlm(t.state.dailyLimit)} {t.tokenCode}</span></div>
+              <div className="panel__kv"><span>Per payment, at most</span><span className="num">{fmtXlm(t.state.perTaskLimit)} {t.tokenCode}</span></div>
               <div className="panel__kv"><span>Payees</span><span>approved list only</span></div>
               <div className="panel__kv"><span>Revoke</span><span>instant, from here</span></div>
               <div className="panel__note">A Leash lets the agent sign without a popup. It lifts nothing — every payment is checked on Stellar.</div>

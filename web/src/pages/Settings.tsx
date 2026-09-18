@@ -80,28 +80,28 @@ export default function Settings() {
           <div className="eyebrow">Limits</div>
           {t.state && (
             <>
-              <div className="panel__kv"><span>Per day</span><span className="num">{fmtXlm(t.state.dailyLimit)} XLM</span></div>
-              <div className="panel__kv"><span>Per payment</span><span className="num">{fmtXlm(t.state.perTaskLimit)} XLM</span></div>
+              <div className="panel__kv"><span>Per day</span><span className="num">{fmtXlm(t.state.dailyLimit)} {t.tokenCode}</span></div>
+              <div className="panel__kv"><span>Per payment</span><span className="num">{fmtXlm(t.state.perTaskLimit)} {t.tokenCode}</span></div>
             </>
           )}
           <div className="two" style={{ marginTop: 6 }}>
             <label className="lab">
-              <span className="eyebrow">New daily limit (XLM)</span>
+              <span className="eyebrow">New daily limit ({t.tokenCode})</span>
               <input
                 className="field field--mono"
                 inputMode="decimal"
-                aria-label="New daily limit in XLM"
+                aria-label={`New daily limit in ${t.tokenCode}`}
                 placeholder={t.state ? fmtXlm(t.state.dailyLimit) : ""}
                 value={newDaily}
                 onChange={(e) => setNewDaily(e.target.value)}
               />
             </label>
             <label className="lab">
-              <span className="eyebrow">New per-payment limit (XLM)</span>
+              <span className="eyebrow">New per-payment limit ({t.tokenCode})</span>
               <input
                 className="field field--mono"
                 inputMode="decimal"
-                aria-label="New per-payment limit in XLM"
+                aria-label={`New per-payment limit in ${t.tokenCode}`}
                 placeholder={t.state ? fmtXlm(t.state.perTaskLimit) : ""}
                 value={newPerTask}
                 onChange={(e) => setNewPerTask(e.target.value)}
@@ -129,7 +129,7 @@ export default function Settings() {
             <div className="panel__note">
               This early treasury has no withdraw of its own. To move funds out: approve your own wallet as a payee
               (Payments), then pay yourself within the limits
-              {t.state ? ` (≤ ${fmtXlm(t.state.perTaskLimit)} XLM per payment · ≤ ${fmtXlm(t.state.dailyLimit)} XLM per day)` : ""}.
+              {t.state ? ` (≤ ${fmtXlm(t.state.perTaskLimit)} ${t.tokenCode} per payment · ≤ ${fmtXlm(t.state.dailyLimit)} ${t.tokenCode} per day)` : ""}.
               Or create a fresh treasury from the switcher — pause, withdraw and the Leash all live there.
             </div>
           ) : (
@@ -156,8 +156,8 @@ export default function Settings() {
                   className="field field--mono"
                   style={{ flex: 1 }}
                   inputMode="decimal"
-                  placeholder="Amount (XLM)"
-                  aria-label="Withdraw amount in XLM"
+                  placeholder={`Amount (${t.tokenCode})`}
+                  aria-label={`Withdraw amount in ${t.tokenCode}`}
                   value={withdrawAmt}
                   onChange={(e) => setWithdrawAmt(e.target.value)}
                 />
@@ -165,6 +165,12 @@ export default function Settings() {
                   {t.busy === "withdraw" ? "Withdrawing…" : "Withdraw"}
                 </button>
               </div>
+              {t.tokenCode === "USDC" && (
+                <div className="panel__note">
+                  A G… account can receive USDC only after it trusts the issuer; without that trustline Stellar
+                  refuses the withdrawal. A passkey wallet (C…) needs nothing.
+                </div>
+              )}
               {withdrawErr && <div className="err">{withdrawErr}</div>}
             </>
           )}

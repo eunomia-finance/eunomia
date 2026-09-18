@@ -34,9 +34,10 @@ import {
 import { SERVICE, shortAddr } from "../config";
 import { fundWithFriendbot, getContractXlmBalance, getXlmBalance } from "../lib/funding";
 import { connectErr, errText, sendErr } from "../lib/wallet-errors";
-import { checkLimits, isValidPaymentDest, parseXlmAmount } from "../lib/validate";
+import { checkLimits, isValidPaymentDest, parseOptionalXlmAmount, parseXlmAmount } from "../lib/validate";
 import { trackError, trackViolation } from "../lib/analytics";
 import { logActivity } from "../lib/activity";
+import { tokenCodeOf, tokenIdOf } from "../lib/token";
 import {
   clearSessionSecret,
   createSession,
@@ -278,7 +279,10 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
       // Starting funds are not checked against the displayed balance on purpose: a smart
       // wallet's reading can lag the faucet by a ledger or two, and the chain refuses an
       // underfunded transfer anyway — atomically, so nothing half-created survives.
-      const fund = parseXlmAmount(extra.fundXlm?.trim() || "0", "starting funds");
+      // A USDC treasury opens empty: the wallet holds no USDC to move in, and the form does
+      // not offer the field — whatever it still carries from an earlier choice is ignored.
+      const code = extra.token ?? "XLM";
+      const fund = parseOptionalXlmAmount(code === "USDC" ? "" : (extra.fundXlm ?? ""), "starting funds");
       if (!fund.ok) return invalid(fund.msg);
       setBusy("deploy");
       toast("info", "Creating your treasury — one confirmation in your wallet…");
@@ -288,6 +292,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
         // throwaway Playwright wallets were inflating it (docs/metrics/e2e-exclude.json).
         const register = !testSignerAvailable();
         const id = await createTreasury(await executorFor(address), {
+          token: tokenIdOf(code),
           dailyXlm: dailyLimit.value,
           perTaskXlm: perTaskLimit.value,
           payees: payee ? [payee] : [],
@@ -348,6 +353,9 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
   const fund = useCallback(
     async (amount: string): Promise<ActionOutcome> => {
       if (!address || !treasuryId) return fail("No treasury open.");
+      // XLM sent into a USDC treasury would sit there for good: the contract pays out and
+      // withdraws its own token only.
+      if (tokenCodeOf(state?.token) !== "XLM") return invalid("This treasury holds USDC — add funds with TRY instead.");
       const amt = parseXlmAmount(amount);
       if (!amt.ok) return invalid(amt.msg);
       setBusy("fund");
@@ -368,7 +376,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
         setBusy(null);
       }
     },
-    [address, treasuryId, bump, loadState, refreshWalletXlm, toast],
+    [address, treasuryId, state?.token, bump, loadState, refreshWalletXlm, toast],
   );
 
   const whitelist = useCallback(
@@ -774,6 +782,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
     address,
     treasuryId,
     state,
+    tokenCode: tokenCodeOf(state?.token),
     lifecycle,
     legacy,
     sessionActive,

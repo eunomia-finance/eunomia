@@ -29,3 +29,13 @@ export function amountOf(e: FeedEvent): string {
   if (e.amountXlm == null || Number.isNaN(e.amountXlm)) return "";
   return e.amountXlm.toFixed(4);
 }
+
+/** A row's sentence, in the open treasury's token. The feed's writers (chain events, the
+ *  activity log) predate the token choice and spell every amount "N XLM"; neither knows
+ *  which token a treasury holds. The page does, so the unit is set where it is shown.
+ *  The durable fix is a token column on the activity row — until then this keeps a USDC
+ *  treasury's ledger from quoting its amounts in the wrong currency. */
+export function inToken<T extends { label: string }>(e: T, code: "XLM" | "USDC"): T {
+  if (code === "XLM") return e;
+  return { ...e, label: e.label.replace(/(\d) XLM\b/g, `$1 ${code}`) };
+}
