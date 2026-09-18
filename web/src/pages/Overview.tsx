@@ -173,11 +173,13 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
         </div>
       )}
 
-      {t.address && t.walletXlm !== undefined && needsFunding(t.walletXlm) && (
+      {/* A low wallet only matters while the treasury itself is empty: after a one-signature
+          setup moved everything in, "you need 20 XLM to fund a treasury" is just noise. */}
+      {t.address && t.walletXlm !== undefined && needsFunding(t.walletXlm) && s && s.balance === 0n && (
         <div className="notice">
           <span>
             {t.walletXlm === null ? "Your wallet holds no testnet XLM yet." : `Your wallet holds ${t.walletXlm.toFixed(2)} XLM.`}{" "}
-            You need about {MIN_XLM} XLM to fund a treasury.
+            The treasury is empty and you need about {MIN_XLM} XLM in the wallet to fund it.
           </span>
           <button className="btn btn--ghost" onClick={() => void t.friendbot()} disabled={!!t.busy} type="button">
             {t.busy === "friendbot" ? "Sending…" : "Get test XLM"}
