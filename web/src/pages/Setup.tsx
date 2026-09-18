@@ -5,6 +5,7 @@
 // treasury by id is a single quiet line under the form.
 import { useEffect, useState } from "react";
 import { useTreasury } from "../state/useTreasury";
+import { freshSalt, predictTreasuryId } from "../lib/createTreasury";
 import { needsFunding, MIN_XLM } from "../lib/funding";
 import { passkeyCapability } from "../lib/passkeySupport";
 import type { View } from "../lib/routes";
@@ -25,6 +26,16 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
   // What the treasury holds is fixed at creation. USDC first: it is the one funded with TRY,
   // and the one a passkey owner can fill without ever needing XLM.
   const [token, setToken] = useState<TokenCode>("USDC");
+  // The salt decides the treasury's address, so it is drawn when the form opens, not at the
+  // moment of signing: an agent connected below needs that address before it exists.
+  const [salt, setSalt] = useState(freshSalt);
+  const initCommand = `npx -y eunomia-mcp init --treasury ${predictTreasuryId(salt)}`;
+  const [copied, setCopied] = useState(false);
+  const copyInit = () => {
+    void navigator.clipboard?.writeText(initCommand);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1400);
+  };
   const [existing, setExisting] = useState("");
   const [err, setErr] = useState("");
   const [openErr, setOpenErr] = useState("");
@@ -57,8 +68,12 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
 
   const doDeploy = async () => {
     setErr("");
-    const res = await t.deploy(daily, perTask, { payee, agentKey, capXlm: cap, hours, fundXlm, token });
+    const res = await t.deploy(daily, perTask, { payee, agentKey, capXlm: cap, hours, fundXlm, token, salt });
     if (!res.ok && res.validation) setErr(res.msg);
+    // A failed attempt may still have reached the chain, and an address can be deployed to
+    // only once. Draw a new one — unless an agent's key was already made for this one, in
+    // which case the address is a promise and the retry has to keep it.
+    if (!res.ok && !res.validation && !agentKey.trim()) setSalt(freshSalt());
   };
 
   const doOpen = () => {
@@ -209,12 +224,28 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
 
           {withAgent && (
             <>
+              {/* An agent's key is made for one treasury id, and this treasury has none yet —
+                  so its address is fixed here, from the salt, before it exists. The command
+                  below already carries it. */}
+              <div className="lab">
+                <span className="eyebrow">On the agent's machine</span>
+                <span className="code">{initCommand}</span>
+                <div>
+                  <button className="linkbtn" onClick={copyInit} type="button" aria-live="polite">
+                    {copied ? "copied" : "copy command"}
+                  </button>
+                </div>
+                <span className="panel__note">
+                  It makes the agent's key for this treasury — whose address is already settled, though it is not created
+                  yet — and prints the public half. The secret stays on that machine.
+                </span>
+              </div>
               <label className="lab">
                 <span className="eyebrow">Agent public key</span>
                 <input
                   className="field field--mono"
                   aria-label="Agent public key for the Leash"
-                  placeholder="G… — printed by `eunomia-mcp init` on the agent's machine"
+                  placeholder="G… — the key that command prints"
                   spellCheck={false}
                   value={agentKey}
                   onChange={(e) => setAgentKey(e.target.value)}

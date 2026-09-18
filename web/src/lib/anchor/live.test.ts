@@ -8,7 +8,7 @@
 import { describe, it, expect } from "vitest";
 import { Horizon, Keypair } from "@stellar/stellar-sdk";
 import { HORIZON_URL } from "../../config";
-import { createTreasury } from "../createTreasury";
+import { createTreasury, freshSalt, predictTreasuryId } from "../createTreasury";
 import { makeWalletExecutor } from "../executor";
 import { fundWithFriendbot } from "../funding";
 import { sessionSigner } from "../session";
@@ -36,6 +36,7 @@ describe.skipIf(!live)("TRY -> USDC treasury -> agent payment (live)", () => {
       await Promise.all([payee, stranger].map((k) => openFundingAccount(k, anchor)));
 
       const ownerExec = makeWalletExecutor(owner.publicKey(), sessionSigner(owner.secret()).signer);
+      const salt = freshSalt();
       const treasuryId = await createTreasury(ownerExec, {
         token: anchorTokenId(anchor),
         dailyXlm: 50,
@@ -44,8 +45,11 @@ describe.skipIf(!live)("TRY -> USDC treasury -> agent payment (live)", () => {
         leash: { agent: agent.publicKey(), capXlm: 25, hours: 1 },
         fundXlm: 0,
         register: false,
+        salt,
       });
-      console.log("treasury", treasuryId);
+      console.log("treasury", treasuryId, "salt", salt.toString("hex"));
+      // Setup shows an agent its treasury id before the treasury exists; the chain has to agree.
+      expect(treasuryId).toBe(predictTreasuryId(salt));
 
       const pending = await startDeposit(funding, "150", (s) => console.log("  step:", s));
       console.log("  send", pending.tryAmount, "TRY to", pending.instructions.iban, "ref", pending.instructions.reference);

@@ -299,6 +299,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
           leash,
           fundXlm: fund.value,
           register,
+          salt: extra.salt,
         });
         setTreasuryId(address, id);
         setTreasuryIdState(id);

@@ -2,7 +2,7 @@
 // treasury, approves the payees, starts the Leash, moves the funding and registers it,
 // all under the owner's single authorisation (see contracts/treasury_factory). This is what
 // replaced the five-transaction setup (deploy → register → fund → payee → Leash).
-import { Address, Contract } from "@stellar/stellar-sdk";
+import { Address, Contract, StrKey, hash, xdr } from "@stellar/stellar-sdk";
 import { Client as FactoryClient, type Setup } from "./factoryClient";
 import type { TxExecutor } from "./executor";
 import { TREASURY_FACTORY_ID } from "./treasuryWasm";
@@ -23,10 +23,31 @@ export interface TreasurySetup {
   fundXlm: number;
   /** Record it in the registry (cross-device recovery). Off for test runs. */
   register: boolean;
+  /** Fix the salt — and with it the treasury's address — ahead of time. Setup does this when
+   *  an agent is connected in the same signature: the agent's key is made for a treasury
+   *  id, so that id has to exist on paper before the treasury exists on chain. */
+  salt?: Buffer;
 }
 
 /** 32 random bytes: what makes a wallet's second treasury a different contract. */
 export const freshSalt = (): Buffer => Buffer.from(crypto.getRandomValues(new Uint8Array(32)));
+
+/** The address the factory will deploy a treasury to for `salt`.
+ *
+ *  The factory deploys with `deployer().with_current_contract(salt)`, so the address is the
+ *  hash of (network, factory, salt) and nothing else — not the owner, not the limits. That is
+ *  the protocol's contract-id preimage, computed here without a network call. */
+export function predictTreasuryId(salt: Buffer, factoryId = TREASURY_FACTORY_ID, passphrase = NETWORK_PASSPHRASE): string {
+  const preimage = xdr.HashIdPreimage.envelopeTypeContractId(
+    new xdr.HashIdPreimageContractId({
+      networkId: hash(Buffer.from(passphrase)),
+      contractIdPreimage: xdr.ContractIdPreimage.contractIdPreimageFromAddress(
+        new xdr.ContractIdPreimageFromAddress({ address: new Address(factoryId).toScAddress(), salt }),
+      ),
+    }),
+  );
+  return StrKey.encodeContract(hash(preimage.toXDR()));
+}
 
 /** The factory's `Setup` argument, in contract units. Pure, so the mapping is testable. */
 export function factorySetupArgs(owner: string, s: TreasurySetup, nowSec: number, salt: Buffer): Setup {
@@ -60,7 +81,7 @@ const readOnlyFactory = () =>
  *  a smart wallet invokes the factory as itself and the relay submits — same call, same
  *  single authorisation, different plumbing. */
 export async function createTreasury(executor: TxExecutor, s: TreasurySetup): Promise<string> {
-  const setup = factorySetupArgs(executor.address, s, Math.floor(Date.now() / 1000), freshSalt());
+  const setup = factorySetupArgs(executor.address, s, Math.floor(Date.now() / 1000), s.salt ?? freshSalt());
   if (executor.invoke) {
     const args = readOnlyFactory().spec.funcArgsToScVals("create", { s: setup });
     const retval = await executor.invoke(new Contract(TREASURY_FACTORY_ID).call("create", ...args));

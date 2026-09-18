@@ -1,6 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { factorySetupArgs } from "./createTreasury";
+import { factorySetupArgs, freshSalt, predictTreasuryId } from "./createTreasury";
 import { XLM_SAC } from "./userTreasury";
+
+describe("predictTreasuryId", () => {
+  it("names the address the factory really deployed to", () => {
+    // A real pair from testnet (2026-09-18): the factory was called with this salt and
+    // answered with this treasury. If the prediction ever drifts, an agent connected during
+    // setup gets a key for a treasury that does not exist.
+    const salt = Buffer.from("6bf1c83c814accb8517f129469bdc6ebaf4878d978cf8d484b6f3a832398014f", "hex");
+    expect(predictTreasuryId(salt)).toBe("CBALSDCSLU5VAWG4ZD5EXDUAYXDFTC3ADNXRBJOAQFVC77PW3H6J5XZZ");
+  });
+
+  it("depends on the salt, the factory and the network — and on nothing else", () => {
+    const salt = freshSalt();
+    const here = predictTreasuryId(salt);
+    expect(predictTreasuryId(salt)).toBe(here);
+    expect(predictTreasuryId(freshSalt())).not.toBe(here);
+    expect(predictTreasuryId(salt, "CBEPVXK6BN2FZ3IYHV5KQUGROFHNBWBYHKHRZ5U3O7UWGIOPFOFE4ZE7")).not.toBe(here);
+    expect(predictTreasuryId(salt, undefined, "Public Global Stellar Network ; September 2015")).not.toBe(here);
+  });
+});
 
 const OWNER = "CAZTJX3ZOVELKZQKUN75G6TIKEOY7YCOQMXTPJZBMAIKWNG2XO47QTKD";
 const PAYEE = "GDOMW4C36BUBBFJW3V4L22LUICOUKFVTPGOYU6UMZZ6D3ENEOCH4QCRT";

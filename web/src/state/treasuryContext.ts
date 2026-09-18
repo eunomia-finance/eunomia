@@ -42,6 +42,9 @@ export interface DeployExtras {
   /** What the treasury holds. USDC opens empty — it is funded with TRY afterwards, because
    *  the owner's wallet holds none to move in. XLM when left out. */
   token?: TokenCode;
+  /** The salt the form drew when it opened; it fixes the treasury's address, which an agent
+   *  connected during setup was already given. A fresh one is drawn when left out. */
+  salt?: Buffer;
 }
 
 export interface TreasuryContextValue {
