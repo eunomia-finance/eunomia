@@ -41,9 +41,9 @@
     "build": "tsc -p tsconfig.json",
     "test": "node --import tsx --test src/*.test.ts",
     "smoke": "tsx scripts/client-smoke.ts",
-    "sync:bindings": "cp ../treasury-client/src/index.ts src/bindings/treasury.ts",
-    "check:bindings": "cmp ../treasury-client/src/index.ts src/bindings/treasury.ts",
-    "check:codec": "cmp src/exceptionCodec.ts ../../web/src/lib/exceptionCodec.ts",
+    "sync:bindings": "node scripts/same.mjs --write ../treasury-client/src/index.ts src/bindings/treasury.ts",
+    "check:bindings": "node scripts/same.mjs ../treasury-client/src/index.ts src/bindings/treasury.ts",
+    "check:codec": "node scripts/same.mjs src/exceptionCodec.ts ../../web/src/lib/exceptionCodec.ts",
     "prepublishOnly": "npm run check:bindings && npm run check:codec && npm test && npm run build"
   },
   "dependencies": {
