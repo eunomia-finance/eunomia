@@ -140,6 +140,14 @@ One run of `live.test.ts`:
 | The agent pays an approved payee 1 USDC, on its own | [`7ff1d88e…0643`](https://stellar.expert/explorer/testnet/tx/7ff1d88ebd68730108e9a965f3e06e99f8cbb4f25f44d11fac59244390d00643) |
 | The agent tries a stranger | refused by the contract: `PayeeNotWhitelisted (#2)` |
 
+On the live site (`eunomia.finance`), with a passkey — `passkey-try.live.spec.ts`:
+
+| Step | Evidence |
+|---|---|
+| A passkey smart wallet, created through the relay | [`CDM2PEHQ…AF6LD`](https://stellar.expert/explorer/testnet/contract/CDM2PEHQXIUIDT35V6WEZWWLURJBSI66SPDEGRGA7RPO6BJEOT7AF6LD) |
+| Its USDC treasury — **one** passkey signature | [`CB7FJFMW…YGBPL`](https://stellar.expert/explorer/testnet/contract/CB7FJFMWQAJXYDCTS7BNDVCJHKTGOPASEL27VC56OTDVSRUYZBMYGBPL) |
+| 200 TRY added through the anchor — **zero** passkey signatures, no XLM held at any point | balance read back from the contract, in USDC |
+
 The off-ramp was probed with the same client calls: 1.5 USDC → 72.81 TRY, paid out over
 (simulated) FAST, Stellar payment
 [`82d5db94…cd43`](https://stellar.expert/explorer/testnet/tx/82d5db94dc77b9c757009acddc00f84a545f2cbedcea307933b0cd17348bcd43).
