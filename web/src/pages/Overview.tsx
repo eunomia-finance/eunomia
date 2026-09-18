@@ -187,7 +187,10 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
         </div>
       )}
 
-      {!progress.complete && nudge && (
+      {/* Not before the state is read: with the balance still unknown the next step reads as
+          "fund", and once it loads the same button turns into "Approve a payee" under the
+          cursor — a click meant for one lands on the other and changes the page. */}
+      {s && !progress.complete && nudge && (
         <div className="notice">
           <span>{nudge}</span>
           {progress.next && NEXT_CTA[progress.next] && (
