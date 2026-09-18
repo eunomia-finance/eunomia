@@ -22,8 +22,28 @@ security-gated — see [`ROADMAP.md`](ROADMAP.md) (M2/M3) for what must land fir
   spend accounting panics (reverts) rather than wrapping.
 - **Testnet-only demo key.** The spectator demo embeds a worthless testnet agent key on
   purpose (the contract, not a human click, is the safety). A build-time guard refuses to
-  load it on any non-testnet network. The per-user product embeds no keys — every action is
-  signed by the user's own wallet.
+  load it on any non-testnet network. The per-user product embeds no keys — every owner
+  action is signed by the user's own wallet or passkey.
+- **One-signature setup gives the factory no standing authority.** `treasury_factory.create`
+  deploys the treasury with the owner as its admin and performs the rest of the setup (payees,
+  Leash, funding, registry) as sub-invocations of the one call the owner authorised — the
+  treasury's own `require_auth` checks still run, against that signature. Once the call
+  returns the factory has no role: it is not the admin, holds no funds and cannot act on the
+  treasury. Setup is atomic — any refusal aborts all of it. A treasury's address is the hash
+  of (network, factory, salt); someone who saw a salt in flight and deployed to it first
+  would make the owner's creation fail, and nothing more — no funds or authority move before
+  the treasury exists under the owner's admin.
+- **The anchor never gets a useful signature.** The SEP-6 anchor is named by a home domain
+  pinned in source. Its `stellar.toml` must declare this network and https endpoints, and a
+  SEP-10 challenge is signed only after it is proven unsubmittable (sequence 0, manage-data
+  operations only), addressed to this account and this home domain, and signed by the key
+  that toml publishes. A payment dressed up as a challenge is refused
+  (`web/src/lib/anchor/auth.test.ts`). The key that signs is the funding account's, never
+  the owner's.
+- **Agent credentials stay on the agent's machine.** `eunomia-mcp init` generates the Leash
+  key locally and stores it under `~/.eunomia/` with mode 0600; only the public half reaches
+  the dashboard. What the key can do is bounded by the Leash the owner signed — cap, deadline,
+  the treasury's limits and payee list — and ends the moment the owner revokes it.
 - **ZK verifier — bound to chain state.** The on-chain Groth16/BN254 verifier holds no
   policy of its own. Every claim in a proof is re-read from the treasury named in the call:
   its limits (`get_config`), its published payee root (`whitelist_root`), and the total it
@@ -87,6 +107,11 @@ was a design change and landed 2026-08-06.
 | M4 | Medium | With the reputation gate on, whoever controls the registry can authorize payees without the owner's signature, at the same limits as a whitelisted one | ⏳ Open — needs a separate, lower cap for reputation-authorized payees |
 | H1 | High | ZK attestation is **not bound to the treasury**: no public signal identifies it, none derives from chain state, the witness is prover-chosen and `verify` needs no auth → anyone can mint a valid `ComplianceAttested` for any period | ✅ Fixed 2026-08-06 — the verifier is now multi-tenant and reads limits, payee root and the period total from the treasury itself; the circuit binds the batch to that total (`total === periodSpent`); only the treasury admin can attest; periods must be closed and strictly advancing. Proven on testnet: a valid proof of a fabricated batch is rejected with `Error(Contract, #9)` |
 
+**Not yet through an audit round:** the treasury factory (2026-09-16), `eunomia-mcp`
+(2026-09-14 → 09-18) and the anchor leg (2026-09-18) all shipped after the third round.
+They carry their own tests — including live runs against testnet and production — but no
+independent review has looked at them yet. That round is a precondition for mainnet.
+
 ## Known limitations (honest scope)
 
 - **Contracts are immutable — deliberately.** M2 shipped the lifecycle (pause/resume,
@@ -98,6 +123,22 @@ was a design change and landed 2026-08-06.
   stored in localStorage — acceptable precisely because the credential is bounded
   (spend cap + expiry + instant revoke). Mainnet needs hardened key storage and fee
   sponsorship for session accounts (M3).
+- **So does the funding account's key.** The G-account between the anchor and a treasury is
+  a device-held key in localStorage. It is a corridor: it holds USDC only from the anchor's
+  payment to the forward that follows, seconds later — plus anything an interrupted transfer
+  left behind, which the app looks for and offers to move in whenever the form opens. Whoever
+  steals that key can take what is in the corridor at that moment, and nothing from the
+  treasury. It exists because the anchor has no SEP-45 endpoint (a smart wallet cannot sign
+  in) and pays G-accounts only; with SEP-45 on the anchor's side it disappears.
+- **The anchor is a counterparty, and today it is a sandbox.** `tr-mock-anchor.fly.dev`
+  simulates the bank and KYC; only its Stellar side is real. The TRY → USDC leg is not
+  atomic and cannot be: between the bank transfer and the anchor's payment the owner holds a
+  claim on the anchor, which no contract enforces. A production anchor's solvency, compliance
+  and uptime sit outside everything the treasury guarantees. What the integration does
+  guarantee is on our side of the line: a locked rate before any money moves, and no
+  signature the anchor could misuse.
+- **A `connect-src` policy is still open (F4)** — and the app now talks to one more origin,
+  the anchor's. An allowlist has to include it.
 - **The ZK layer attests after the fact, and proves the total rather than the breakdown.**
   `pay()` does not require a proof; confidential compliance and the payment flow are not
   wired together (M4). Since H1 the proof is bound to the chain — the batch must equal the

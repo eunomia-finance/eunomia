@@ -74,7 +74,7 @@ Rejections are the product working. A prompt-injected drain hits step 4 and reve
 ## Architecture
 
 <div align="center">
-<img src="docs/architecture.svg" width="920" alt="The owner deploys a bounded Soroban treasury and grants the agent a Leash; every pay() passes the on-chain guardrails; allowed payments settle, drains bounce, and the ZK verifier emits a Sealed Receipt."/>
+<img src="docs/architecture.svg" width="920" alt="An owner, signing once through the treasury factory, creates a bounded Soroban treasury with its rules, payees and an agent Leash. Turkish lira reaches it as USDC through a SEP-6 anchor and a funding account. The AI agent, connected with eunomia-mcp, signs pay() with its Leash key; the contract pays approved payees and refuses everyone else. A reputation registry can admit payees, and a ZK verifier emits a Sealed Receipt."/>
 </div>
 
 - **Owner** is the root of trust: creates the treasury, funds it, sets the rules, and can pause or withdraw at any time.
@@ -156,11 +156,19 @@ Usage is provable from two independent sources, neither of which we can quietly 
 
 **Tried Eunomia?** Tell us what to fix next: **[share feedback →](https://forms.gle/7gzJWwte52SmbXei7)**
 
-## Built during Stellar Hacks: Real-World ZK
+## Confidential compliance — what the ZK layer proves
 
-The bounded-treasury core predates the hackathon (built at IBW 2026). **Everything zero-knowledge — the entire Confidential layer — was designed and built inside the Stellar Hacks: Real-World ZK window (18–22 June 2026)**: the Circom compliance circuit (per-payment range + daily-sum bounds, Poseidon commitments, Poseidon-Merkle whitelist membership), the Groth16 trusted setup, and the on-chain BN254 verifier with a replay guard. It has since been rebuilt to bind proofs to chain state (2026-08-06) and widened to a 16-payment batch (2026-08-07).
+An owner can show an auditor, an investor or a counterparty that the agent stayed inside its rules **without showing them the payments**. For a closed period the owner proves, in zero knowledge, and the chain attests:
 
-Where the ZK is load-bearing: the [circuit](circuits/circuits/compliance.circom) proves the bounds *and* that the batch adds up to the treasury's own recorded total for the period, and the [on-chain verifier](contracts/compliance_verifier/src/lib.rs) runs the real BN254 pairing check through Soroban's native host functions after re-reading the policy and that total from the treasury — a valid proof over the real figures is the *only* way to produce an `attested` event. Proof: [live verify tx](https://stellar.expert/explorer/testnet/tx/426e55d6ce0a9157c156190cee39dc2a1d302cf4c7f4f98cc930da5ad63b4606), plus a fabricated batch and a replay both **rejected** on-chain in [`DEPLOYMENT.md`](DEPLOYMENT.md).
+- the payments in the batch **add up to exactly what the treasury recorded** as spent in that period,
+- **no single payment exceeded** the per-payment limit,
+- **every payee belonged** to the published payee root.
+
+Amounts and payees stay sealed; what lands on-chain is the `attested` event — the **Sealed Receipt**.
+
+The proof is bound to chain state, not to the prover's word. The [circuit](circuits/circuits/compliance.circom) (Circom · Poseidon commitments · Poseidon-Merkle membership · a 16-payment batch) forces the batch to equal the treasury's own total, and the [on-chain verifier](contracts/compliance_verifier/src/lib.rs) (Groth16 / BN254, through Soroban's native pairing host function) holds no policy of its own: it re-reads the limits, the payee root and the period total from the treasury named in the call, accepts only the treasury's admin, only closed periods, only forward in time, and rejects non-canonical field encodings. A valid proof over the real figures is the *only* way to produce an `attested` event: [live attestation](https://stellar.expert/explorer/testnet/tx/426e55d6ce0a9157c156190cee39dc2a1d302cf4c7f4f98cc930da5ad63b4606), and a fabricated batch and a replay both **rejected** on-chain in [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
+What it does not claim: it attests after the fact — `pay()` does not wait for a proof — it proves the total rather than the breakdown, and the trusted setup is a single-party development setup. The honest scope is written out in [`SECURITY.md`](SECURITY.md#known-limitations-honest-scope).
 
 ---
 
@@ -235,4 +243,5 @@ Full security model, audit-finding status, known limitations, and how to report 
 
 ## License
 
-[MIT](LICENSE) © 2026 Bekir Erdem · Seyit Ali Değirmen
+[MIT](LICENSE) © 2026 Bekir Erdem · Seyit Ali Değirmen — contracts, circuits, app and clients.
+The published agent package, [`packages/mcp`](packages/mcp) (`eunomia-mcp` on npm), is [Apache-2.0](packages/mcp/LICENSE).
