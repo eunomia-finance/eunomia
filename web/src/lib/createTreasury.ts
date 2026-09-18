@@ -10,6 +10,9 @@ import { XLM_SAC, toStroops } from "./userTreasury";
 import { NETWORK_PASSPHRASE, RPC_URL } from "../config";
 
 export interface TreasurySetup {
+  /** The token the treasury holds and spends. XLM when left out; the anchor's USDC for a
+   *  treasury funded with TRY. Every amount below is in this token (both are 7-decimal). */
+  token?: string;
   dailyXlm: number;
   perTaskXlm: number;
   /** Payees approved from the start. */
@@ -29,7 +32,7 @@ export const freshSalt = (): Buffer => Buffer.from(crypto.getRandomValues(new Ui
 export function factorySetupArgs(owner: string, s: TreasurySetup, nowSec: number, salt: Buffer): Setup {
   return {
     owner,
-    token: XLM_SAC,
+    token: s.token ?? XLM_SAC,
     daily_limit: toStroops(s.dailyXlm),
     per_task_limit: toStroops(s.perTaskXlm),
     payees: s.payees,
