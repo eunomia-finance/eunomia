@@ -117,6 +117,9 @@ test.describe.serial("Live passkey onboarding", () => {
 
     // 4. Take the starting XLM. The dispenser is the only way value reaches a smart
     //    wallet — friendbot cannot fund a contract address.
+    //    This run measures the XLM treasury. The form opens on USDC (funded with TRY), where
+    //    a smart wallet needs no XLM and the faucet is not offered — so choose XLM first.
+    await page.getByRole("button", { name: /^XLM/ }).first().click();
     const faucet = page.getByRole("button", { name: /get free testnet xlm/i }).first();
     await faucet.waitFor({ state: "visible", timeout: 60_000 });
     await faucet.click();

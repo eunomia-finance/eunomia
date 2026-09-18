@@ -130,6 +130,12 @@ export class EunomiaPage {
   }
 
   async deployTreasury(daily = "50", perTask = "10"): Promise<void> {
+    // This suite walks the XLM treasury (wallet-funded). The form opens on USDC, whose
+    // funding runs through the TRY anchor — covered by src/lib/anchor/live.test.ts.
+    const xlmChip = this.page.getByRole("button", { name: /^XLM/ }).first();
+    await xlmChip.waitFor({ state: "visible", timeout: 30_000 });
+    await xlmChip.click();
+
     const dailyInput = this.page.getByLabel(/daily limit.*xlm/i).first();
     await dailyInput.waitFor({ state: "visible", timeout: 30_000 });
     await dailyInput.fill(daily);
@@ -165,7 +171,10 @@ export class EunomiaPage {
 
     // The rules panel opens the fund form behind "Add funds"; the submit inside it is
     // named exactly "Fund", so /^fund$/ below resolves to one button.
-    const toggle = this.page.getByRole("button", { name: /^add funds$/i }).first();
+    // Scoped to that panel: the setup nudge above it can carry an "Add funds" button too.
+    const toggle = this.page
+      .locator("section", { hasText: /rules on stellar/i })
+      .getByRole("button", { name: /^add funds$/i });
     await toggle.waitFor({ state: "visible" });
     await toggle.click();
 
@@ -266,10 +275,12 @@ export class EunomiaPage {
     await this.page.goto("/#overview");
     await this.page.reload();
     await this.page.waitForLoadState("networkidle");
-    const bal = this.page.locator(".ov__balance").first();
+    // The balance is a row in the rules panel since the control-room redesign; the old
+    // `.ov__balance` hero it used to be read from no longer renders.
+    const bal = this.page.getByTestId("treasury-balance").first();
     await bal.waitFor({ state: "visible" });
     await this.page.waitForFunction(
-      () => /[1-9]/.test(document.querySelector(".ov__balance")?.textContent ?? ""),
+      () => /[1-9]/.test(document.querySelector('[data-testid="treasury-balance"]')?.textContent ?? ""),
       null,
       { timeout: 60_000 },
     );

@@ -67,11 +67,14 @@ test.describe
     await eunomia.whitelistPayee(SERVICE);
 
     // 8. Pay 1 XLM within the per-task + daily limits.
+    const balBefore = await eunomia.readBalanceStroops();
     await eunomia.sendPayment(SERVICE, "1");
 
-    // 9. On-chain state assertions — balance decreased; day-spent advanced.
+    // 9. On-chain state assertion — the payment left the treasury. Measured as a difference:
+    //    the one-signature setup already moves starting funds in, so an absolute figure
+    //    ("at most 19") stopped describing this flow the day that shipped.
     const balAfter = await eunomia.readBalanceStroops();
-    expect(balAfter).toBeLessThanOrEqual(19n * 10_000_000n);
+    expect(balBefore - balAfter).toBe(10_000_000n);
 
     expect(pageErrors).toEqual([]);
   });
