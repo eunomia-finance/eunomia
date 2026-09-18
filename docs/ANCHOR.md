@@ -148,6 +148,18 @@ On the live site (`eunomia.finance`), with a passkey — `passkey-try.live.spec.
 | Its USDC treasury — **one** passkey signature | [`CB7FJFMW…YGBPL`](https://stellar.expert/explorer/testnet/contract/CB7FJFMWQAJXYDCTS7BNDVCJHKTGOPASEL27VC56OTDVSRUYZBMYGBPL) |
 | 200 TRY added through the anchor — **zero** passkey signatures, no XLM held at any point | balance read back from the contract, in USDC |
 
+With the published agent package — `npx -y eunomia-mcp@0.2.0` from an empty directory, driven
+over raw MCP stdio, against a treasury funded with 250 TRY:
+
+| Step | Evidence |
+|---|---|
+| The treasury, 5.0990227 USDC in from the anchor | [`CDASPRZN…SZVU`](https://stellar.expert/explorer/testnet/contract/CDASPRZNAHSZXFNKQ2RYNDLOH77HTFYAELCA6JH2KLGFQM57JNZ3SZVU) |
+| `init` makes the agent's key; before the owner acts, `status` says `canSpend: false` — "No active Leash" | agent `GCKWOWL4…OIPY` |
+| The owner puts that key on a 25 USDC / 1 h Leash | [`70a23038…2803`](https://stellar.expert/explorer/testnet/tx/70a230385af9af06703fbb0be2d5f1baffd5202d06f0436e8fc23136d8012803) |
+| `check_budget` → `canSpend: true`, `isThisAgent: true`; asking for 15 is refused ahead of time with the contract's codes (`ExceedsTaskLimit #3`) | — |
+| `pay` 1.5 USDC to the approved payee — the agent signs, nobody is prompted | [`55e1d57a…6bfe`](https://stellar.expert/explorer/testnet/tx/55e1d57ac10b71b88f12f7403efadcc8c44a6b46209f86759293616f154a6bfe) |
+| `pay` 1 USDC to a stranger | refused by the contract: `PayeeNotWhitelisted (#2)`, `nextStep: request_exception` |
+
 The off-ramp was probed with the same client calls: 1.5 USDC → 72.81 TRY, paid out over
 (simulated) FAST, Stellar payment
 [`82d5db94…cd43`](https://stellar.expert/explorer/testnet/tx/82d5db94dc77b9c757009acddc00f84a545f2cbedcea307933b0cd17348bcd43).
