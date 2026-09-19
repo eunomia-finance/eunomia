@@ -24,7 +24,10 @@ export default function FeedbackButton() {
 // Only geometry stays inline. Anything the shell needs to override on a phone — size,
 // radius, and the type itself — lives in the stylesheet, because an inline value wins over
 // a class and that is exactly how this button kept resisting every change made around it.
+// Below the bottom sheet (backdrop 1300), above the tab bar (1000) and the topbar's menus
+// (1200): at 1500 it floated over an open sheet and covered the text it carries — on a phone,
+// part of the bank instructions.
 const fab: CSSProperties = {
-  position: "fixed", right: 18, bottom: 18, zIndex: 1500,
+  position: "fixed", right: 18, bottom: 18, zIndex: 1250,
   cursor: "pointer", textDecoration: "none", fontFamily: "inherit",
 };

@@ -11,6 +11,7 @@ import { EXPLORER, fmtXlm, shortAddr } from "../config";
 import { useTreasury } from "../state/useTreasury";
 import { useAnalyticsScore } from "../lib/useAnalytics";
 import { useTreasuryActivity } from "../lib/useTreasuryActivity";
+import { mergeFeedEvents } from "../lib/activity";
 import { computeAnomaly, mergeLedger } from "../lib/eventLedger";
 import { loadPayeeBook, mergePayees, payeesFromEvents } from "../lib/payees";
 import { setupProgress, type SetupStep } from "../lib/onboarding";
@@ -58,7 +59,16 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
   const analytics = useAnalyticsScore(treasuryId, t.refreshKey);
   const { rows: written, freshId } = useTreasuryActivity(treasuryId, t.refreshKey);
   // One list feeds the verdict, the ledger and the bars — set the unit once, here.
-  const rows = useMemo(() => written.map((e) => inToken(e, t.tokenCode)), [written, t.tokenCode]);
+  //
+  // The activity log only knows what passed through this app. An agent paying from its own
+  // machine (eunomia-mcp) never does — but the treasury emits `paid` for every payment, and
+  // the chain scan above already has those. Add the ones the log does not carry, matched by
+  // tx hash, so the owner sees what the agent did without having been there.
+  const rows = useMemo(
+    () =>
+      mergeFeedEvents(written, analytics.events.filter((e) => e.kind === "paid")).map((e) => inToken(e, t.tokenCode)),
+    [written, analytics.events, t.tokenCode],
+  );
 
   const [fundOpen, setFundOpen] = useState(false);
   const fundPanel = useRef<HTMLDivElement>(null);

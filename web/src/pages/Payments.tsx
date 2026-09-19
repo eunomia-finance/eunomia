@@ -125,10 +125,21 @@ export default function Payments() {
     };
   }, [treasuryId, t.refreshKey]);
 
+  // Payments an agent made from its own machine (eunomia-mcp) never pass through this app, so
+  // the activity log has no row for them. The chain does: the treasury emits `paid` for each,
+  // and the Overview's scan keeps those in the local ledger. Add the ones the log lacks.
+  const chainPaid = useMemo(
+    () => loadLedger(treasuryId).filter((e) => e.kind === "paid"),
+    // refreshKey: re-read after every action, when the scan has had reason to run again
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [treasuryId, t.refreshKey],
+  );
   const decisions = useMemo(
     () =>
-      filterFeed(history, { groups: new Set(["payments", "blocked"]), treasuryId }).map((e) => inToken(e, t.tokenCode)),
-    [history, treasuryId, t.tokenCode],
+      mergeFeedEvents(filterFeed(history, { groups: new Set(["payments", "blocked"]), treasuryId }), chainPaid, 120).map(
+        (e) => inToken(e, t.tokenCode),
+      ),
+    [history, chainPaid, treasuryId, t.tokenCode],
   );
   const [slice, setSlice] = useState<Slice>("all");
   const shown = useMemo(
