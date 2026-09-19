@@ -466,6 +466,16 @@ input, textarea, select{ font-family:inherit; font-size:14px; }
   transition:opacity .16s ease;
 }
 .feedback-fab:hover{ opacity:.88; }
+/* On a phone the full pill sat on top of the landing's own buttons — "I have a wallet", the
+   recovery link, and the sign-in error under them. There it is a small round mark, as it
+   already was inside the app (shell.css only adds the lift above the tab bar). */
+@media (max-width:640px){
+  .feedback-fab{
+    right:14px !important; width:42px; height:42px; padding:0; border-radius:50%;
+    display:grid; place-items:center; font-size:0; overflow:hidden; line-height:0;
+  }
+  .feedback-fab::before{ content:"✎"; font-size:18px; line-height:1; }
+}
 :root[data-theme="dark"] .feedback-fab{
   background:#edf6d2; border-color:#edf6d2; color:#152a03;
   box-shadow:0 8px 24px -10px rgba(0,0,0,0.5);

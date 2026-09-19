@@ -293,6 +293,15 @@ function adoptPasskeySession(contractId: string, keyId: string): void {
   notifyAddress();
 }
 
+/** The name a passkey is saved under — what the phone's passkey picker shows at sign-in.
+ *
+ *  Every passkey used to be called "Eunomia user". Someone who had made more than one (a
+ *  second treasury, a retry after a failed setup) met a list of identical rows and had to
+ *  guess; a wrong guess ends in "No treasury wallet belongs to that passkey". The date and
+ *  time of creation is the one thing the owner can recognise them by. */
+export const passkeyLabel = (at: Date = new Date()): string =>
+  `Eunomia · ${at.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })} ${at.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+
 /** Register a passkey (or reconnect one) and adopt the resulting smart wallet as the session.
  *
  *  Same funnel contract as connect(), tagged `passkey`, so the two entry paths are directly
@@ -300,7 +309,7 @@ function adoptPasskeySession(contractId: string, keyId: string): void {
  *  comes back signed and is submitted through the relay, so the user never needs XLM. */
 export async function connectPasskey(
   mode: "create" | "connect",
-  userLabel = "Eunomia user",
+  userLabel = passkeyLabel(),
 ): Promise<string> {
   logFunnel({ event: "connect_click", walletId: PASSKEY_ID });
   try {
@@ -359,7 +368,7 @@ export async function activateRecovery(publicKey: string, address: string): Prom
  *  signer authorize it through the relay, and adopt the wallet as the session. */
 export async function connectPasskeyRecovery(
   code: string,
-  userLabel = "Eunomia user",
+  userLabel = passkeyLabel(),
 ): Promise<string> {
   logFunnel({ event: "connect_click", walletId: PASSKEY_RECOVERY_ID });
   try {

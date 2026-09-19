@@ -337,6 +337,10 @@
  * the row; the footer carries the same destinations. */
 @media (max-width: 900px) {
   .lp__nav-mid { display: none; }
+  /* With the middle gone only two items remain, and they fell into the first two tracks of
+   * `1fr auto 1fr` — the third `1fr` stayed empty and took half the row with it. On a phone
+   * that left the brand ~58px ("Eunoı") and parked the wallet button mid-row. Two tracks. */
+  .lp__nav { grid-template-columns: 1fr auto; }
 }
 .lp__nav-mask { display: inline-block; overflow: hidden; vertical-align: bottom; }
 .lp__nav-link {
@@ -919,6 +923,9 @@
    * later rule wins and an earlier `display: none` was simply overwritten. */
   .lp__nav { gap: 12px; }
   .lp__nav-end { gap: 14px; }
+  /* The fixed bar turns solid only after a scroll threshold; on a phone a small scroll put
+   * the headline straight under a transparent bar. Solid from the start, and a little shorter. */
+  .lp__hero-top { background: var(--bg); padding: 14px 20px; }
   .lp__nav-brand { font-size: 18px; }
   /* The cap band shrinks with the word: 18px caps ≈ 13.5px, mark 15. */
   .lp__nav-brand svg { width: 15px; height: 15px; top: -0.5px; }
