@@ -3,6 +3,7 @@
 // while paused). The exits sit in a red-framed panel apart from day-to-day edits.
 import { useState } from "react";
 import { EXPLORER, fmtXlm, shortAddr } from "../config";
+import WithdrawTry from "../components/WithdrawTry";
 import { useTreasury } from "../state/useTreasury";
 
 export default function Settings() {
@@ -172,6 +173,8 @@ export default function Settings() {
                 </div>
               )}
               {withdrawErr && <div className="err">{withdrawErr}</div>}
+              {/* The anchor leg in reverse — only a USDC treasury holds what the anchor takes. */}
+              {t.tokenCode === "USDC" && <WithdrawTry />}
             </>
           )}
         </section>

@@ -27,7 +27,7 @@ What stood between a working contract and a product a stranger can use in one si
 - [x] **Passkey onboarding** — Face ID / fingerprint / PIN controls a Stellar smart wallet that owns the treasury; a fail-closed relay sponsors fees, so a new user needs no wallet, no seed phrase and no XLM
 - [x] **One-signature setup** — the treasury factory deploys, sets the policy, approves payees, starts the Leash, funds and registers, atomically
 - [x] **`eunomia-mcp` on npm** — an MCP server + SDK: any MCP agent (Claude included) checks its budget, pays, settles x402 payment requirements and asks the owner for exceptions; refusals arrive with the contract's own error codes. The agent's key is made on its own machine; the owner signs only a cap and a deadline — in the same signature that creates the treasury, if they wish
-- [x] **Fiat on-ramp through a SEP-6 anchor** — TRY in at a locked rate, USDC out into a USDC-denominated treasury, with no wallet prompt ([`docs/ANCHOR.md`](docs/ANCHOR.md)). Runs against the testnet sandbox anchor; the integration's only inputs are a home domain and an asset code
+- [x] **Fiat ramp through a SEP-6 anchor, both ways** — TRY in at a locked rate, USDC out into a USDC-denominated treasury, with no wallet prompt; and unspent USDC back out to an IBAN as TRY, with one owner signature ([`docs/ANCHOR.md`](docs/ANCHOR.md)). Runs against the testnet sandbox anchor; the integration's only inputs are a home domain and an asset code
 - [x] **Proofs bound to chain state** — the ZK attestation re-reads limits, payee root and the period total from the treasury itself; a fabricated batch is rejected on-chain
 - [x] **Third security review** — full scope, every finding tracked in [`SECURITY.md`](SECURITY.md)
 - [x] **The dashboard reports what the rules did** — latest verdict, decision ledger, budget meter, Leash
@@ -39,7 +39,6 @@ The on-ramp and the agent side exist; what mainnet needs is for them to be safe 
 - [ ] **Security review of what shipped since the last round** — the treasury factory, `eunomia-mcp` and the anchor leg have tests, including live runs, but no independent review yet. This gates everything below
 - [ ] **A production SEP-6 anchor** in place of the sandbox — real bank rails and real KYC. The integration is a configuration change; the counterparty is the work
 - [ ] **SEP-45 (or its equivalent) on the anchor's side**, so a smart wallet signs in itself and the per-treasury funding account — a device-held key today — goes away
-- [ ] **Off-ramp in the product** — the library already withdraws USDC to TRY (probed on testnet); it has no screen yet
 - [ ] Mainnet **USDC** — the treasury already holds any SEP-41 token; this is the issuer and the anchor, not the contract
 - [ ] **Hardened key storage** for agent session keys, and fee sponsorship for session accounts
 - [ ] Multi-party **trusted-setup ceremony** for the ZK circuit (replacing the single-party dev setup)
@@ -49,7 +48,7 @@ The on-ramp and the agent side exist; what mainnet needs is for them to be safe 
 
 - [ ] Production **ERC-8004 reputation** ([trionlabs/stellar-8004](https://github.com/trionlabs/stellar-8004)) — earned reputation replaces the testnet stand-in oracle, with a separate, lower cap for reputation-admitted payees (SECURITY.md, M4)
 - [ ] **x402 at scale** — the bounded buyer and `eunomia-mcp`'s `pay` settle x402 requirements today; next is the service side: paying real, USDC-priced agent-facing APIs from a treasury, and a directory of them
-- [ ] **Agent activity in the owner's ledger** — payments and refusals made through `eunomia-mcp` appear in the dashboard's decision ledger the way hand-made ones do, with the exception requests beside them
+- [ ] **The agent's refusals in the owner's ledger** — payments made through `eunomia-mcp` already appear in the decision ledger (read from the treasury's own events); refusals met in simulation leave no trace on chain, so they need their own path, beside the exception requests
 - [ ] **Agent-platform skills** (OpenClaw / ClawHub) — packaged on top of `eunomia-mcp`, so agents on those platforms pick a treasury up conversationally
 - [ ] ZK compliance wired into the payment flow (confidential-by-default option), composing with OpenZeppelin Confidential Tokens via `ComplianceHooks`
 - [ ] More on-ramps: the same SEP-6 client against anchors in other currencies

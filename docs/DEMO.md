@@ -34,7 +34,7 @@ and what must be on screen are what matter.
 | 0:50–1:00 | **Create treasury** → one passkey prompt → Overview | "One signature. The treasury exists, the rules are in it, and the agent is on its Leash." |
 | 1:00–1:35 | **Add funds** → 1500 TRY → live price → *Get bank details* → IBAN + description → *Declare the transfer sent* → USDC lands, two tx links | "Now money. Lira, through a SEP-6 anchor, at a locked rate. This is a testnet sandbox, so I declare the transfer instead of sending it — the USDC that arrives is real testnet USDC. Notice what didn't happen: no wallet prompt." |
 | 1:35–1:50 | **Payments** → approve one payee | "One address may be paid. Everyone else is a stranger." |
-| 1:50–2:20 | **Claude** (MCP connected): "check the budget, then pay 2.5 USDC to \<payee\>" → `check_budget` → `pay` → tx hash on Stellar Expert → dashboard: balance and the 24h meter move *(the ledger row for agent-made payments is not built yet — show the meter, not the ledger)* | "I never touch this. Claude checks what it may spend, pays, and the payment is on-chain — signed by the Leash key, no prompt." |
+| 1:50–2:20 | **Claude** (MCP connected): "check the budget, then pay 2.5 USDC to \<payee\>" → `check_budget` → `pay` → tx hash → switch to the dashboard: the dark panel reads **2.5 USDC · Allowed**, the row is in the ledger with its proof, the 24h meter has moved | "I never touch this. Claude checks what it may spend, pays, and the payment is on-chain — signed by the Leash key, no prompt." |
 | **2:20–2:50** | **Claude**: "send 5 USDC to \<stranger\>" → refused `PayeeNotWhitelisted #2` → open the refusal | **The climax — hold on it.** "Now the jailbreak. Same agent, same key — and the contract refuses. Not the app. Not the model's conscience. The contract. The funds never moved." |
 | 2:50–3:05 | Claude calls `request_exception` → dashboard **Agent** page shows the request → *Approve payee* → Claude pays | "The agent doesn't argue — it asks. I decide, on-chain, and only then does it pay." |
 | 3:05–3:15 | **Revoke Leash** → Overview | "One click and its authority is gone. My money, my rules, enforced on Stellar. eunomia.finance." |
@@ -53,8 +53,9 @@ and what must be on screen are what matter.
   notifications off.
 - Stills for a submission can be re-taken any time without recording:
   `cd web && npx playwright test --config playwright.shots.config.ts` → `docs/screenshots/`.
-- Optional beats if the cut runs short: the ZK attestation (Sealed Receipt), *Pause spending*
-  in Settings, the same flow on a phone.
+- Optional beats if the cut runs short: **Settings → Withdraw to your bank** (the unspent
+  USDC goes back to an IBAN as TRY — the anchor in both directions, ~20 seconds on screen),
+  the ZK attestation (Sealed Receipt), *Pause spending*, the same flow on a phone.
 
 ## 90-second guided demo (no sign-in)
 
@@ -102,8 +103,8 @@ bounded-spend idea exists elsewhere — the **fiat-grade rail under it** is wher
   key, and the device-held funding-account and session keys.
 - **Not reviewed yet:** the factory, `eunomia-mcp` and the anchor leg shipped after the last
   security round ([`SECURITY.md`](../SECURITY.md)).
-- **Not built yet:** an off-ramp screen (the library already withdraws to TRY), agent activity
-  from `eunomia-mcp` in the owner's ledger, mainnet.
+- **Not built yet:** refusals an agent meets in simulation in the owner's ledger (its payments are there, and its exception
+  requests are on the Agent page); mainnet.
 
 ## Likely questions
 

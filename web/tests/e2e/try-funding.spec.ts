@@ -10,6 +10,8 @@ import { Keypair } from "@stellar/stellar-sdk";
 import { getTestSigner, injectTestSigner, EunomiaPage, expect } from "./eunomiaTest";
 import { theAnchor } from "../../src/lib/anchor/addFunds";
 import { signIn } from "../../src/lib/anchor/auth";
+import { openFundingAccount } from "../../src/lib/anchor/fundingAccount";
+import { fundWithFriendbot } from "../../src/lib/funding";
 import { firmQuote } from "../../src/lib/anchor/quotes";
 import { requestDeposit, simulateBankTransfer, waitForTransfer } from "../../src/lib/anchor/transfers";
 
@@ -127,6 +129,53 @@ test("a USDC treasury is funded with TRY through the anchor", async ({ eunomia, 
   };
   expect(after.canSpend).toBe(true);
   expect(after.session.isThisAgent).toBe(true);
+
+  // The agent pays — from its own machine, with the published package, nobody prompted. One
+  // approved payee that can hold USDC, one stranger.
+  const payee = Keypair.random();
+  const stranger = Keypair.random();
+  await Promise.all([payee, stranger].map((k) => fundWithFriendbot(k.publicKey())));
+  await openFundingAccount(payee, anchor);
+  await eunomia.whitelistPayee(payee.publicKey());
+
+  // `pay` exits non-zero on a refusal (that is its contract with shell scripts), so read the
+  // JSON from whichever stream carried it.
+  const cli = (args: string): Record<string, unknown> => {
+    try {
+      return JSON.parse(run(`npx -y eunomia-mcp pay --treasury ${treasuryId} ${args}`));
+    } catch (e) {
+      return JSON.parse((e as { stdout?: string }).stdout ?? "{}");
+    }
+  };
+  const paid = cli(`--to ${payee.publicKey()} --amount 1.5`);
+  expect(paid.paid, JSON.stringify(paid)).toBe(true);
+  expect(paid.unit).toBe("USDC");
+  const refused = cli(`--to ${stranger.publicKey()} --amount 1`) as { paid: boolean; reasons: { code: number }[] };
+  expect(refused.paid).toBe(false);
+  expect(refused.reasons.map((r) => r.code)).toContain(2);
+
+  // The owner was not there — and the ledger shows it anyway, read from the treasury's events.
+  await page.goto("/#overview");
+  await page.reload();
+  await expect(page.locator(".ledger__row", { hasText: /agent paid 1\.5 USDC/i }).first()).toBeVisible({ timeout: 120_000 });
+  await page.screenshot({ path: "test-results/try-8-agent-paid-in-ledger.png" });
+
+  // And back out: what the agent did not spend goes to a bank account. One owner signature.
+  const heldBefore = Number(((await page.getByTestId("treasury-balance").textContent()) ?? "0").split(" ")[0]);
+  await page.goto("/#settings");
+  await page.getByLabel(/amount in usdc to withdraw to your bank/i).fill("2");
+  await page.getByRole("button", { name: /use a sample one/i }).click();
+  await expect(page.getByText(/you receive/i)).toBeVisible({ timeout: 30_000 });
+  await page.screenshot({ path: "test-results/try-9-withdraw-form.png" });
+  await page.getByRole("button", { name: /^withdraw to bank$/i }).click();
+  await expect(page.getByText(/paid to your bank/i)).toBeVisible({ timeout: 240_000 });
+  await expect(page.getByText(/^FAST-/)).toBeVisible();
+  await page.screenshot({ path: "test-results/try-10-withdrawn.png" });
+  await page.goto("/#overview");
+  await page.reload();
+  await expect
+    .poll(async () => Number(((await page.getByTestId("treasury-balance").textContent()) ?? "0").split(" ")[0]), { timeout: 60_000 })
+    .toBeCloseTo(heldBefore - 2, 3);
 
   expect(pageErrors).toEqual([]);
 });

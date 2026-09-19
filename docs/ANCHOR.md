@@ -160,10 +160,38 @@ over raw MCP stdio, against a treasury funded with 250 TRY:
 | `pay` 1.5 USDC to the approved payee — the agent signs, nobody is prompted | [`55e1d57a…6bfe`](https://stellar.expert/explorer/testnet/tx/55e1d57ac10b71b88f12f7403efadcc8c44a6b46209f86759293616f154a6bfe) |
 | `pay` 1 USDC to a stranger | refused by the contract: `PayeeNotWhitelisted (#2)`, `nextStep: request_exception` |
 
-The off-ramp was probed with the same client calls: 1.5 USDC → 72.81 TRY, paid out over
-(simulated) FAST, Stellar payment
+## And back out — withdraw to a bank
+
+The same anchor, in reverse: what the agent did not spend leaves the treasury as USDC and
+arrives at an IBAN as TRY. **Settings → Owner exits → Withdraw to your bank.**
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Owner
+    participant UI as Eunomia dashboard
+    participant FA as Funding account (G…)
+    participant A as Anchor
+    participant T as Treasury contract
+
+    Owner->>UI: amount in USDC · IBAN (checksum-verified)
+    UI->>A: SEP-38 /price (live preview)
+    FA->>A: SEP-10 sign-in · SEP-12 payout IBAN
+    UI->>A: SEP-38 /quote (rate locked) · SEP-6 /withdraw-exchange
+    A-->>UI: anchor account + memo
+    Note over T: nothing has moved yet — a refusal from the anchor costs nothing
+    Owner->>T: admin_withdraw(to = FA) — the one signature
+    T->>FA: USDC
+    FA->>A: USDC payment with the memo
+    A-->>Owner: TRY to the IBAN (sandbox: simulated FAST)
+```
+
+The order is the safety: the rate and the anchor's instructions are in hand **before** the
+treasury releases anything. If the trip stops after the release, the USDC is in the funding
+account and *Add funds* offers to move it back in. `live.test.ts` runs this leg too
+(1.5 USDC → 72.81 TRY, paid to the IBAN it was given); the browser run is in
+`try-funding.spec.ts`. First probe of the raw calls: Stellar payment
 [`82d5db94…cd43`](https://stellar.expert/explorer/testnet/tx/82d5db94dc77b9c757009acddc00f84a545f2cbedcea307933b0cd17348bcd43).
-The library carries it (`requestWithdraw`, `setPayoutIban`, `payAnchor`); it has no screen yet.
 
 ## From the sandbox to a real anchor
 

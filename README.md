@@ -45,7 +45,7 @@ So agents "research and recommend" but never transact. Eunomia removes the block
 |---|---|---|
 | **Bound** | The agent can't overspend or pay the wrong address | The Soroban contract enforces a policy (payee whitelist · per-payment limit · rolling 24h limit) and **rejects violations on-chain** |
 | **Revoke** | Authority ends on its own, or the moment the owner says so | The agent signs with a **Leash**: a session key with a spending cap and a deadline. The owner can revoke it, pause the treasury or withdraw at any time |
-| **On-ramp** | The budget starts as ordinary money | TRY goes in through a **SEP-6 anchor** at a locked rate; the anchor's USDC lands inside the treasury, with no wallet prompt ([how](docs/ANCHOR.md)) |
+| **Ramp** | The budget starts as ordinary money, and what is left goes back to it | TRY goes in through a **SEP-6 anchor** at a locked rate and lands in the treasury as USDC, with no wallet prompt; unspent USDC goes back out to an IBAN as TRY, with one owner signature ([how](docs/ANCHOR.md)) |
 | **Connect** | Any MCP agent can spend from it — Claude included | [`eunomia-mcp`](https://www.npmjs.com/package/eunomia-mcp): one command makes the agent's key, one signature puts it on the Leash |
 | **Account** | Every payment is attributable, with zero overhead | Spend is tracked **per task** in the contract; read straight off-chain |
 | **Earmark** | Money set aside for a specific agent budget, with no memos | A pool account issues **zero-cost muxed sub-addresses**; deposits attributed by `to_muxed_id` |
@@ -166,7 +166,7 @@ Usage is provable from two independent sources, neither of which we can quietly 
 
 What is left out matters as much: our own wallets and every wallet made by our end-to-end runs are listed in [`docs/metrics/e2e-exclude.json`](docs/metrics/e2e-exclude.json) and never counted — in one week of building the anchor leg those runs created more than a dozen treasuries, and none of them is a user.
 
-**Feedback signal from 11 external responses:** 4.9 / 5 average · 7 yes / 4 maybe on *would you use this in production*, none said no. What testers hit went straight into the product — the funding gate, "Copy ID", the sample-vendor prefill, the app shell and the treasury switcher all came from their reports.
+**Feedback signal from 14 responses:** 4.9 / 5 average · 10 yes / 4 maybe on *would you use this in production*, none said no. What testers hit went straight into the product — the funding gate, "Copy ID", the sample-vendor prefill, the app shell and the treasury switcher all came from their reports.
 
 **Tried Eunomia?** Tell us what to fix next: **[share feedback →](https://forms.gle/7gzJWwte52SmbXei7)**
 

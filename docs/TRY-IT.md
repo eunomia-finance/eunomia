@@ -71,7 +71,8 @@ button (it needs a little for fees).
    ![Agent: an active Leash with its cap and countdown, and the command to connect an external agent](screenshots/agent-leash.png)
 
 8. **Owner controls** — in **Settings**: *Pause spending* (freezes the agent; withdraw still
-   works), *Withdraw* funds back out, *Update limits* live. The owner always has an exit. Your
+   works), *Withdraw* funds back out — to an address, or **to your bank**: type an amount and
+   an IBAN (there is a sample one), see what it pays in TRY, sign once — and *Update limits* live. The owner always has an exit. Your
    treasury is backed up on Stellar, so it opens by itself when you sign in with the same
    passkey or wallet on another device.
 

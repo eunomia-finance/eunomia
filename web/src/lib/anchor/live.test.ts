@@ -12,7 +12,8 @@ import { createTreasury, freshSalt, predictTreasuryId } from "../createTreasury"
 import { makeWalletExecutor } from "../executor";
 import { fundWithFriendbot } from "../funding";
 import { sessionSigner } from "../session";
-import { makeTreasury, pay, readState } from "../userTreasury";
+import { adminWithdraw, makeTreasury, pay, readState } from "../userTreasury";
+import { finishWithdrawal, startWithdrawal } from "./withdrawToBank";
 import { finishDeposit, startDeposit, theAnchor } from "./addFunds";
 import { decimalToStroops } from "./amounts";
 import { anchorTokenId, hasTrustline, openFundingAccount } from "./fundingAccount";
@@ -78,6 +79,19 @@ describe.skipIf(!live)("TRY -> USDC treasury -> agent payment (live)", () => {
       expect(refused.ok).toBe(false);
 
       expect((await readState(asOwner)).balance).toBe(decimalToStroops(done.usdcAmount) - 10_000_000n);
+
+      // And back out: the owner withdraws what the agent did not spend to a bank account.
+      // Rate and instructions first, while the money is still in the treasury.
+      const iban = "TR330006100519786457841326";
+      const out = await startWithdrawal(funding, "1.5", iban, (s) => console.log("  out:", s));
+      const released = await adminWithdraw(asOwner, funding.publicKey(), Number(out.usdcAmount));
+      expect(released.ok).toBe(true);
+      const paidOut = await finishWithdrawal(funding, out, (s) => console.log("  out:", s));
+      console.log("  withdrew", out.usdcAmount, "USDC ->", paidOut.tryAmount, "TRY |", paidOut.transfer.bankRef, "|", paidOut.transfer.message);
+      expect(paidOut.transfer.status).toBe("completed");
+      expect(Number(paidOut.tryAmount)).toBeGreaterThan(50);
+      expect(paidOut.transfer.message ?? "").toContain(iban);
+      expect((await readState(asOwner)).balance).toBe(decimalToStroops(done.usdcAmount) - 10_000_000n - 15_000_000n);
     },
     300_000,
   );

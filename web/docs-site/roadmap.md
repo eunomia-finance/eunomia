@@ -29,8 +29,9 @@ with on-chain interactions · published feedback summary.
 - **[`eunomia-mcp`](/connect-your-agent) on npm** — any MCP agent checks its budget, pays,
   settles x402 requirements and asks the owner for exceptions; refusals arrive with the
   contract's own error codes.
-- **[Fiat on-ramp through a SEP-6 anchor](/anchor)** — TRY in at a locked rate, USDC out
-  into the treasury, with no wallet prompt. Against the testnet sandbox anchor today.
+- **[Fiat ramp through a SEP-6 anchor, both ways](/anchor)** — TRY in at a locked rate, USDC
+  out into the treasury, with no wallet prompt; unspent USDC back out to an IBAN as TRY,
+  with one owner signature. Against the testnet sandbox anchor today.
 - **Proofs bound to chain state** and a **third, full-scope security review**.
 
 ## M3 — Mainnet
@@ -38,7 +39,7 @@ with on-chain interactions · published feedback summary.
 A **security review of what shipped since the last round** (the factory, `eunomia-mcp`, the
 anchor leg) comes first and gates the rest · a **production SEP-6 anchor** in place of the
 sandbox · **SEP-45** on the anchor's side, so the per-treasury funding account goes away ·
-the **off-ramp** in the product (the library already does it) · mainnet **USDC** · hardened
+mainnet **USDC** · hardened
 key storage for agent session keys · multi-party **trusted-setup ceremony** for the ZK
 circuit · mainnet deployment with conservative default policies.
 

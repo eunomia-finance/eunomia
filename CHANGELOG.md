@@ -23,6 +23,13 @@ published package. Architecture and evidence: [`docs/ANCHOR.md`](docs/ANCHOR.md)
   wallet prompt on that path: a passkey owner reaches a funded treasury with one signature
   and without ever holding XLM (measured on the live site). Every amount label follows the
   treasury's token
+- **Added (off-ramp)** — *Settings → Withdraw to your bank*: unspent USDC leaves the treasury
+  and arrives at an IBAN as TRY, through the same anchor. The rate and the anchor's
+  instructions are taken **before** the treasury releases anything; the owner signs once
+  (`admin_withdraw` into the funding account); the IBAN is checksum-verified (ISO 13616)
+- **Added (ledger)** — payments an agent makes through `eunomia-mcp` appear in the owner's
+  decision ledger, read from the treasury's own `paid` events and matched to the activity
+  log by tx hash — the owner sees what the agent did without having been there
 - **Added (setup)** — "Connect an agent now" works: a treasury's address is the hash of
   (network, factory, salt), so the form settles it before the treasury exists and prints
   `eunomia-mcp init` with it — one signature creates the treasury *and* puts the agent on

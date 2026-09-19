@@ -19,6 +19,14 @@ other way to be funded, and every payment the agent makes afterwards is that sam
 No wallet prompt at any point: a passkey owner goes from nothing to a funded treasury with
 **one signature** — the one that created it — and without ever holding XLM.
 
+## And back out
+
+**Settings → Withdraw to your bank**: type an amount in USDC and an IBAN (checksum-verified),
+see what it pays in TRY, sign once. The rate and the anchor's instructions are taken *before*
+the treasury releases anything, so a refusal from the anchor costs nothing; then the treasury
+releases the USDC, it is sent to the anchor with the memo that ties it to the request, and
+TRY arrives at the IBAN.
+
 ## How it is built
 
 | Step | Standard |

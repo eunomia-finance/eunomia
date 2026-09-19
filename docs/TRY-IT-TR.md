@@ -72,7 +72,9 @@ ayarlarından **Testnet**'e geç. Boş cüzdana tek tıkla **"Get free testnet X
    ![Agent: üst sınırı ve geri sayımıyla aktif bir Leash, dış ajan bağlama komutu](screenshots/agent-leash.png)
 
 8. **Sahip kontrolleri** — **Settings**'te: *Pause spending* (ajanı dondurur; para çekme yine
-   çalışır), *Withdraw* ile parayı geri çek, *Update limits* ile limitleri canlı değiştir.
+   çalışır), *Withdraw* ile parayı geri çek — bir adrese ya da **bankana**: tutarı ve IBAN'ı
+   yaz (hazır bir örnek IBAN var), kaç TL edeceğini gör, bir kez imzala — *Update limits* ile
+   limitleri canlı değiştir.
    Sahibin her zaman bir çıkışı vardır. Kasan Stellar üzerinde yedeklenir; aynı passkey ya da
    cüzdanla başka bir cihazdan girdiğinde kendiliğinden açılır.
 
