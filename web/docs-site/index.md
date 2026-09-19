@@ -11,12 +11,14 @@ checked and enforced on Stellar. Anything outside the rules is blocked, automati
 ## How it works
 
 1. **Create** a treasury — with a passkey (Face ID, fingerprint or device PIN) or with a
-   Stellar wallet you already use. The rules are built into it at creation.
-2. **Fund** it — the treasury pays from its own balance, never from your wallet.
+   Stellar wallet you already use. One signature; the rules are built into it at creation.
+2. **Fund** it — with a bank transfer: TRY goes in through a SEP-6 anchor and lands in the
+   treasury as USDC, with no wallet prompt. (Or hold XLM and fund it from your wallet.) The
+   treasury pays from its own balance, never from your wallet.
 3. **Approve payees** — payments can only go to addresses you've approved.
-4. **Hand it to your agent on a Leash** — a spending cap and a time limit. The agent
-   pays on its own, no popups; every payment is still checked against your rules,
-   and you can revoke instantly.
+4. **Hand it to your agent on a Leash** — a spending cap and a time limit. Any MCP agent
+   connects with one command (`npx eunomia-mcp`); it pays on its own, no popups; every
+   payment is still checked against your rules, and you can revoke instantly.
 
 Signing in with a passkey needs no wallet, no seed phrase and no XLM: the passkey
 controls a Stellar smart wallet, and transaction fees are sponsored. It stays
@@ -39,8 +41,10 @@ you can verify, not something you have to trust.
 
 ## Start here
 
-- [Try it in 5 minutes](/try-it) — testnet, free XLM, real contract.
+- [Try it in 5 minutes](/try-it) — testnet, no real money, real contract.
 - [Türkçe hızlı başlangıç](/try-it-tr)
-- [Architecture](/architecture) — the four contracts and how they fit.
+- [Connect your agent](/connect-your-agent) — `eunomia-mcp`: one command, six tools.
+- [The anchor leg](/anchor) — how TRY becomes a spendable agent budget.
+- [Architecture](/architecture) — the contracts and how they fit.
 - [Confidential compliance (ZK)](/zk) — prove the rules held, reveal nothing.
 - [Deployed contracts & addresses](/contracts) · [Security model](/security)

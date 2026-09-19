@@ -7,14 +7,18 @@ live and verifiable on [stellar.expert](https://stellar.expert/explorer/testnet)
 
 | Contract | Address / hash |
 | --- | --- |
-| **Treasury v3.4 wasm** (current — every in-app create instantiates this) | `b813a1e7a3d2ddb1013dbaa11a41dcc1fbed984a30cfef9023dc199b12131a72` |
+| **Treasury factory** (one owner signature: deploy + rules + payees + Leash + funding + registry; it has no admin and keeps no authority over what it creates) | [`CAWLFTQ4…2OMS`](https://stellar.expert/explorer/testnet/contract/CAWLFTQ4V3ZPUWRVL5RGXBBA7FMJ26EXW37GGKCGKOXO4TKABEHF2OMS) |
+| **Treasury v3.5 wasm** (current — what the factory instantiates) | `824472060b3abec7c6c64e8985fa5d0c5a39ea277fbb67eab3125a483d059641` |
 | **Treasury Registry** (cross-device backup) | [`CBEPVXK6…4ZE7`](https://stellar.expert/explorer/testnet/contract/CBEPVXK6BN2FZ3IYHV5KQUGROFHNBWBYHKHRZ5U3O7UWGIOPFOFE4ZE7) |
-| **Compliance Verifier** (ZK, bound to treasury state) | [`CCZKA3K4…D5Q`](https://stellar.expert/explorer/testnet/contract/CCZKA3K4SPIFWG7UBIY2CE7LPKPMCWROCHXZO2JAMYVVGU6TUKOWMD5Q) |
+| **Compliance Verifier** (ZK, bound to treasury state, 16-payment batch — the one the app reads) | [`CD3TB3F4…DYZ3`](https://stellar.expert/explorer/testnet/contract/CD3TB3F4VQF2H56IQC4KV3YLA6QRIF272W5D6PK2SWVTYPXHS4NFDYZ3) |
+| Compliance Verifier, previous (holds the attestation linked below) | [`CCZKA3K4…D5Q`](https://stellar.expert/explorer/testnet/contract/CCZKA3K4SPIFWG7UBIY2CE7LPKPMCWROCHXZO2JAMYVVGU6TUKOWMD5Q) |
+| **USDC the TRY anchor pays out** (asset contract of `USDC:GBBD47IF…FLA5` — what a USDC treasury holds) | [`CBIELTK6…DAMA`](https://stellar.expert/explorer/testnet/contract/CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA) |
 | **Eunomia Policy** (OpenZeppelin ComplianceHooks) | `CBWMYGL7E663UON6ER5KQX2JZZA4UDZZD4RIFEHGXXF2HMMBRAN7BLQF` |
 
 Treasury version history (v1 demo → v2 reputation+escrow → v3 sessions+lifecycle →
 v3.1 audit hardening → v3.2 storage-TTL hardening → v3.3 spend-window fixes →
-v3.4 the surfaces a compliance proof binds to) is recorded with upload transactions
+v3.4 the surfaces a compliance proof binds to → v3.5 a policy ceiling a proof can always
+cover) is recorded with upload transactions
 in [`DEPLOYMENT.md`](https://github.com/eunomia-finance/eunomia/blob/main/DEPLOYMENT.md).
 
 ## Live on-chain proofs
@@ -25,6 +29,8 @@ in [`DEPLOYMENT.md`](https://github.com/eunomia-finance/eunomia/blob/main/DEPLOY
 | A proof of a batch that never happened, rejected | `Error(Contract, #9)` — the total must match the treasury's own `period_spent` |
 | Replay of the same period rejected | `Error(Contract, #8)` — periods only move forward |
 | Rogue payment to an unapproved address rejected | `Error(Contract, #2)` — funds never moved |
+| TRY in through the SEP-6 anchor, USDC into a treasury | [anchor pays `0db8d770…`](https://stellar.expert/explorer/testnet/tx/0db8d77093198f64d7ebc3b03628a34ef1a6c47d80e74b07298073c3427f1b34) → [forwarded into the treasury `aff042d1…`](https://stellar.expert/explorer/testnet/tx/aff042d153ff4e11295e310efdcc70f6ad81404452c003e7a56804a5a27d411e) — see [The anchor leg](/anchor) |
+| An agent running the published `eunomia-mcp` pays from a TRY-funded treasury, unprompted | [tx `55e1d57a…`](https://stellar.expert/explorer/testnet/tx/55e1d57ac10b71b88f12f7403efadcc8c44a6b46209f86759293616f154a6bfe) — the same agent's payment to a stranger refused with `#2` |
 | Session key as sole spender, root key refused while Leash active | verified on the M2 smoke treasury |
 | Reputation-gated payment (payee not approved, score ≥ threshold) | [tx `8d62132f…`](https://stellar.expert/explorer/testnet/tx/8d62132f4940f71758a351e68c8a7fe0f24b14207abf8c9c3eed6b3842c215cb) |
 

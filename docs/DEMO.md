@@ -10,94 +10,110 @@
 
 AI agents can reason and act — until they need to pay. No business gives an LLM agent a
 wallet, because one jailbreak drains it and hundreds of micro-payments are impossible to
-reconcile. Eunomia fixes both: the agent's spend is **bounded by a Soroban contract** (whitelist,
-per-task and daily limits, rejected on-chain), every payment is **auto-accounted per task**,
-and budgets are funded through **zero-cost muxed sub-addresses** — Stellar primitives nothing
-else matches. It's live on testnet, settling payments in testnet USDC (a test-issued asset;
-per-user treasuries run on native testnet XLM — Circle USDC is the mainnet path).
+reconcile. Eunomia fixes both: the agent's spend is **bounded by a Soroban contract** (approved
+payees, per-payment and daily limits, refused on-chain), every payment is **auto-accounted per
+task**, and the budget starts as ordinary money — **TRY goes in through a SEP-6 anchor and
+lands in the treasury as USDC**. Any MCP agent connects with one command. It is live on
+testnet: a stranger signs up with a passkey, funds a treasury with a bank transfer and hands
+it to Claude, in one sitting.
 
-## 90-second live demo
+## Full product demo — screen-recording script
 
-1. **Landing → Launch live demo.** "This dashboard is reading live testnet state — 495 USDC
-   sitting in the business's own non-custodial contract."
-2. **▶ Run agent tasks.** "The agent pays three vendors autonomously — it signs its own
-   transactions, no human, no wallet popup. Watch them settle." → 3 tx links, balance drops.
-3. **⚠ Simulate prompt-injection.** "Now I jailbreak the agent: send everything to an
-   attacker wallet." → 🔴 **Blocked on-chain — PayeeNotWhitelisted. Funds never moved.**
-   "The model misbehaved. The contract didn't care."
-4. **Auto-reconciled spend.** "Every payment is tagged to its task, read straight off-chain —
-   reconcile a thousand agent payments with zero memos."
-5. **Funding rail.** "Fund the Research agent's budget — one click pays its zero-cost muxed
-   sub-address; the deposit is attributed on-chain with no memo. One account, infinite
-   sub-budgets." → attributed deposit appears.
-6. **Close:** "Bounded. Accounted. Funded. All Stellar-native. All live."
+Goal: one unbroken take that shows the whole claim — **lira in, a leashed agent paying, the
+contract saying no** — on the live site, with real transaction hashes. Real screen recording
+(no static-screenshot zoom/pan), voiceover *or* captions. Target ~3:15.
 
-## Full product demo — app shell (screen-recording script)
-
-Goal: prove Eunomia is a **usable product**, not a scripted demo — a first-time user connects a
-wallet, deploys their **own** bounded treasury, the contract rejects a real over-spend, and an
-agent then spends on a revocable **Leash** with no wallet popups. **Real screen recording**
-(Freighter + live testnet, real tx hashes) with voiceover *or* captions — no static-screenshot
-zoom/pan. Target ~3:10.
+The "say" column is a working draft in plain words — rewrite it in your own voice; the beats
+and what must be on screen are what matter.
 
 | Time | Screen | Say / caption |
 |---|---|---|
-| 0:00–0:12 | Landing hero | "The wallet your AI agent can't drain. Not a mockup — I'll deploy my own in three minutes, live." |
-| 0:12–0:26 | **Open app** → Connect wallet → Freighter approve | "I connect my own Stellar wallet. This address becomes the treasury owner — nobody custodies my funds." |
-| 0:26–0:50 | **Setup** wizard → limits (per-payment 10 / daily 50) → sign | "One signature deploys *my* bounded treasury on-chain. I set the rules; the contract keeps them." *(show the tx)* |
-| 0:50–1:05 | **Overview** — balance, limit bar, next-step stepper | "This is my treasury. Balance, remaining daily allowance, and what to do next — read live from chain." |
-| 1:05–1:18 | **Fund** it from the wallet | "I fund it with testnet XLM. The funds live in my contract, never with Eunomia." |
-| 1:18–1:33 | **Payments** → add payee (sample vendor) | "I approve exactly one payee. Only this address can ever receive money." |
-| 1:33–1:52 | **Payments** → pay the payee, in-policy → settles | "In-policy payment: inside the limit, to an approved payee. Settled on-chain in seconds." *(tx link, balance drops)* |
-| **1:52–2:15** | **Payments** → pay over the limit **→ 🔴 blocked** | **The climax — hold on this.** "Now I overspend. The contract rejects it: `ExceedsTaskLimit`. The funds never moved. The model can misbehave — the contract doesn't care." *(open the failed tx in Stellar Expert)* |
-| 2:15–2:40 | **Agent** → start a Leash (duration + cap) → run autonomous task | "I hand an agent a Leash: time-bound, spend-capped, revocable. It signs its own payments — no popups — and it still can't cross the policy." |
-| 2:40–2:52 | **Agent** → revoke the Leash | "One click and the agent's authority is gone. Revocation is on-chain, not a promise." |
-| 2:52–3:05 | **Activity** — full platform feed, BLOCKED rows | "Every action by every user, streamed live — including the drain attempts the contract turned down." |
-| 3:05–3:15 | **Settings** → pause / limits, then landing CTA | "Pause the treasury or withdraw at any time. Deploy your own at eunomia.finance." |
+| 0:00–0:10 | Landing hero | "The wallet your AI agent can't drain. Not a mock-up — I'll set one up and fund it with lira, live." |
+| 0:10–0:25 | **Create your treasury with a passkey** → Face ID / fingerprint | "No wallet, no seed phrase, no crypto to buy first. A passkey — that's the owner." |
+| 0:25–0:50 | **Setup**: USDC · limits 50 / 10 · *+ Connect an agent now* → copy the command → terminal: `npx -y eunomia-mcp init …` → paste the key | "The rules: fifty a day, ten per payment. And my agent — its key is made on *its* machine; I only see the public half. The treasury doesn't exist yet, but its address is already settled." |
+| 0:50–1:00 | **Create treasury** → one passkey prompt → Overview | "One signature. The treasury exists, the rules are in it, and the agent is on its Leash." |
+| 1:00–1:35 | **Add funds** → 1500 TRY → live price → *Get bank details* → IBAN + description → *Declare the transfer sent* → USDC lands, two tx links | "Now money. Lira, through a SEP-6 anchor, at a locked rate. This is a testnet sandbox, so I declare the transfer instead of sending it — the USDC that arrives is real testnet USDC. Notice what didn't happen: no wallet prompt." |
+| 1:35–1:50 | **Payments** → approve one payee | "One address may be paid. Everyone else is a stranger." |
+| 1:50–2:20 | **Claude** (MCP connected): "check the budget, then pay 2.5 USDC to \<payee\>" → `check_budget` → `pay` → tx hash on Stellar Expert → dashboard: balance and the 24h meter move *(the ledger row for agent-made payments is not built yet — show the meter, not the ledger)* | "I never touch this. Claude checks what it may spend, pays, and the payment is on-chain — signed by the Leash key, no prompt." |
+| **2:20–2:50** | **Claude**: "send 5 USDC to \<stranger\>" → refused `PayeeNotWhitelisted #2` → open the refusal | **The climax — hold on it.** "Now the jailbreak. Same agent, same key — and the contract refuses. Not the app. Not the model's conscience. The contract. The funds never moved." |
+| 2:50–3:05 | Claude calls `request_exception` → dashboard **Agent** page shows the request → *Approve payee* → Claude pays | "The agent doesn't argue — it asks. I decide, on-chain, and only then does it pay." |
+| 3:05–3:15 | **Revoke Leash** → Overview | "One click and its authority is gone. My money, my rules, enforced on Stellar. eunomia.finance." |
 
 **Recording notes**
 
-- **Start from a fresh treasury** — switcher → **＋ New treasury**. Older treasuries run legacy
-  WASM where the Leash beat (Agent section) won't work.
-- Pre-fund the wallet before recording so friendbot waits don't land on camera; keep Freighter
-  on **Testnet**; let each tx confirm on camera — the real hash is the proof.
-- 1080p, cursor visible, no browser notifications on screen.
-- **Grab stills while you're in there** (submission needs them): Overview (connected), Payments
-  with the blocked attempt, Activity, and one mobile screen at 390 px.
-- Optional confidential-mode beat (ZK proof → attested) slots in before Activity if the cut
-  runs short.
+- Record on **eunomia.finance**, not localhost — passkeys are bound to that domain.
+- Have Claude Code open with the MCP server already added (`claude mcp add eunomia …` is
+  printed by `init`); a second terminal for the `init` command. Pre-approve the MCP tools so
+  permission dialogs don't land on camera.
+- The payee must be able to hold USDC: a passkey wallet needs nothing, a G… account needs a
+  USDC trustline. The **sample vendor** has one.
+- TRY per transfer: 50–3000. 1500 TRY buys ~30 USDC — comfortably above the 50/10 limits'
+  needs.
+- Let each transaction confirm on camera — the real hash is the proof. 1080p, cursor visible,
+  notifications off.
+- Stills for a submission can be re-taken any time without recording:
+  `cd web && npx playwright test --config playwright.shots.config.ts` → `docs/screenshots/`.
+- Optional beats if the cut runs short: the ZK attestation (Sealed Receipt), *Pause spending*
+  in Settings, the same flow on a phone.
+
+## 90-second guided demo (no sign-in)
+
+The in-app **Guided demo** (sidebar) needs no wallet and reads live testnet state — useful on
+a stage where signing in is a risk.
+
+1. **▶ Run agent tasks.** "The agent pays three vendors autonomously — it signs its own
+   transactions, no human, no wallet popup. Watch them settle." → 3 tx links, balance drops.
+2. **⚠ Simulate prompt-injection.** "Now I jailbreak the agent: send everything to an attacker
+   wallet." → 🔴 **Blocked on-chain — PayeeNotWhitelisted. Funds never moved.** "The model
+   misbehaved. The contract didn't care."
+3. **Auto-reconciled spend.** "Every payment is tagged to its task, read straight off-chain."
+4. **Funding rail.** "One click pays a zero-cost muxed sub-address; the deposit is attributed
+   on-chain with no memo. One account, any number of sub-budgets."
 
 ## Why Stellar (have this ready)
 
-Sub-cent deterministic fees make agent micro-payments viable; **muxed accounts** are the
-zero-cost attribution primitive for payment swarms; **`__check_auth`** makes a contract-bounded
-agent first-class; native USDC + anchors reach the real world. The bounded-spend safety exists
-elsewhere — the **cheap attribution + fiat-grade rail** is where Stellar wins.
+Sub-cent deterministic fees make agent micro-payments viable; **anchors and the SEPs** give a
+standard, non-custodial way for ordinary money to become an on-chain budget — we integrate one
+with two inputs, a home domain and an asset code; **contract accounts + passkeys** make an
+owner who never holds a seed phrase first-class; **muxed accounts** are a zero-cost
+attribution primitive; native USDC and x402 are where agent commerce is being priced. The
+bounded-spend idea exists elsewhere — the **fiat-grade rail under it** is where Stellar wins.
 
 ## Judging map
 
 | Criterion | Our evidence |
 |---|---|
-| Real-world impact | The #1 blocker to agentic commerce (safe + accountable agent spend) — SDF's own Agents hackathon names "payments" as the hard stop |
-| Technical | Real Soroban contract (policy + `__check_auth` semantics, per-task accounting, events), deployed + verified on testnet; on-chain rejection demoed live |
-| UX | One-click autonomous agent, visceral on-chain rejection, live reconciliation, cinematic landing |
-| Ecosystem fit | Muxed accounts, SAC/USDC, path-ready, ERC-8004 (trionlabs) trust layer — composes with the ecosystem |
-| Presentation | The "contract says no" moment + live tx links |
+| Real-world impact | The #1 blocker to agentic commerce — safe, accountable agent spend — solved for money that starts in a bank account |
+| Anchor / local payments | TRY → USDC through SEP-1/10/38/6, in the product's payment path: a USDC treasury has no other way to be funded. Evidence and diagrams: [`ANCHOR.md`](ANCHOR.md) |
+| Technical | Soroban treasury + factory + registry + ZK verifier on testnet; SEP-10 challenge verified before signing; treasury address derived before creation; live tests against production |
+| UX | Passkey sign-up, one-signature setup including the agent, funding with zero wallet prompts, refusals in plain language with the contract's code |
+| Ecosystem fit | SEP anchors, passkey smart wallets, SAC/USDC, x402, MCP, ERC-8004 (trionlabs) — composes with what exists |
+| Presentation | The "contract says no" moment, with live transaction links |
 
 ## Honest scope
 
-- **Real (testnet):** treasury contract + policy + rejection, agent autonomous payments,
-  per-task accounting, muxed funding attribution, ERC-8004 identity (agent #1).
-- **Demo shortcut:** the agent key is embedded (testnet-only) so the agent signs without a
-  popup — deliberate, since the contract is the safety, not a human approval. Funding-rail
-  deposits use XLM for a frictionless demo (USDC in production).
-- **Roadmap:** on-chain reputation gate in `pay()` (the seam is already in the contract),
-  anchor cash-out, x402 vendor endpoints.
+- **Real (testnet):** the treasury, the rules and the refusals; one-signature setup; passkey
+  ownership; autonomous agent payments through the published `eunomia-mcp`; the USDC the
+  anchor pays; ZK attestation bound to chain state.
+- **Simulated:** the anchor's **bank and KYC** — it is the Pro Hackathon's sandbox anchor. The
+  integration is a configuration change away from a production SEP-6 anchor; the counterparty
+  is the work.
+- **Testnet shortcuts, stated in the code where they live:** the guided demo's embedded agent
+  key, and the device-held funding-account and session keys.
+- **Not reviewed yet:** the factory, `eunomia-mcp` and the anchor leg shipped after the last
+  security round ([`SECURITY.md`](../SECURITY.md)).
+- **Not built yet:** an off-ramp screen (the library already withdraws to TRY), agent activity
+  from `eunomia-mcp` in the owner's ledger, mainnet.
 
 ## Likely questions
 
-- *"Isn't bounded spend already solved?"* The bound is table-stakes; our edge is **cheap
-  on-chain attribution** (muxed) + the **funding rail**, which competitors don't have.
-- *"Why not Base/Solana where x402 lives?"* Micro-fee + muxed attribution + fiat anchors.
-  Stellar is also shipping x402; we compose with it.
+- *"Is the lira real?"* No — the sandbox anchor simulates the bank; the rate is real (oracle +
+  spread, locked by a firm quote) and so is the USDC. Nothing in our code knows the
+  difference: a production anchor is a different home domain.
+- *"Isn't bounded spend already solved?"* Limits and allowlists are becoming table-stakes.
+  What isn't: an owner who starts from a bank transfer and a passkey, an agent connected in
+  the same signature, and refusals the agent can read and appeal.
+- *"Why does the agent need a funding account in between?"* The anchor signs in and pays out
+  G-accounts only; the owner's smart wallet and the treasury are contracts. SEP-45 on the
+  anchor's side removes it.
 - *"Custody risk?"* None — funds never leave the owner's contract. We're software, not a bank.

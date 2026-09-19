@@ -62,6 +62,7 @@ export default defineConfig({
         items: [
           { text: `What is ${NAME}?`, link: "/" },
           { text: "Architecture", link: "/architecture" },
+          { text: "The anchor leg (TRY → USDC)", link: "/anchor" },
           { text: "Confidential compliance (ZK)", link: "/zk" },
         ],
       },
@@ -70,6 +71,7 @@ export default defineConfig({
         items: [
           { text: "Try it (5 minutes)", link: "/try-it" },
           { text: "Hızlı başlangıç (TR)", link: "/try-it-tr" },
+          { text: "Connect your agent (MCP)", link: "/connect-your-agent" },
         ],
       },
       {

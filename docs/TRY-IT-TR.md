@@ -2,62 +2,91 @@
 
 *English version: [TRY-IT.md](TRY-IT.md)*
 
-**Eunomia nedir?** AI agent'lara güvenle harcama yetkisi veren, Stellar üzerinde çalışan
-sınırlı bir hazine (bounded treasury): günlük limit + işlem-başı limit + payee whitelist'ini
-**kontrat** uygular — model ne kadar "ikna edilirse edilsin" limit dışına para çıkamaz.
+**Eunomia nedir?** Stellar üzerinde, bir yapay zekâ ajanına gerçek harcama yetkisini güvenle
+vermeni sağlayan sınırlı bir kasa: günlük limit, ödeme başına limit ve onaylı alıcı listesi
+**kontrat** tarafından uygulanır — model ne kadar "ikna edilirse" edilsin, para kuralların
+dışına çıkamaz.
 
-Aşağıdaki akış tamamen **testnet** üzerindedir: gerçek para yok, riskiniz sıfır.
-Her adım cüzdanınızla imzalanır — non-custodial, fonlar hep sizin kontrolünüzde.
+Aşağıdaki her şey **testnet**'te çalışır: gerçek para yok, risk sıfır. Sahip olarak yaptığın
+her işlemi sen imzalarsın — emanetçi yok, para baştan sona senin kontrolünde.
 
 **Uygulama:** [eunomia.finance](https://eunomia.finance)
 
-## Mobil cihazdan bağlanma
+## İki giriş yolu
 
-Aşağıdaki adımlar telefondan da aynen çalışır. Tarayıcı eklentisi yerine:
+**Passkey ile (en hızlısı).** Face ID, parmak izi ya da cihaz PIN'i. Cüzdan kurmak, kurtarma
+kelimesi yazmak ya da önce XLM bulmak yok — passkey bir Stellar akıllı cüzdanını yönetir,
+işlem ücretleri karşılanır. Telefonda da aynı şekilde çalışır.
 
-1. **Freighter mobil** (veya WalletConnect destekleyen başka bir Stellar cüzdanı)
-   uygulamasını app store'dan kur.
-2. **Testnet'e al** — cüzdanın ayarlarından ağı **Testnet** olarak değiştir.
-3. **WalletConnect ile bağlan** — uygulamada *Connect wallet*'a dokun → modalda
-   **WalletConnect**'i seç → telefon cüzdanınla QR kodu tara → onayla.
-
-Şimdi aşağıdaki adımları takip et — her şey aynı şekilde çalışır.
+**Cüzdan ile.** Zaten varsa: masaüstünde Freighter, xBull, Albedo, LOBSTR, Rabet ya da Hana;
+telefonda WalletConnect destekleyen herhangi bir Stellar cüzdanı. Önce cüzdanın kendi
+ayarlarından **Testnet**'e geç. Boş cüzdana tek tıkla **"Get free testnet XLM"** düğmesi
+çıkar (ücretler için biraz gerekir).
 
 ## Adımlar
 
-1. **Cüzdan kur** — **masaüstünde** [Freighter](https://www.freighter.app/) tarayıcı
-   eklentisini kur, ayarlarından ağı **Testnet**'e al. **Telefonda** yukarıdaki *Mobil
-   cihazdan bağlanma* bölümüne bak. (Zaten Stellar cüzdanın varsa bu adımı atla.)
-2. **Bağlan** — sağ üstteki *Connect wallet*'a veya *Open app*'e tıkla → **Freighter**
-   (masaüstü) ya da **WalletConnect** (telefon) seçeneklerinden birini seç.
-3. **Ücretsiz testnet XLM al** — cüzdanın boşsa uygulama bunu fark eder ve
-   **"Get free testnet XLM"** butonu gösterir; tek tıkla friendbot cüzdanını fonlar.
-4. **Hazineni oluştur** — günlük ve işlem-başı limitlerini gir → *Create treasury* →
-   cüzdanında imzala. Deploy bitince **"Copy ID" ile hazine kimliğini kopyala ve sakla** —
-   başka tarayıcı/cihazdan aynı hazineyi bu ID ile açarsın.
-5. **Fonla** — bir miktar XLM gir (ör. 20) → *Fund* → imzala.
-6. **Payee whitelist'le** — ödeme yapılabilecek adresi ekle. İkinci bir adresin yoksa
-   inputun altındaki **"use the sample vendor"** bağlantısına tıkla, örnek adresi kullan.
-7. **Harca** — whitelist'lediğin adrese limit içinde bir ödeme gönder → on-chain işler ✓.
-8. **Asıl gösteriyi izle** — şimdi bir de limit ÜSTÜ tutar dene, ya da whitelist dışı bir
-   adrese göndermeyi dene: kontrat işlemi **on-chain reddeder**, para yerinden oynamaz.
-   Bu red, ürünün ta kendisi. 🔴
-9. **Hazineyi ajana devret (popup'lar bitsin)** — **Agent** sekmesinde harcama
-   tavanı ve süre belirle → *Start Leash* (tek cüzdan onayı). Artık ödemeler
-   session anahtarıyla imzalanır — **Run autonomous task**'a bas: 1 XLM, **sıfır cüzdan
-   popup'ıyla** on-chain işler ve tüm limitler yine geçerlidir. *Revoke Leash* ile
-   kontrolü anında geri alırsın.
-10. **Sahip kontrolleri** — **Settings** sekmesinde *Pause spending* (ajanı dondurur,
-     withdraw çalışmaya devam eder), *Withdraw* ile paranı geri çek, *Update limits* ile
-     limitleri anında güncelle — sahibin her zaman bir çıkışı var.
+1. **Giriş yap** — *Create your treasury with a passkey* → yüzün, parmak izin ya da PIN'inle
+   onayla. (Cüzdan mı tercih ediyorsun? *I have a wallet* → kendininkini seç. Telefonda
+   **WalletConnect**'i seçip QR'ı okut.)
+2. **Kuralları koy ve oluştur — tek imza.** Kasa varsayılan olarak **USDC** tutar (TRY ile
+   fonlanır); istersen **XLM**'e çevirirsin (cüzdanından fonlanır). Günlük limiti ve ödeme
+   başına limiti gir → *Create treasury* → bir kez onayla. İki isteğe bağlı seçenek aynı
+   imzaya katlanır: *+ Approve a payee now* ve *+ Connect an agent now* (7. adım).
+
+   ![Kurulum: kasanın tuttuğu para birimi, iki limit, ilk alıcı, tek düğme](screenshots/setup.png)
+
+3. **TRY ile para ekle** — **Overview**'da *Add funds* → bir tutar yaz (50–3000 TRY), karşılığını
+   canlı gör → *Get bank details*: banka, IBAN, havale açıklaması ve kurun kilitli kaldığı saat.
+   Bu anchor arkasında banka olmayan bir testnet sandbox'ı; o yüzden havale göndermek yerine
+   *Declare the transfer sent*'e basarsın; ödediği USDC gerçek testnet USDC'sidir. Birkaç
+   saniye sonra para kasadadır, iki işlem de bağlantısıyla görünür. Hiçbir aşamada cüzdan
+   onayı çıkmaz. *(XLM kasada: Add funds → tutar → Fund → onayla.)*
+
+   ![TRY ile para ekleme: kilitlenen tutar ve banka bilgileri](screenshots/add-funds-try.png)
+
+4. **Bir alıcıyı onayla** — **Payments**'ta ödeme yapılabilecek bir adres ekle. Elinde ikinci
+   bir adres yoksa **"use the sample vendor"**a tıkla. *(USDC kasada G… ile başlayan bir
+   alıcının USDC alabilmesi için trustline'ı olmalı — örnek satıcıda var; passkey cüzdanına
+   bir şey gerekmez.)*
+5. **Ödeme gönder** — *Pay by hand* → onayladığın adres, limitler içinde bir tutar → zincire
+   düşer ✓ ve kanıtıyla birlikte defterde görünür.
+6. **Asıl gösteriyi izle** — ödeme başına limitin **üstünde** bir tutar ya da hiç onaylamadığın
+   bir adrese ödeme dene: kontrat bunu **zincir üstünde reddeder**, para yerinden oynamaz.
+   O ret, ürünün çalıştığı andır. 🔴
+
+   ![Overview: son karar reddedilmiş, izin verilen ve reddedilen ödemelerin defteri, bütçe sayacı, Leash](screenshots/overview.png)
+
+7. **Ajana devret (artık onay penceresi yok)** — **Agent** sayfasında:
+   - *En hızlısı:* bir üst sınır ve süre gir → **Start Leash**. Bu cihazdaki bir oturum
+     anahtarı artık kendi başına öder — **Run autonomous task**'ı dene: hiç pencere açılmadan
+     zincire düşer, bütün kurallar yine geçerlidir.
+   - *Kendi ajanın (Claude ya da herhangi bir MCP istemcisi):* sayfanın yazdığı komutu
+     kopyala — `npx -y eunomia-mcp init --treasury <kasa kimliğin>` — ajanın çalıştığı
+     makinede çalıştır, yazdırdığı açık anahtarı yapıştır, **Authorise agent**. Ajanın gizli
+     anahtarı kendi makinesinden hiç çıkmaz. Komut, MCP istemcine ekleyeceğin ayarı da
+     yazdırır; ondan sonra ajanın elinde `check_budget`, `pay`, `request_exception` ve
+     diğerleri olur — retler ona kontratın kendi hata kodlarıyla döner.
+
+   *Revoke Leash* kontrolü anında geri alır.
+
+   ![Agent: üst sınırı ve geri sayımıyla aktif bir Leash, dış ajan bağlama komutu](screenshots/agent-leash.png)
+
+8. **Sahip kontrolleri** — **Settings**'te: *Pause spending* (ajanı dondurur; para çekme yine
+   çalışır), *Withdraw* ile parayı geri çek, *Update limits* ile limitleri canlı değiştir.
+   Sahibin her zaman bir çıkışı vardır. Kasan Stellar üzerinde yedeklenir; aynı passkey ya da
+   cüzdanla başka bir cihazdan girdiğinde kendiliğinden açılır.
 
 ## Bir şey ters giderse
 
-- Hata mesajları uygulama içinde açıklamalı gösterilir (bakiye yetersiz, imza reddedildi vb.).
-- Sağ alttaki **Share feedback** butonu kısa bir Google Form açar — iki cümlelik geri
-  bildirim yol haritasını doğrudan şekillendirir. 🙏
+- Hatalar uygulamanın içinde sade bir dille gösterilir (yetersiz bakiye, imza reddedildi vb.).
+- TRY transferi yarıda kalırsa (sayfa yenilendi, bağlantı koptu) hiçbir şey kaybolmaz:
+  *Add funds*'ı yeniden aç, uygulama bekleyen USDC'yi kasaya taşımayı önerir.
+- Sağ alttaki **Share feedback** düğmesi kısa bir form açar — oraya yazacağın iki cümle yol
+  haritasını doğrudan şekillendirir. 🙏
 
 ## Daha fazlası
 
-- Ana [README](../README.md) — mimari, kontratlar, ZK confidential mode
-- İzleyici demosu (cüzdan gerektirmez): ana sayfada **Launch live demo**
+- Ana [README](../README.md) — mimari, kontratlar, ZK gizli mod
+- [Anchor bacağı](ANCHOR.md) — TRY'nin harcanabilir bir ajan bütçesine nasıl dönüştüğü, kanıtlarıyla
+- [`eunomia-mcp`](../packages/mcp/README.md) — ajanın eline geçen bütün araçlar
+- İzleyici demosu (giriş gerekmez): uygulamanın kenar çubuğundaki **Guided demo**

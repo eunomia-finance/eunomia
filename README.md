@@ -18,6 +18,12 @@ A non-custodial Soroban treasury that lets a business hand an autonomous AI agen
 
 **[▶ Live app](https://eunomia.finance) · [📖 Docs](https://eunomia.finance/docs/) · [🎥 Demo video](https://youtu.be/R7mw9ZTh94U) · [🔌 Connect your agent](packages/mcp/README.md) · [🏦 The anchor leg](docs/ANCHOR.md) · [🗺 Roadmap](ROADMAP.md) · [📄 Deployment & proofs](DEPLOYMENT.md)**
 
+<br/>
+
+<img src="docs/screenshots/overview.png" width="920" alt="The Eunomia dashboard on testnet. The dark panel shows the latest decision: a 1 USDC payment, blocked. Below it the ledger lists what the rules did — two payments allowed with their transaction hashes, two blocked, the treasury funded with 30.59 USDC. On the right: 6.5 of 50 USDC spent in the rolling 24 hours, an agent on an active Leash, and the rules on Stellar."/>
+
+<sub>Not a mock-up: one treasury on testnet, funded with TRY through the anchor, paid from twice and refused twice — over the per-payment cap, then to an address nobody approved. Re-taken by <code>web/playwright.shots.config.ts</code>.</sub>
+
 </div>
 
 ---
@@ -58,18 +64,19 @@ The business keeps custody the whole time — funds live in the owner's own Soro
 The agent signs its own `pay(task, to, amount)`. The contract runs the policy gate, in order, on **every** call:
 
 ```
-1. spender.require_auth()            the active session agent — else the root agent
-2. not paused                        else  Paused               (#9)
-3. session valid & within its cap    else  SessionExpired       (#11) / SessionCapExceeded (#12)
-4. payee whitelisted OR reputation   else  PayeeNotWhitelisted  (#2)
-5. amount ≤ per-payment limit        else  ExceedsTaskLimit     (#3)
-6. 24h spend + amount ≤ daily limit  else  ExceedsDailyLimit    (#4)
-7. balance sufficient                else  InsufficientBalance  (#5)
-─────────────────────────────────────────────────────────────────
+1. spender.require_auth()             the Leash key while a Leash is active — else the root agent
+2. not paused                         else  Paused                    (#9)
+3. amount > 0                         else  InvalidAmount             (#1)
+4. payee whitelisted OR reputation    else  PayeeNotWhitelisted (#2) / BelowReputationThreshold (#5)
+5. amount ≤ per-payment limit         else  ExceedsTaskLimit          (#3)
+6. Leash spent + amount ≤ its cap     else  ExceedsSessionLimit       (#10)
+7. 24h spend + amount ≤ daily limit   else  ExceedsDailyLimit         (#4)
+8. amount ≤ free balance              else  InsufficientFreeBalance   (#6)
+──────────────────────────────────────────────────────────────────────
    write accounting → transfer → emit event
 ```
 
-Rejections are the product working. A prompt-injected drain hits step 4 and reverts; funds never move.
+An expired Leash is not an error code: its key simply stops being the spender, so step 1 fails for it. Rejections are the product working — a prompt-injected drain hits step 4 and reverts; funds never move.
 
 ## Architecture
 
@@ -117,6 +124,10 @@ A first-time user creates a treasury with **Face ID, a fingerprint or a device P
 ## Fund it with TRY — through a SEP-6 anchor
 
 A treasury can hold USDC and be filled with Turkish lira: the owner types an amount, gets bank details at a locked rate (SEP-38), and the anchor's USDC lands inside the treasury, where the agent spends it under the same rules. The integration is SEP-1 / SEP-10 / SEP-38 / SEP-6 against `tr-mock-anchor.fly.dev`; its only inputs are a home domain and an asset code, so a production SEP-6 anchor is a configuration change. The SEP-10 challenge is verified before it is signed, and adding funds needs no wallet prompt: a passkey owner goes from nothing to a funded treasury with one signature and without ever holding XLM (measured on the live site by `web/tests/e2e/passkey-try.live.spec.ts`).
+
+<div align="center">
+<img src="docs/screenshots/add-funds-try.png" width="920" alt="Add funds with TRY: 1500 TRY to send, 30.5941362 USDC to be received, the bank name, IBAN and transfer description, and the time until which the rate is held."/>
+</div>
 
 The anchor is a testnet sandbox: its bank and KYC are simulated, its USDC and everything on the Stellar side are real. Architecture, the two constraints that shaped it, what is simulated and what is not, and the testnet evidence: [`docs/ANCHOR.md`](docs/ANCHOR.md).
 
