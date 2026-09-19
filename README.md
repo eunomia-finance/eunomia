@@ -152,16 +152,19 @@ Per-user treasuries are deployed by the factory and indexed by the registry, so 
 
 ## Testers & traction
 
-Eunomia is used by people who are not us. Every treasury below was deployed by someone connecting their own wallet on testnet — no seeded accounts, no scripted users.
+Eunomia is used by people who are not us. Every treasury below was deployed by someone signing in with their own wallet or passkey on testnet — no seeded accounts, no scripted users.
 
-| | On testnet, as of 28 Jul 2026 |
+| | On testnet, as of 19 Sep 2026 |
 |---|---|
-| External testers | **14** — 12 with on-chain proof, 2 who explored and reported back |
-| Treasuries deployed by testers | **13** (15 including ours) |
-| Funding & payment transactions | **19** by testers (28 including ours), each recorded with its tx hash |
-| Payments **blocked by the contract** | **13** by testers (20 including ours) — over-limit or non-whitelisted, funds never moved |
+| External testers | **18** — 16 with on-chain proof (12 wallets registered in the TreasuryRegistry, 9 of which funded their treasury, plus 4 from before the registry existed), 2 who explored and reported back |
+| Treasuries deployed by testers | **17** |
+| Funding & payment transactions | **22** by testers, 21 of them recorded with their tx hash |
+| Payments **blocked by the contract** | **16** by testers — over-limit or non-whitelisted, funds never moved |
 
-Usage is provable from two independent sources, neither of which we can quietly edit: the on-chain [TreasuryRegistry](https://stellar.expert/explorer/testnet/contract/CBEPVXK6BN2FZ3IYHV5KQUGROFHNBWBYHKHRZ5U3O7UWGIOPFOFE4ZE7), where each deploy registers its owner wallet, and a telemetry table recording every treasury action with its tx hash. Both are reconciled by [`web/scripts/user-count.mjs`](web/scripts/user-count.mjs) into [`docs/metrics/registered-users.json`](docs/metrics/registered-users.json), checked into the repo. Wallets made by our own end-to-end runs are listed in [`docs/metrics/e2e-exclude.json`](docs/metrics/e2e-exclude.json) and kept out of the count.
+
+Usage is provable from two independent sources, neither of which we can quietly edit: the on-chain [TreasuryRegistry](https://stellar.expert/explorer/testnet/contract/CBEPVXK6BN2FZ3IYHV5KQUGROFHNBWBYHKHRZ5U3O7UWGIOPFOFE4ZE7), where each deploy registers its owner wallet, and a telemetry table recording every treasury action with its tx hash. [`web/scripts/user-count.mjs`](web/scripts/user-count.mjs) reads the registry, checks on-chain which of those treasuries were ever funded, and keeps the cumulative result in [`docs/metrics/registered-users.json`](docs/metrics/registered-users.json), checked into the repo; the transaction rows are the telemetry table's, counted **only for those wallets** and for the four testers who deployed before the registry existed.
+
+What is left out matters as much: our own wallets and every wallet made by our end-to-end runs are listed in [`docs/metrics/e2e-exclude.json`](docs/metrics/e2e-exclude.json) and never counted — in one week of building the anchor leg those runs created more than a dozen treasuries, and none of them is a user.
 
 **Feedback signal from 11 external responses:** 4.9 / 5 average · 7 yes / 4 maybe on *would you use this in production*, none said no. What testers hit went straight into the product — the funding gate, "Copy ID", the sample-vendor prefill, the app shell and the treasury switcher all came from their reports.
 

@@ -1,6 +1,11 @@
 # Rust's output directory
 target
 
+# Soroban test snapshots: `cargo test` rewrites one JSON per test on every run (a dump of the
+# ledger at the end of that test). The tests do not read them, and any change to a contract
+# rewrites dozens at once — noise in every diff. Regenerated locally and on CI.
+test_snapshots/
+
 # Local settings
 .soroban
 .stellar

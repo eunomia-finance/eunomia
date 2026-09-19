@@ -8,7 +8,7 @@ Eunomia is moving from a proven testnet product to **mainnet agent-payments infr
 - [x] Per-user product: connect a wallet → deploy your own treasury → fund → whitelist → spend
 - [x] ZK compliance layer — Circom/Groth16 proofs, hardened on-chain BN254 verifier (policy binding + replay guard)
 - [x] Analytics & monitoring + in-app feedback + on-chain activity logging (proof of usage)
-- [x] 10+ real user wallets with on-chain interactions (risein Journey-to-Mastery Level 4) — 14 external testers, 12 with on-chain proof, 13 tester-deployed treasuries
+- [x] 10+ real user wallets with on-chain interactions (risein Journey-to-Mastery Level 4) — 18 external testers, 16 with on-chain proof, 17 tester-deployed treasuries (as of 2026-09-19)
 - [x] Published user-feedback summary — [README → Testers & traction](README.md#testers--traction)
 
 ## M2 — Agent infrastructure *(shipped 2026-07-07)*
