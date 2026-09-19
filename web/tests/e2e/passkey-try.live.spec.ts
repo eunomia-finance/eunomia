@@ -113,6 +113,19 @@ test("a passkey owner creates a USDC treasury and funds it with TRY, holding no 
   expect(cfg.token).toBe(ANCHOR_USDC);
   expect((await treasury.balance()).result).toBeGreaterThan(30_000_000n);
 
+  // And back out to a bank — the one step of the ramp that does need the owner: exactly one
+  // more passkey signature (admin_withdraw, through the relay), and the treasury is 2 USDC lighter.
+  const heldBefore = (await treasury.balance()).result;
+  const beforeWithdraw = await signatures(cdp, authenticatorId);
+  await page.goto("/#settings");
+  await page.getByLabel(/amount in usdc to withdraw to your bank/i).fill("2");
+  await page.getByRole("button", { name: /use a sample one/i }).click();
+  await expect(page.getByText(/you receive/i)).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: /^withdraw to bank$/i }).click();
+  await expect(page.getByText(/paid to your bank/i), why()).toBeVisible({ timeout: 300_000 });
+  expect((await signatures(cdp, authenticatorId)) - beforeWithdraw, "passkey prompts during the withdrawal").toBe(1);
+  expect(heldBefore - (await treasury.balance()).result).toBe(20_000_000n);
+
   expect(pageErrors).toEqual([]);
   excludeFromUserCount(created!.wallet);
   test.info().annotations.push({
