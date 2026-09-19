@@ -137,6 +137,18 @@ independent review has looked at them yet. That round is a precondition for main
   and uptime sit outside everything the treasury guarantees. What the integration does
   guarantee is on our side of the line: a locked rate before any money moves, and no
   signature the anchor could misuse.
+- **The web app is the soft spot.** The contracts need no trust in us; the page that builds
+  the transactions does. Whoever controls what `eunomia.finance` serves can put a harmful call
+  in front of an owner — a withdrawal to the wrong address, an attacker approved as a payee, an
+  oversized Leash — and a passkey prompt shows no transaction detail to catch it (a wallet's
+  own confirmation screen shows more). What bounds it today: every such call still needs the
+  owner's signature, one at a time, and nothing can be taken without one. What mainnet needs:
+  a strict `script-src`/`connect-src` policy, reproducible builds a third party can compare
+  with what is served, and a human-readable summary of what is being signed.
+- **The published package is a supply-chain surface.** A poisoned `eunomia-mcp` release could
+  read the agent keys it manages. The damage is bounded by each Leash — cap, deadline, approved
+  payees, instant revoke — but the trust would not be. Publishing requires 2FA; release
+  provenance and pinned versions in the printed MCP config are the next steps.
 - **A `connect-src` policy is still open (F4)** — and the app now talks to one more origin,
   the anchor's. An allowlist has to include it.
 - **The ZK layer attests after the fact, and proves the total rather than the breakdown.**
