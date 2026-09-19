@@ -31,7 +31,17 @@ import {
   type Lifecycle,
   type EunomiaState,
 } from "../lib/userTreasury";
-import { SERVICE, shortAddr } from "../config";
+import { ATTACKER, NETWORK_PASSPHRASE, RPC_URL, SERVICE, shortAddr } from "../config";
+import {
+  demoAmount,
+  initialLoop,
+  unitsOf,
+  withStep,
+  type LoopStep,
+  type LoopStepKey,
+} from "../lib/agentLoop";
+import { loadPayeeBook } from "../lib/payees";
+import { Client } from "../lib/treasuryClient";
 import { fundWithFriendbot, getContractXlmBalance, getXlmBalance } from "../lib/funding";
 import { connectErr, errText, sendErr } from "../lib/wallet-errors";
 import { checkLimits, isValidPaymentDest, parseOptionalXlmAmount, parseXlmAmount } from "../lib/validate";
@@ -46,7 +56,9 @@ import {
   loadSessionSecret,
   sessionIsActive,
   sessionPay,
+  sessionRequestException,
 } from "../lib/session";
+import { Keypair } from "@stellar/stellar-sdk";
 import { discoverTreasuries, registerTreasury } from "../lib/registry";
 import { testSignerAvailable } from "../lib/testSigner";
 import { mergeTreasuries } from "../lib/treasuryList";
@@ -624,6 +636,125 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
     [address, treasuryId, sessionSecret, bump, loadState, toast],
   );
 
+  // The agent's own loop, the three steps in the order they matter: a payment the rules
+  // allow, a payment they refuse, and the agent asking the owner to allow that one. Every
+  // step is real — the refusal is the contract's, not a staged message, and the request
+  // lands on the agent's own Stellar account, where the panel below reads it. The owner
+  // signs nothing: that is the claim this button exists to perform.
+  const runAgentLoop = useCallback(
+    async (onStep: (steps: LoopStep[]) => void): Promise<ActionOutcome> => {
+      if (!address || !treasuryId || !sessionSecret) return fail("No Leash key on this device — start one first.");
+      if (!state) return fail("The treasury's rules haven't loaded yet — give it a moment.");
+      const s = lifecycle?.session;
+      const sessionLeft =
+        s && sessionActive ? (s.limit > s.spent ? s.limit - s.spent : 0n) : null;
+      const room = demoAmount({
+        perTaskLimit: state.perTaskLimit,
+        dailyLimit: state.dailyLimit,
+        daySpent: state.daySpent,
+        balance: state.balance,
+        sessionLeft,
+      });
+      if (!room.ok) return fail(room.why);
+      const amount = unitsOf(room.stroops);
+
+      let steps = initialLoop();
+      const push = (key: LoopStepKey, patch: Partial<LoopStep>) => {
+        steps = withStep(steps, key, patch);
+        onStep(steps);
+      };
+      onStep(steps);
+
+      setBusy("loop");
+      try {
+        // 1. Someone the owner approved. Which one is the contract's answer, not this
+        //    device's: the local payee book can hold an address that was never whitelisted
+        //    or was removed since, and opening with a refused payment proves nothing.
+        push("pay", { status: "running" });
+        const payee = await firstApprovedPayee(treasuryId, [...loadPayeeBook(treasuryId), SERVICE]);
+        if (!payee) {
+          const msg = "Approve a payee first — the loop opens with a payment your rules allow.";
+          push("pay", { status: "failed", detail: msg });
+          toast("error", msg);
+          return fail(msg);
+        }
+        const paid = await sessionPay(treasuryId, sessionSecret, BigInt(Date.now()), payee, amount);
+        if (!paid.ok) {
+          const msg = paid.errorMessage ?? "The agent's payment did not go through.";
+          push("pay", { status: "failed", detail: msg });
+          toast("error", msg);
+          return fail(msg);
+        }
+        void logActivity({ walletAddress: address, treasuryId, action: "agent_pay", txHash: paid.hash, amountXlm: amount });
+        push("pay", {
+          status: "done",
+          detail: `Paid ${amount} ${tokenCodeOf(state.token)} to ${shortAddr(payee)}. You signed nothing.`,
+          hash: paid.hash,
+        });
+
+        // 2. Someone the owner never approved. Prefer the demo's known address so the
+        //    ledger reads the same every time; if it has since been whitelisted, a fresh
+        //    key is the one address that certainly isn't on the list.
+        push("refused", { status: "running" });
+        const stranger = (await isApprovedPayee(treasuryId, ATTACKER)) ? Keypair.random().publicKey() : ATTACKER;
+        const taskId = BigInt(Date.now());
+        const tried = await sessionPay(treasuryId, sessionSecret, taskId, stranger, amount);
+        if (tried.ok) {
+          // The contract let it through — the rules are not what this page just claimed.
+          const msg = "That payment went through. Check your approved payees: the loop expected a refusal.";
+          push("refused", { status: "failed", detail: msg, hash: tried.hash });
+          toast("error", msg);
+          await loadState(treasuryId, address);
+          return fail(msg);
+        }
+        trackViolation(treasuryId);
+        void logActivity({ walletAddress: address, treasuryId, action: "reject", amountXlm: amount });
+        const code = tried.errorCode ?? 2;
+        push("refused", {
+          status: "refused",
+          detail: `${tried.errorMessage ?? "Refused by your rules."} ${shortAddr(stranger)} never got the money.`,
+        });
+
+        // 3. The agent's appeal. It writes the refusal onto its own account, where only
+        //    its key can write; the owner resolves it on-chain in "Waiting for you".
+        push("request", { status: "running" });
+        const filed = await sessionRequestException(treasuryId, sessionSecret, {
+          payee: stranger,
+          amount: room.stroops,
+          taskId,
+          reasonCodes: [code],
+          requestedAt: Math.floor(Date.now() / 1000),
+        });
+        if (!filed.ok) {
+          const msg = filed.errorMessage ?? "The agent could not file its request.";
+          push("request", { status: "failed", detail: msg });
+          toast("error", msg);
+          await loadState(treasuryId, address);
+          return fail(msg);
+        }
+        push("request", {
+          status: "done",
+          detail: "Filed on the agent's own account — it's waiting for you below.",
+          hash: filed.hash,
+        });
+
+        const msg = "The agent ran on its own ✓ — it paid, got refused, and asked you to allow the one it couldn't.";
+        toast("success", msg, { hash: paid.hash });
+        bump();
+        await loadState(treasuryId, address);
+        return { ok: true, msg, hash: paid.hash };
+      } catch (e) {
+        trackError(treasuryId, errText(e));
+        const msg = sendErr(e);
+        toast("error", msg);
+        return fail(msg);
+      } finally {
+        setBusy(null);
+      }
+    },
+    [address, treasuryId, sessionSecret, state, lifecycle, sessionActive, bump, loadState, toast],
+  );
+
   const togglePause = useCallback(async (): Promise<ActionOutcome> => {
     if (!address || !treasuryId || !lifecycle) return fail("No treasury open.");
     const next = !lifecycle.paused;
@@ -805,6 +936,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
     startLeash,
     revokeLeash,
     runAutonomousTask,
+    runAgentLoop,
     togglePause,
     withdraw,
     updateLimits,
@@ -817,4 +949,27 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
   };
 
   return <TreasuryContext.Provider value={value}>{children}</TreasuryContext.Provider>;
+}
+
+// ---- whom the agent loop pays -----------------------------------------------------
+// Read-only client: whether an address is approved is the contract's answer, and asking
+// it costs one simulation, not a signature.
+
+const readClient = (treasuryId: string) =>
+  new Client({ contractId: treasuryId, networkPassphrase: NETWORK_PASSPHRASE, rpcUrl: RPC_URL });
+
+async function isApprovedPayee(treasuryId: string, addr: string): Promise<boolean> {
+  try {
+    return (await readClient(treasuryId).is_payee({ payee: addr })).result;
+  } catch {
+    return false; // unreadable — treat as not approved rather than pay into the dark
+  }
+}
+
+/** The first candidate the contract calls approved, or null when none is. */
+async function firstApprovedPayee(treasuryId: string, candidates: string[]): Promise<string | null> {
+  for (const addr of new Set(candidates)) {
+    if (await isApprovedPayee(treasuryId, addr)) return addr;
+  }
+  return null;
 }

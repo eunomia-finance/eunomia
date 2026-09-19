@@ -1,6 +1,7 @@
 // Context + types live apart from the provider component (react-refresh rule: a file
 // exporting a component must export nothing else).
 import { createContext } from "react";
+import type { LoopStep } from "../lib/agentLoop";
 import type { Lifecycle, EunomiaState } from "../lib/userTreasury";
 import type { TreasuryRef } from "../lib/treasuryList";
 import type { TokenCode } from "../lib/token";
@@ -19,6 +20,7 @@ export type Busy =
   | "session"
   | "revoke"
   | "task"
+  | "loop"
   | "pause"
   | "withdraw"
   | "limits"
@@ -77,6 +79,9 @@ export interface TreasuryContextValue {
   startLeash: (cap: string, hours: string, agentPublicKey?: string) => Promise<ActionOutcome>;
   revokeLeash: () => Promise<ActionOutcome>;
   runAutonomousTask: (to?: string) => Promise<ActionOutcome>;
+  /** The agent's own loop — pay, get refused, ask the owner — reported step by step as
+   *  each one lands on-chain. `onStep` receives the whole list every time one changes. */
+  runAgentLoop: (onStep: (steps: LoopStep[]) => void) => Promise<ActionOutcome>;
   togglePause: () => Promise<ActionOutcome>;
   withdraw: (to: string, amount: string) => Promise<ActionOutcome>;
   updateLimits: (daily: string, perTask: string) => Promise<ActionOutcome>;

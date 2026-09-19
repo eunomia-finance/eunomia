@@ -246,6 +246,10 @@
   grid-template-columns:minmax(0,8fr) minmax(0,4fr);
   gap:16px;
   align-items:start;
+  /* Room under the last panel for the feedback pill, which floats in the bottom-right
+     corner: without it the pill sits on whatever ends the aux column — on the Agent page
+     that is the "Approve payee" button of a pending request. */
+  padding-bottom:72px;
 }
 .page__main,.page__side{ display:flex; flex-direction:column; gap:16px; min-width:0; }
 

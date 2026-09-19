@@ -92,6 +92,16 @@ An expired Leash is not an error code: its key simply stops being the spender, s
 - **ZK verifier** (Groth16/BN254) proves a payment sat inside policy without revealing the amount or the payee, and emits a **Sealed Receipt**.
 - **x402**: when a service answers `402 Payment Required`, the quoted charge settles through the same policy gate — an over-limit or wrong-payee quote never reaches settlement. A USDC treasury can settle USDC-priced x402 offers; the asset has to be the treasury's own.
 
+## Watch it spend by itself
+
+Dashboard → **Agent** → **Run the agent**. With a Leash on the device, three real transactions run in order and the owner signs none of them:
+
+1. **it pays a payee you approved** — the money moves, no wallet popup;
+2. **it tries an address you never approved** — the contract refuses it with its own error code, and nothing leaves the treasury;
+3. **it asks you to allow that one** — the refusal is written as a request on the agent's own Stellar account, and the dashboard renders it with the single on-chain action that resolves it.
+
+Both decisions land in the owner's ledger, side by side. A refusal is a decision here, not a failure that leaves no trace — that is the difference between a policy gate and a payment that happened to fail. The same three steps are what an external agent does through the MCP tools below; this button just runs them where you can watch.
+
 ## Connect your agent
 
 [`eunomia-mcp`](https://www.npmjs.com/package/eunomia-mcp) is an MCP server and TypeScript SDK. The agent's key is made on the agent's machine and never leaves it; the owner only signs a cap and a deadline.

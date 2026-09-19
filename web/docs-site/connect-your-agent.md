@@ -7,6 +7,21 @@ everything outside your rules is refused by the contract, not by the agent's goo
 The agent's key is made **on the agent's machine and never leaves it**. You, the owner, sign
 exactly one thing: a spending cap and a deadline for that key's public half.
 
+## See it first, without setting anything up
+
+If you'd rather watch the arrangement work before wiring your own agent into it: start a Leash
+without pasting a key (the **Start Leash** button with the key field empty) and the app keeps
+one on this device. **Agent → Run the agent** then does three real transactions in a row,
+signed by that key, with no prompt to you:
+
+1. it pays a payee you approved;
+2. it tries an address you never approved, and the contract refuses it with its own error code;
+3. it files that refusal as a request on its own Stellar account — which appears under
+   **Waiting for you**, with the one on-chain action that resolves it.
+
+Both decisions land in your ledger. That is the whole product in about forty seconds, and it
+is exactly what an external agent does through the tools below.
+
 ## Three steps
 
 **1 · On the agent's machine — make its key.**

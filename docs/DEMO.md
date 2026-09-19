@@ -56,6 +56,12 @@ and what must be on screen are what matter.
 - Optional beats if the cut runs short: **Settings → Withdraw to your bank** (the unspent
   USDC goes back to an IBAN as TRY — the anchor in both directions, ~20 seconds on screen),
   the ZK attestation (Sealed Receipt), *Pause spending*, the same flow on a phone.
+- **If the MCP leg can't be shown** (no terminal on stage, a laptop that isn't yours, a
+  network that blocks npx): the **Agent → Run the agent** button does beats 1:50–3:05 by
+  itself in about forty seconds — pays an approved payee, gets refused by the contract, files
+  the request — with the same transactions and the same refusal code. Weaker as proof (it is
+  our page driving our agent, not Claude), so lead with Claude when you can and keep this as
+  the rehearsed fallback.
 
 ## 90-second guided demo (no sign-in)
 
@@ -103,8 +109,10 @@ bounded-spend idea exists elsewhere — the **fiat-grade rail under it** is wher
   key, and the device-held funding-account and session keys.
 - **Not reviewed yet:** the factory, `eunomia-mcp` and the anchor leg shipped after the last
   security round ([`SECURITY.md`](../SECURITY.md)).
-- **Not built yet:** refusals an agent meets in simulation in the owner's ledger (its payments are there, and its exception
-  requests are on the Agent page); mainnet.
+- **Not built yet:** a refused payment an external agent (`eunomia-mcp`) meets in the owner's
+  ledger — the package doesn't log it anywhere the dashboard reads, so only its payments show
+  up there; its exception requests are on the Agent page. The device agent's refusals do land
+  in the ledger. Mainnet.
 
 ## Likely questions
 

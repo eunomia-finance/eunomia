@@ -3,6 +3,7 @@
 // task, revoke. Inactive, the page explains the model and starts one. The single-spender
 // rule and the "registered but unfunded key" recovery path live in the provider.
 import { useEffect, useState } from "react";
+import AgentLoop from "../components/AgentLoop";
 import ExceptionRequests from "../components/ExceptionRequests";
 import { EXPLORER, fmtXlm, shortAddr } from "../config";
 import { useNow } from "../lib/useNow";
@@ -78,15 +79,9 @@ export default function Agent() {
               </div>
             </div>
             <div className="verdict__side">
-              {t.sessionSecret ? (
-                <button className="btn btn--inv" onClick={() => void t.runAutonomousTask()} disabled={!!t.busy} type="button">
-                  {t.busy === "task" ? "Agent paying…" : `Run autonomous task (1 ${t.tokenCode}, no popup)`}
-                </button>
-              ) : (
-                <a className="verdict__tx" href={`${EXPLORER}/account/${session.agent}`} target="_blank" rel="noreferrer">
-                  agent account ↗
-                </a>
-              )}
+              <a className="verdict__tx" href={`${EXPLORER}/account/${session.agent}`} target="_blank" rel="noreferrer">
+                agent account ↗
+              </a>
               <button className="btn btn--inv" onClick={() => void t.revokeLeash()} disabled={!!t.busy} type="button">
                 {t.busy === "revoke" ? "Revoking…" : "Revoke Leash"}
               </button>
@@ -133,6 +128,10 @@ export default function Agent() {
             {err && <div className="err">{err}</div>}
           </section>
         )}
+
+        {/* The claim this product makes, as a thing that runs. Only the agent whose key is on
+            this device can be driven from here; an external one runs from its own machine. */}
+        {active && t.sessionSecret && <AgentLoop />}
 
         {/* Requests the agent filed on its own account (eunomia-mcp request_exception). They
             belong under the Leash they came from, on the page where the owner resolves them. */}

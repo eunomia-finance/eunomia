@@ -8,9 +8,15 @@
 // because the design's point is a bounded credential: cap + expiry + instant
 // revoke make a leak survivable. Mainnet needs fee sponsorship + hardened key
 // storage (roadmap M3); the demo key's non-testnet build guard applies there too.
-import { Keypair, StrKey } from "@stellar/stellar-sdk";
+import { BASE_FEE, Keypair, Operation, StrKey, TransactionBuilder, rpc } from "@stellar/stellar-sdk";
 import { basicNodeSigner } from "@stellar/stellar-sdk/contract";
-import { NETWORK_PASSPHRASE } from "../config";
+import { NETWORK_PASSPHRASE, RPC_URL } from "../config";
+import {
+  encodeExceptionPayload,
+  exceptionEntryName,
+  exceptionIdOf,
+  type ExceptionPayload,
+} from "./exceptionCodec";
 import { fundWithFriendbot } from "./funding";
 import type { Session } from "./treasuryClient";
 import type { Treasury } from "./userTreasury";
@@ -153,4 +159,39 @@ export async function sessionPay(
   // Ed25519 credential, not a smart wallet, so the relay is not involved here.
   const t = makeTreasury(treasuryId, makeWalletExecutor(publicKey, signer));
   return pay(t, taskId, to, amountXlm);
+}
+
+/** The agent's side of an exception request, signed by the Leash key in this browser.
+ *  An external agent files these from eunomia-mcp (packages/mcp/src/exception.ts); the
+ *  agent on this device needs the same entry on its own account, or the owner's "Waiting
+ *  for you" panel has nothing to resolve. Same codec, same account, same 56-byte layout —
+ *  the owner's dashboard cannot tell the two agents apart, which is the point. */
+export async function sessionRequestException(
+  treasuryId: string,
+  secret: string,
+  payload: ExceptionPayload,
+  nowMs: number = Date.now(),
+): Promise<{ ok: boolean; id?: string; hash?: string; errorMessage?: string }> {
+  try {
+    const kp = Keypair.fromSecret(secret);
+    const server = new rpc.Server(RPC_URL);
+    const source = await server.getAccount(kp.publicKey());
+    const name = exceptionEntryName(treasuryId, nowMs);
+    const tx = new TransactionBuilder(source, { fee: BASE_FEE, networkPassphrase: NETWORK_PASSPHRASE })
+      .addOperation(Operation.manageData({ name, value: Buffer.from(encodeExceptionPayload(payload)) }))
+      .setTimeout(120)
+      .build();
+    tx.sign(kp);
+    const sent = await server.sendTransaction(tx);
+    if (sent.status === "ERROR") {
+      return { ok: false, errorMessage: "Stellar refused the request before it reached a ledger." };
+    }
+    const done = await server.pollTransaction(sent.hash, { attempts: 30 });
+    if (done.status !== rpc.Api.GetTransactionStatus.SUCCESS) {
+      return { ok: false, errorMessage: `The request did not reach the ledger (${done.status}).` };
+    }
+    return { ok: true, id: exceptionIdOf(name), hash: sent.hash };
+  } catch (e) {
+    return { ok: false, errorMessage: e instanceof Error ? e.message : "Could not file the request." };
+  }
 }

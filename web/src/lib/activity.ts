@@ -80,7 +80,7 @@ export function activityToFeedEvent(row: ActivityRow): FeedEvent {
     whitelist: { kind: "whitelist", label: `${who} approved a payee` },
     pay: { kind: "paid", label: `Payment from ${who}'s treasury${amtTxt}` },
     agent_pay: { kind: "paid", label: `Leash-signed agent payment · ${who}${amtTxt}` },
-    reject: { kind: "blocked", label: `Payment blocked by ${who}'s rules` },
+    reject: { kind: "blocked", label: `Payment blocked by ${who}'s rules${amtTxt}` },
     session_start: { kind: "leash", label: `${who} started a Leash` },
     session_revoke: { kind: "leash", label: `${who} revoked a Leash` },
     pause: { kind: "lifecycle", label: `${who} paused their treasury` },
