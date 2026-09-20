@@ -8,6 +8,7 @@ import { useTreasury } from "../state/useTreasury";
 import { executorFor } from "../lib/walletKit";
 import { isPayee, makeTreasury } from "../lib/userTreasury";
 import { isValidPaymentDest } from "../lib/validate";
+import { dedupeRefusals, useAgentRejections } from "../lib/agentRejections";
 import { loadLedger } from "../lib/eventLedger";
 import { loadPayeeBook, mergePayees, payeesFromEvents, rememberPayee, forgetPayee, type PayeeEntry } from "../lib/payees";
 import { fetchActivityHistory, mergeFeedEvents, subscribeActivity } from "../lib/activity";
@@ -134,12 +135,15 @@ export default function Payments() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [treasuryId, t.refreshKey],
   );
+  // And the refusals it met: the contract leaves no event and no transaction behind when it
+  // reverts, so the record is the request the agent filed on its own account.
+  const agentRefusals = useAgentRejections(t.lifecycle?.session?.agent ?? null, treasuryId, t.refreshKey);
   const decisions = useMemo(
     () =>
-      mergeFeedEvents(filterFeed(history, { groups: new Set(["payments", "blocked"]), treasuryId }), chainPaid, 120).map(
-        (e) => inToken(e, t.tokenCode),
-      ),
-    [history, chainPaid, treasuryId, t.tokenCode],
+      dedupeRefusals(
+        mergeFeedEvents(filterFeed(history, { groups: new Set(["payments", "blocked"]), treasuryId }), [...chainPaid, ...agentRefusals], 120),
+      ).map((e) => inToken(e, t.tokenCode)),
+    [history, chainPaid, agentRefusals, treasuryId, t.tokenCode],
   );
   const [slice, setSlice] = useState<Slice>("all");
   const shown = useMemo(

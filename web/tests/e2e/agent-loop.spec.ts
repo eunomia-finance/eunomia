@@ -84,11 +84,16 @@ test("the agent pays, gets refused, and asks the owner — on its own", async ({
   await page.screenshot({ path: "test-results/loop-3-waiting.png", fullPage: true });
 
   // Both decisions land in the owner's ledger — the payment the agent made, and the one the
-  // rules refused. A refusal is a decision here, not a failure that leaves no trace.
+  // rules refused. The refusal row is read from the request the agent filed on its own
+  // account, which is the only record an agent on another machine leaves behind; it names
+  // the rule and the payee, and it replaces this app's own thinner telemetry row.
   await page.goto("/#overview");
   await page.reload();
   await expect(page.locator(".ledger__row", { hasText: /leash-signed agent payment/i }).first()).toBeVisible({ timeout: 120_000 });
-  await expect(page.locator(".ledger__row", { hasText: /payment blocked/i }).first()).toBeVisible({ timeout: 60_000 });
+  const refusal = page.locator(".ledger__row", { hasText: /agent payment refused/i });
+  await expect(refusal.first()).toBeVisible({ timeout: 60_000 });
+  await expect(refusal).toHaveCount(1);
+  await expect(page.locator(".ledger__row", { hasText: /payment blocked by/i })).toHaveCount(0);
   await page.screenshot({ path: "test-results/loop-4-ledger.png", fullPage: true });
 
   expect(pageErrors).toEqual([]);

@@ -60,6 +60,17 @@
 .shell .mark--ok{ background:var(--green); }
 .shell .mark--no{ border:1.5px solid var(--red); box-sizing:border-box; }
 .shell .mark--ink{ background:var(--ink); }
+.shell .mark--idle{ border:1px solid var(--line); box-sizing:border-box; }
+
+/* The anchor trip, step by step. Twenty seconds with only a button label changing reads as
+   a hung app on a phone — the owner reported exactly that. Each leg lists its steps and
+   marks the one it is on. */
+.progress{ display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+.progress__row{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-2); }
+.progress__row.is-now{ color:var(--ink); font-weight:500; }
+.progress__dots{ letter-spacing:2px; animation:progress-dots 1.2s steps(1,end) infinite; }
+@keyframes progress-dots{ 0%{ opacity:.25 } 50%{ opacity:1 } 100%{ opacity:.25 } }
+@media (prefers-reduced-motion: reduce){ .progress__dots{ animation:none; } }
 
 /* the ledger */
 .shell .ledger{ overflow:hidden; }

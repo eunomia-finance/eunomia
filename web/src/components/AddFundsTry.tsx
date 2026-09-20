@@ -27,6 +27,33 @@ const STEP_LINE: Record<DepositStep, string> = {
   forward: "Moving it into the treasury",
 };
 
+// Both legs take about twenty seconds — friendbot, a trustline, SEP-10, a quote, then the
+// anchor's own payment. A button whose label changes is not enough on a phone: the owner
+// reported it as the app having hung. The whole trip is listed, with the step it is on.
+const LEGS: Record<"bank" | "money", DepositStep[]> = {
+  bank: ["account", "sign-in", "quote", "instructions"],
+  money: ["anchor", "forward"],
+};
+
+function Progress({ leg, step }: { leg: "bank" | "money"; step: DepositStep }) {
+  const steps = LEGS[leg];
+  const at = steps.indexOf(step);
+  return (
+    <div className="progress" aria-live="polite">
+      {steps.map((s, i) => (
+        <div key={s} className={`progress__row${i === at ? " is-now" : i < at ? " is-done" : ""}`}>
+          <i className={`mark ${i < at ? "mark--ok" : "mark--idle"}`} />
+          <span>{STEP_LINE[s]}</span>
+          {i === at && <span className="progress__dots">…</span>}
+        </div>
+      ))}
+      <div className="panel__note" style={{ marginTop: 2 }}>
+        This takes about twenty seconds. Keep this screen open — leaving the tab stops it.
+      </div>
+    </div>
+  );
+}
+
 const trimZeros = (usdc: string) => usdc.replace(/(\.\d{2}\d*?)0+$/, "$1");
 const clock = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const errLine = (e: unknown) => (e instanceof Error && e.message ? e.message : "Something went wrong talking to the anchor.");
@@ -202,10 +229,11 @@ export default function AddFundsTry({ onDone }: { onDone?: () => void }) {
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className="btn" onClick={() => void settle(pending)} disabled={!!step} type="button">
-            {step ? `${STEP_LINE[step]}…` : "Declare the transfer sent"}
+            {step ? "Working…" : "Declare the transfer sent"}
           </button>
           <button className="btn btn--ghost" onClick={again} disabled={!!step} type="button">Back</button>
         </div>
+        {step && <Progress leg="money" step={step} />}
         {err && <div className="err">{err}</div>}
       </div>
     );
@@ -247,9 +275,10 @@ export default function AddFundsTry({ onDone }: { onDone?: () => void }) {
       )}
       <div>
         <button className="btn" onClick={() => void begin()} disabled={!inRange || !!step} type="button">
-          {step ? `${STEP_LINE[step]}…` : "Get bank details"}
+          {step ? "Working…" : "Get bank details"}
         </button>
       </div>
+      {step && <Progress leg="bank" step={step} />}
       {err && <div className="err">{err}</div>}
     </div>
   );

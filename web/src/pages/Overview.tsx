@@ -12,6 +12,7 @@ import { useTreasury } from "../state/useTreasury";
 import { useAnalyticsScore } from "../lib/useAnalytics";
 import { useTreasuryActivity } from "../lib/useTreasuryActivity";
 import { mergeFeedEvents } from "../lib/activity";
+import { dedupeRefusals, useAgentRejections } from "../lib/agentRejections";
 import { computeAnomaly, mergeLedger } from "../lib/eventLedger";
 import { loadPayeeBook, mergePayees, payeesFromEvents } from "../lib/payees";
 import { setupProgress, type SetupStep } from "../lib/onboarding";
@@ -64,10 +65,18 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
   // machine (eunomia-mcp) never does — but the treasury emits `paid` for every payment, and
   // the chain scan above already has those. Add the ones the log does not carry, matched by
   // tx hash, so the owner sees what the agent did without having been there.
+  //
+  // Refusals are a third source, and they have to be: the contract reverts, so it emits no
+  // event, and the refused call never reaches a ledger. What survives is the request the
+  // agent filed about it on its own account — the only way an agent running on someone
+  // else's machine gets its refusals in front of the owner.
+  const agentRefusals = useAgentRejections(t.lifecycle?.session?.agent ?? null, treasuryId, t.refreshKey);
   const rows = useMemo(
     () =>
-      mergeFeedEvents(written, analytics.events.filter((e) => e.kind === "paid")).map((e) => inToken(e, t.tokenCode)),
-    [written, analytics.events, t.tokenCode],
+      dedupeRefusals(
+        mergeFeedEvents(written, [...analytics.events.filter((e) => e.kind === "paid"), ...agentRefusals]),
+      ).map((e) => inToken(e, t.tokenCode)),
+    [written, analytics.events, agentRefusals, t.tokenCode],
   );
 
   const [fundOpen, setFundOpen] = useState(false);
