@@ -27,7 +27,8 @@ export function rejectionsToFeed(reqs: ExceptionRequest[], treasuryId: string): 
   return reqs.map((r) => ({
     id: `x-${r.id}`,
     kind: "blocked",
-    label: `Agent payment refused — ${why(r.reasonCodes)} · ${short(r.payee)}`,
+    // Dot-separated, not dashed: the contract's own wording already carries an em dash.
+    label: `Agent payment refused · ${why(r.reasonCodes)} · ${short(r.payee)}`,
     // The request's own transaction is the proof, but Horizon's account-data view doesn't
     // carry it; the entry is the evidence and the Agent page links the account.
     txHash: "",
