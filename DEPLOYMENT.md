@@ -312,3 +312,17 @@ drives that passkey path against production and reads policy, payee, Leash, bala
 entry and the running wasm hash back from the chain. Red since 08-07, green from this run.
 The relay admits the factory by address (`web/src/lib/treasuryWasm.ts`), so the treasury it
 deploys inside the call needs no separate sponsorship.
+
+## Anchor leg — the USDC a TRY-funded treasury holds
+
+A treasury funded with TRY through the SEP-6 anchor (`tr-mock-anchor.fly.dev`) holds the anchor's
+USDC rather than the demo USDC above. Its Stellar Asset Contract is derived from the issuer and
+pinned in `web/src/lib/token.ts` (`token.test.ts` asserts the derivation).
+
+| Item | Value |
+|---|---|
+| USDC issuer (the anchor's) | `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` |
+| **USDC SAC** (`USDC:GBBD47IF…FLA5`) | [`CBIELTK6…DAMA`](https://stellar.expert/explorer/testnet/contract/CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA) |
+
+Architecture, what is simulated and the testnet run with transaction hashes:
+[`docs/ANCHOR.md`](docs/ANCHOR.md#verified-on-testnet-2026-09-18).
