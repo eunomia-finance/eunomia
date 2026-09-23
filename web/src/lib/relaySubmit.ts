@@ -100,11 +100,7 @@ export async function submitHostFunction(
   tx.sign(deps.keypair);
 
   const sent = await deps.server.sendTransaction(tx);
-  if (sent.status === "ERROR") {
-    throw new RelaySubmitError(
-      `the network rejected the transaction: ${JSON.stringify(sent.errorResult ?? {})}`,
-    );
-  }
+  assertAccepted(sent);
 
   return { hash: sent.hash, status: await settle(deps, sent.hash, sent.status) };
 }
@@ -131,12 +127,22 @@ export async function submitEnvelope(
   tx.sign(deps.keypair);
 
   const sent = await deps.server.sendTransaction(tx);
+  assertAccepted(sent);
+  return { hash: sent.hash, status: await settle(deps, sent.hash, sent.status) };
+}
+
+/** A send the network did not take in. ERROR is a rejection; TRY_AGAIN_LATER means it was
+ *  never queued, so polling its hash can only ever come back NOT_FOUND — which the caller
+ *  would otherwise receive as a 200. */
+function assertAccepted(sent: { status: string; errorResult?: unknown }): void {
   if (sent.status === "ERROR") {
     throw new RelaySubmitError(
       `the network rejected the transaction: ${JSON.stringify(sent.errorResult ?? {})}`,
     );
   }
-  return { hash: sent.hash, status: await settle(deps, sent.hash, sent.status) };
+  if (sent.status === "TRY_AGAIN_LATER") {
+    throw new RelaySubmitError("the network is busy and did not accept the transaction");
+  }
 }
 
 /** Wait briefly for a verdict. A transaction that is still pending is reported as such rather

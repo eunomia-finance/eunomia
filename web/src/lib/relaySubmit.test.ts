@@ -140,6 +140,16 @@ describe("submitHostFunction", () => {
     );
   });
 
+  it("reports a send the network would not queue rather than a pending hash", async () => {
+    const s = server({
+      sendTransaction: vi.fn().mockResolvedValue({ hash: "H", status: "TRY_AGAIN_LATER" }),
+    });
+    await expect(submitHostFunction(deps(s), FUNC, [signedEntry()])).rejects.toBeInstanceOf(
+      RelaySubmitError,
+    );
+    expect(s.getTransaction).not.toHaveBeenCalled();
+  });
+
   it("refuses to call an on-chain failure a success", async () => {
     // The caller shows the user a treasury on success; a FAILED ledger result must not
     // arrive looking like one.
