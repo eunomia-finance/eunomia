@@ -129,7 +129,7 @@ Full reference: [`packages/mcp/README.md`](packages/mcp/README.md). A run with t
 
 ## Sign in with a passkey — no wallet, no seed, no XLM
 
-A first-time user creates a treasury with **Face ID, a fingerprint or a device PIN**. Under the hood that is a WebAuthn passkey controlling a Stellar smart wallet (`passkey-kit`), and the treasury is deployed **by the wallet itself** so authority is bound to the user's own C-address. Transaction fees are sponsored, so nobody needs to hold XLM to get started. Browser wallets (Freighter, Albedo, LOBSTR via WalletConnect) work exactly as before.
+A first-time user creates a treasury with **Face ID, a fingerprint or a device PIN**. Under the hood that is a WebAuthn passkey controlling a Stellar smart wallet (`passkey-kit`), and the wallet **calls the treasury factory as itself**, so the treasury's owner — and every authority over it — is the user's own C-address. Transaction fees are sponsored, so nobody needs to hold XLM to get started. Browser wallets (Freighter, Albedo, LOBSTR via WalletConnect) work exactly as before.
 
 ## Fund it with TRY — through a SEP-6 anchor
 
@@ -231,8 +231,11 @@ packages/prover/                snarkjs → Soroban byte encoder + proof fixture
 packages/treasury-client/       generated TypeScript client (regen: `npm run generate`)
 packages/registry-client/       generated TypeScript client for the treasury registry
 packages/factory-client/        generated TypeScript client for the treasury factory
-web/                            landing + app (Vite · React 19 · TS) + docs site
+web/                            landing + app (Vite · React 19 · TS)
 web/src/lib/anchor/             the SEP-6 anchor leg: SEP-1 · SEP-10 · SEP-38 · SEP-6 · SEP-12, funding account, live test
+web/api/                        Vercel functions: fee-sponsoring relay + testnet faucet for passkey wallets
+web/docs-site/                  the docs site (VitePress) served at /docs
+supabase/migrations/            telemetry tables (activity with tx hashes, feedback, funnel)
 docs/ANCHOR.md                  the anchor leg — diagrams, constraints, what is simulated, evidence
 DEPLOYMENT.md                   live testnet addresses & verified results
 ```
