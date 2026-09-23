@@ -250,7 +250,7 @@ export default function Hero({
             </span>
             {/* Every other number here is our own. This is the one someone else awarded — the
                 only outside verification on the page, and the redesign had dropped it. */}
-            <span className="lp__award">2nd place · BuildOn Stellar, IBW 2026</span>
+            <span className="lp__award">2nd place · BuildOn Stellar, IBW 2026 — Agentic Track</span>
           </div>
         </div>
       </div>
