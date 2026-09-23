@@ -59,7 +59,10 @@ export async function logFunnel(input: FunnelInput): Promise<void> {
       device: input.device ?? currentDevice(),
       sessionId: input.sessionId ?? sessionId(),
     });
-    await supabase.from("funnel_events").insert(row);
+    // supabase-js resolves with { error } rather than throwing, so a rejected row (a CHECK
+    // constraint, a unique index) would otherwise pass the catch below without a trace.
+    const { error } = await supabase.from("funnel_events").insert(row);
+    if (error) console.error("[eunomia] funnel log failed:", error.message);
   } catch (e) {
     // best-effort — a logging failure must never break the user's action
     console.error("[eunomia] funnel log failed:", e instanceof Error ? e.message : e);

@@ -45,7 +45,10 @@ export function buildActivityRow(input: ActivityInput) {
 export async function logActivity(input: ActivityInput): Promise<void> {
   if (!supabaseConfigured || !supabase || !input.walletAddress) return;
   try {
-    await supabase.from("activity").insert(buildActivityRow(input));
+    // supabase-js resolves with { error } rather than throwing, so a rejected row (a CHECK
+    // constraint, a unique index) would otherwise pass the catch below without a trace.
+    const { error } = await supabase.from("activity").insert(buildActivityRow(input));
+    if (error) console.error("[eunomia] activity log failed:", error.message);
   } catch (e) {
     // best-effort — a logging failure must never break the user's action
     console.error("[eunomia] activity log failed:", e instanceof Error ? e.message : e);
