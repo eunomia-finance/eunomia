@@ -71,7 +71,17 @@ export default function ExceptionRequests({ agent }: { agent: string }) {
       {err && <div className="err">{err}</div>}
       {rows.map((r) => {
         const status = exceptionStatus(r, t.state!, t.lifecycle, r.payeeAllowed, nowSec);
-        const primary = r.reasonCodes.map(ownerActionFor).find((a) => a.kind !== "none");
+        // The reason codes are what blocked the payment when it was filed. Offer only an action
+        // that still applies: "Resume" calls togglePause, which would pause a treasury that has
+        // since been resumed, and approving an already-approved payee is a wasted signature.
+        const primary = r.reasonCodes
+          .map(ownerActionFor)
+          .find(
+            (a) =>
+              a.kind !== "none" &&
+              !(a.kind === "pause" && !t.lifecycle?.paused) &&
+              !(a.kind === "whitelist" && r.payeeAllowed),
+          );
         return (
           <div key={r.id} style={{ paddingTop: 12, borderTop: "1px solid var(--line)", display: "flex", flexDirection: "column", gap: 8 }}>
             <div className="rowline">
