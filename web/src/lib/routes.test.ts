@@ -43,7 +43,9 @@ describe("isAppPage", () => {
 describe("isLandingAnchor", () => {
   it("recognises the landing section anchors", () => {
     expect(isLandingAnchor("#how")).toBe(true);
-    expect(isLandingAnchor("#prism")).toBe(true);
+    // Every section the landing nav links to — a missing one made the router scroll back to
+    // the top the moment it was clicked.
+    for (const id of ["#proof", "#guarantees", "#privacy"]) expect(isLandingAnchor(id)).toBe(true);
     expect(isLandingAnchor("how")).toBe(true);
   });
   it("rejects routes, unknown hashes and the empty hash", () => {

@@ -9,7 +9,7 @@ const STANDALONE = ["dashboard", "wallet"] as const;
 const LEGACY: Record<string, View> = { workspace: "overview" };
 // In-page section ids on the landing page. They live in the hash too, so the router has
 // to leave them alone: rewriting or scrolling on these kills the anchor jump.
-const LANDING_ANCHORS = ["how", "prism"] as const;
+const LANDING_ANCHORS = ["proof", "how", "guarantees", "privacy"] as const;
 
 export function viewFromHash(hash: string): View {
   const h = hash.replace(/^#/, "");

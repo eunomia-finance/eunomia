@@ -53,7 +53,7 @@ export default function App() {
 
   useEffect(() => {
     const onHash = () => {
-      // #how / #prism are landing sections, not routes — let the browser do its anchor
+      // #proof / #how / … are landing sections, not routes — let the browser do its anchor
       // jump instead of erasing the hash and scrolling back to the top.
       if (isLandingAnchor(window.location.hash)) return;
       const v = viewFromHash(window.location.hash);
