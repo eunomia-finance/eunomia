@@ -214,7 +214,7 @@ export default function Setup({ onGo }: { onGo: (v: View) => void }) {
               <input
                 className="field field--mono"
                 aria-label="First approved payee address"
-                placeholder="G… or C… — the treasury can pay this address; anyone else is refused"
+                placeholder="G… — the treasury can pay this address; anyone else is refused"
                 spellCheck={false}
                 value={payee}
                 onChange={(e) => setPayee(e.target.value)}

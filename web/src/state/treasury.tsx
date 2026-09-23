@@ -289,7 +289,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
       const coherent = checkLimits(dailyLimit.value, perTaskLimit.value);
       if (!coherent.ok) return invalid(coherent.msg);
       const payee = (extra.payee ?? "").trim();
-      if (payee && !isValidPaymentDest(payee)) return invalid("That payee isn't a Stellar address (G… or C…).");
+      if (payee && !isValidPaymentDest(payee)) return invalid("That payee isn't a Stellar account address (G…).");
       const agentKey = (extra.agentKey ?? "").trim();
       let leash: TreasurySetup["leash"];
       if (agentKey) {
