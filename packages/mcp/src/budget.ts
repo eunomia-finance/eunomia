@@ -91,10 +91,16 @@ export function computeBudget(
   if (s.paused) {
     blockers.push("Treasury is paused by its owner — no payments until it is resumed.");
   }
+  // With no active Leash the contract's spender is the treasury's own agent (`cfg.agent`),
+  // so that key needs no Leash at all.
+  const rootSpends = agentPk !== null && agentPk === s.config.agent && !session?.active;
+
   if (agentPk === null) {
     blockers.push(
       "No agent credential configured — run `eunomia-mcp init --treasury <id>` and have the owner start a Leash for the printed public key.",
     );
+  } else if (rootSpends) {
+    // nothing to add: the root agent spends under the treasury's own limits
   } else if (!session) {
     blockers.push(
       "No active Leash for this treasury — the owner must start one for this agent's public key from the Eunomia dashboard.",
@@ -119,7 +125,13 @@ export function computeBudget(
 
   const canSpend = blockers.length === 0;
   const spendableNow =
-    canSpend && session ? min(s.config.per_task_limit, dailyRemaining, session.remaining, freeBalance) : 0n;
+    !canSpend
+      ? 0n
+      : rootSpends
+        ? min(s.config.per_task_limit, dailyRemaining, freeBalance)
+        : session
+          ? min(s.config.per_task_limit, dailyRemaining, session.remaining, freeBalance)
+          : 0n;
 
   const b: Budget = {
     contractId: s.contractId,

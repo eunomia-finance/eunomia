@@ -142,3 +142,22 @@ test("a blocked agent gets allowed:false even when the amount itself is fine", (
   assert.equal(b.decision?.allowed, false);
   assert.deepEqual(b.decision?.reasons, []); // nothing wrong with the amount — the blocker is the Leash
 });
+
+test("the treasury's own agent spends without a Leash, as the contract lets it", () => {
+  // The contract's spender is the active session agent, else cfg.agent.
+  const none = computeBudget(snap({ session: null }), "GROOT", NOW, 50_000_000n);
+  assert.equal(none.canSpend, true);
+  assert.equal(none.spendableNow, 100_000_000n);
+  assert.equal(none.decision?.allowed, true);
+
+  const expired = computeBudget(
+    snap({ session: { agent: AGENT, valid_until: BigInt(NOW - 1), limit: 1n, spent: 0n } }),
+    "GROOT",
+    NOW,
+  );
+  assert.equal(expired.canSpend, true);
+
+  // While a Leash is active, only its agent may spend — the root key is locked out.
+  const leashed = computeBudget(snap(), "GROOT", NOW);
+  assert.equal(leashed.canSpend, false);
+});
