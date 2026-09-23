@@ -7,6 +7,7 @@ import { NETWORKS } from "./network.js";
 import { payFromTreasury, preflightReasons } from "./pay.js";
 import type { ServerContext } from "./server.js";
 import { memoryExceptionStore } from "./store.js";
+import { serializeOutcome } from "./tools.js";
 
 const AGENT = "GB4GJNEZ6KLZNU3TE2CHQFNPOEQL5SHPQ246OMRZRLKVVQNLZCDX2QXZ";
 const NOW = 1_800_000_000;
@@ -180,4 +181,30 @@ test("Ok + SUCCESS pays; Ok + FAILED reads the verdict from diagnostics", async 
     assert.equal(failed.txHash, "ab".repeat(32));
     assert.deepEqual(failed.reasons.map((r) => r.code), [4]);
   }
+});
+
+test("a payment the network took but did not confirm is pending, never a failure to retry", async () => {
+  // signAndSend gives up polling after its timeout and throws, yet the transaction can
+  // still land. Answering "retry later" there is how an agent pays the same bill twice.
+  const signing = {
+    pay: async () => ({
+      result: new Ok(undefined),
+      signAndSend: async (opts?: { watcher?: { onSubmitted?: (r: { hash: string }) => void } }) => {
+        opts?.watcher?.onSubmitted?.({ hash: "SENTHASH" });
+        throw new Error("Waited 30 seconds for transaction to complete, but it did not.");
+      },
+    }),
+  } as never;
+  const out = await payFromTreasury(
+    ctx(),
+    { to: "GPAYEE", amount: 1n, taskId: 0n },
+    { readClient: readClient(), signingClient: signing },
+  );
+  assert.equal(out.paid, false);
+  if (!out.paid) {
+    assert.equal(out.stage, "pending");
+    assert.equal(out.txHash, "SENTHASH");
+  }
+  const json = serializeOutcome(out, "testnet");
+  assert.doesNotMatch(String(json.nextStep), /^retry/);
 });

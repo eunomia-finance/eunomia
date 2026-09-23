@@ -87,7 +87,13 @@ export function serializeOutcome(o: PayOutcome, net: NetworkName, unit: string |
     blockers: o.blockers,
     message: o.message,
     ...(o.txHash ? { txHash: o.txHash, ledger: o.ledger, links: { tx: txUrl(net, o.txHash) } } : { links: {} }),
-    nextStep: policyRefusal ? "request_exception" : o.blockers.length > 0 ? "wait for the owner (see blockers)" : "retry later",
+    nextStep: policyRefusal
+      ? "request_exception"
+      : o.blockers.length > 0
+        ? "wait for the owner (see blockers)"
+        : o.stage === "pending"
+          ? "check the transaction before retrying — it may already have paid"
+          : "retry later",
     ...(policyRefusal && {
       note: "This refusal is the treasury's policy working — the same rule the contract enforces on-chain.",
     }),

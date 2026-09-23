@@ -22,7 +22,7 @@ export type PayOutcome =
   | { paid: true; txHash: string; ledger: number; to: string; amount: bigint; taskId: bigint }
   | {
       paid: false;
-      stage: "preflight" | "simulation" | "submit" | "onchain";
+      stage: "preflight" | "simulation" | "submit" | "pending" | "onchain";
       reasons: Reason[];
       blockers: string[];
       message: string;
@@ -120,9 +120,26 @@ export async function payFromTreasury(ctx: ServerContext, args: PayArgs, deps: P
   }
 
   let sent: Awaited<ReturnType<typeof tx.signAndSend>>;
+  // The network may have accepted the transaction before signAndSend throws — it gives up
+  // polling after its timeout, or the RPC drops mid-poll. Such a payment can still land, so
+  // it must not be reported as a plain failure an agent would answer by paying again.
+  let submittedHash = "";
   try {
-    sent = await tx.signAndSend();
+    sent = await tx.signAndSend({
+      watcher: { onSubmitted: (r) => void (submittedHash = r?.hash ?? "") },
+    });
   } catch (e) {
+    if (submittedHash) {
+      return {
+        paid: false,
+        stage: "pending",
+        reasons: [],
+        blockers: [],
+        message: `Submitted, but not confirmed yet (${errText(e).slice(0, 200)}). Check the transaction before paying again — it may already have gone through.`,
+        txHash: submittedHash,
+        ...base,
+      };
+    }
     return {
       paid: false,
       stage: "submit",
