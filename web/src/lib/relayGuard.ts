@@ -5,6 +5,7 @@
 // and Vercel compiles api/* with node16 resolution, where an extensionless relative import
 // does not resolve and the function dies at cold start with a 500. `npm run check:api-types`
 // guards it. (Vite and vitest map the .js back to this .ts, so the bundle is unaffected.)
+import type { xdr } from "@stellar/stellar-sdk";
 import { LEGACY_TREASURY_WASM_HASHES, TREASURY_WASM_HASH } from "./treasuryWasm.js";
 
 /** Soroban contract ids are StrKey-encoded, start with `C`, and are 56 characters long. */
@@ -71,4 +72,17 @@ export async function isRelayAllowed(
 
   const seen = hash.toLowerCase();
   return cfg.wasmHashes.some((h) => h.toLowerCase() === seen);
+}
+
+/** Whether caller-supplied auth entries are safe to submit with the relay as the source.
+ *
+ *  The relay sources and signs the transaction, so a `sourceAccount` credential is
+ *  satisfied by the relay's own signature: it authorises as the fee account, not the user.
+ *  Admitted alongside the native SAC, one such entry on `transfer(from = relay, ...)` would
+ *  hand anyone the dispenser's balance. Genuine passkey calls always carry address-bound
+ *  credentials signed by the user's wallet, so nothing legitimate is refused. */
+export function authEntriesAreSafe(entries: xdr.SorobanAuthorizationEntry[]): boolean {
+  return entries.every(
+    (entry) => entry.credentials().switch().name !== "sorobanCredentialsSourceAccount",
+  );
 }

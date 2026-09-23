@@ -14,7 +14,7 @@ import { Keypair, rpc, xdr } from "@stellar/stellar-sdk";
 // Explicit .js extensions — see the note in api/faucet.ts.
 import process from "node:process";
 import { classifyHostFunction, hostFunctionFromEnvelope } from "../src/lib/hostFunction.js";
-import { allowedWasmHashes, isRelayAllowed } from "../src/lib/relayGuard.js";
+import { allowedWasmHashes, authEntriesAreSafe, isRelayAllowed } from "../src/lib/relayGuard.js";
 import { submitEnvelope, submitHostFunction } from "../src/lib/relaySubmit.js";
 import { TREASURY_FACTORY_ID } from "../src/lib/treasuryWasm.js";
 
@@ -117,13 +117,19 @@ async function handler(req: Request): Promise<Response> {
     networkPassphrase: NETWORK_PASSPHRASE,
   };
 
+  let entries: xdr.SorobanAuthorizationEntry[] = [];
+  if (isFuncCall) {
+    try {
+      entries = (auth as string[]).map((a) => xdr.SorobanAuthorizationEntry.fromXDR(a, "base64"));
+    } catch {
+      return json({ error: "Malformed request." }, 400);
+    }
+    if (!authEntriesAreSafe(entries)) return json({ error: "Not allowed." }, 403);
+  }
+
   try {
     const result = isFuncCall
-      ? await submitHostFunction(
-          deps,
-          xdr.HostFunction.fromXDR(func as string, "base64"),
-          (auth as string[]).map((a) => xdr.SorobanAuthorizationEntry.fromXDR(a, "base64")),
-        )
+      ? await submitHostFunction(deps, xdr.HostFunction.fromXDR(func as string, "base64"), entries)
       : await submitEnvelope(deps, envelope as string);
     return json({ hash: result.hash, status: result.status }, 200);
   } catch (e) {

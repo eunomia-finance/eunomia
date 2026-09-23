@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { allowedWasmHashes, isAllowedContract, isRelayAllowed } from "./relayGuard";
+import { Address, xdr } from "@stellar/stellar-sdk";
+import { allowedWasmHashes, authEntriesAreSafe, isAllowedContract, isRelayAllowed } from "./relayGuard";
 import { LEGACY_TREASURY_WASM_HASHES, TREASURY_WASM_HASH } from "./treasuryWasm";
 
 describe("allowedWasmHashes", () => {
@@ -113,5 +114,48 @@ describe("isRelayAllowed", () => {
   it("is case-insensitive about the wasm hash hex", async () => {
     const readWasmHash = vi.fn().mockResolvedValue(TREASURY_WASM.toUpperCase());
     await expect(isRelayAllowed(USER_TREASURY, guard(readWasmHash))).resolves.toBe(true);
+  });
+});
+
+describe("authEntriesAreSafe", () => {
+  const NATIVE_SAC = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+  const WALLET = "CAYWNXHANRY5GSJAZOR4YTKBKNOKTCITE52ZRKDKCAWLDTYWFFVFSPAZ";
+  const invocation = new xdr.SorobanAuthorizedInvocation({
+    function: xdr.SorobanAuthorizedFunction.sorobanAuthorizedFunctionTypeContractFn(
+      new xdr.InvokeContractArgs({
+        contractAddress: new Address(NATIVE_SAC).toScAddress(),
+        functionName: "transfer",
+        args: [],
+      }),
+    ),
+    subInvocations: [],
+  });
+
+  const addressEntry = new xdr.SorobanAuthorizationEntry({
+    credentials: xdr.SorobanCredentials.sorobanCredentialsAddress(
+      new xdr.SorobanAddressCredentials({
+        address: new Address(WALLET).toScAddress(),
+        nonce: xdr.Int64.fromString("1"),
+        signatureExpirationLedger: 100,
+        signature: xdr.ScVal.scvVoid(),
+      }),
+    ),
+    rootInvocation: invocation,
+  });
+
+  it("admits the address-bound entries a passkey signs", () => {
+    expect(authEntriesAreSafe([addressEntry])).toBe(true);
+    expect(authEntriesAreSafe([])).toBe(true);
+  });
+
+  it("refuses a source-account entry, which would authorise as the relay itself", () => {
+    // The relay is the transaction source, so this entry is satisfied by the relay's own
+    // signature: a transfer out of the dispenser that anyone could post.
+    const asRelay = new xdr.SorobanAuthorizationEntry({
+      credentials: xdr.SorobanCredentials.sorobanCredentialsSourceAccount(),
+      rootInvocation: invocation,
+    });
+    expect(authEntriesAreSafe([asRelay])).toBe(false);
+    expect(authEntriesAreSafe([addressEntry, asRelay])).toBe(false);
   });
 });
