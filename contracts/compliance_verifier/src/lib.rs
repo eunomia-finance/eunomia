@@ -2,7 +2,7 @@
 //! Eunomia Compliance Verifier
 //!
 //! Checks a Groth16 proof that an agent's spending for a closed period obeyed its
-//! treasury's policy, and Ã¢â‚¬â€ crucially Ã¢â‚¬â€ that the batch it proves is the one that
+//! treasury's policy, and — crucially — that the batch it proves is the one that
 //! actually happened.
 //!
 //! The earlier version anchored a copy of the policy at deploy time and checked proofs
@@ -12,7 +12,7 @@
 //! were therefore worthless as audit artefacts.
 //!
 //! Now the contract is multi-tenant and stateless about policy: every value a proof
-//! asserts is re-read from the treasury's own on-chain storage Ã¢â‚¬â€ its limits, its
+//! asserts is re-read from the treasury's own on-chain storage — its limits, its
 //! published payee root, and the total it actually moved in that period. The caller must
 //! be that treasury's admin. One verifier serves every treasury.
 use soroban_sdk::{
@@ -33,7 +33,7 @@ pub enum Groth16Error {
     MalformedVerifyingKey = 0,
 }
 
-/// Every way a submission can fail, as a typed code Ã¢â‚¬â€ a malformed or dishonest proof
+/// Every way a submission can fail, as a typed code — a malformed or dishonest proof
 /// fails closed with something legible rather than an opaque slice panic.
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -71,7 +71,7 @@ const PROOF_BYTES: u32 = 256;
 
 const SECONDS_PER_DAY: u64 = 86_400;
 /// How far back an attestation may reach. `period_spent` sums hourly buckets, and a
-/// bucket old enough to be archived would silently read as zero Ã¢â‚¬â€ making a stale period
+/// bucket old enough to be archived would silently read as zero — making a stale period
 /// look cheaper than it was. Well inside the persistent min-TTL, so the sum stays honest.
 const MAX_PERIOD_LOOKBACK: u64 = 7;
 
@@ -79,8 +79,8 @@ const MAX_PERIOD_LOOKBACK: u64 = 7;
 ///
 /// `Bn254Fr::from_bytes` reduces modulo `r`, so a field element has many byte
 /// encodings: `x`, `x + r`, `x + 2r`, ... all denote the same element. The pairing
-/// check cannot tell them apart, but anything that keys on the raw bytes Ã¢â‚¬â€ the
-/// period bookkeeping below Ã¢â‚¬â€ can. Only values strictly below `r` are canonical.
+/// check cannot tell them apart, but anything that keys on the raw bytes — the
+/// period bookkeeping below — can. Only values strictly below `r` are canonical.
 const BN254_FR_MODULUS: [u8; 32] = [
     0x30, 0x64, 0x4E, 0x72, 0xE1, 0x31, 0xA0, 0x29, 0xB8, 0x50, 0x45, 0xB6, 0x81, 0x81, 0x58, 0x5D,
     0x28, 0x33, 0xE8, 0x48, 0x79, 0xB9, 0x70, 0x91, 0x43, 0xE1, 0xF5, 0x93, 0xF0, 0x00, 0x00, 0x01,
@@ -174,7 +174,7 @@ pub enum DataKey {
     LastPeriod(Address),
 }
 
-/// Keep the period bookkeeping alive well past the lookback window Ã¢â‚¬â€ if it were archived,
+/// Keep the period bookkeeping alive well past the lookback window — if it were archived,
 /// an already-attested period could be attested again.
 const LEDGERS_PER_WEEK: u32 = 120_960;
 const LAST_PERIOD_TTL_THRESHOLD: u32 = 4 * LEDGERS_PER_WEEK;
@@ -274,12 +274,12 @@ impl ComplianceVerifier {
     }
 
     /// Verify a compliance proof for `treasury`'s closed period and, on success, emit
-    /// `attested`. Traps on any mismatch Ã¢â‚¬â€ the whole point is that an attestation only
+    /// `attested`. Traps on any mismatch — the whole point is that an attestation only
     /// exists when every claim in it survived a check against the chain.
     ///
     /// proof_bytes  = a(64) || b(128) || c(64)      = 256 bytes
-    /// public_bytes = 13 field elements x 32 bytes  = 416 bytes
-    ///   layout: [dailyLimit, perTaskLimit, whitelistRoot, periodId, periodSpent, commitments[8]]
+    /// public_bytes = 21 field elements x 32 bytes  = 672 bytes
+    ///   layout: [dailyLimit, perTaskLimit, whitelistRoot, periodId, periodSpent, commitments[16]]
     pub fn verify(env: Env, treasury: Address, proof_bytes: Bytes, public_bytes: Bytes) {
         // ---- INPUT SHAPE: fail closed with a typed error, not an opaque slice panic ----
         if proof_bytes.len() != PROOF_BYTES {
@@ -325,7 +325,7 @@ impl ComplianceVerifier {
 
         // The circuit compares with LessEqThan(nBits+4=68) for the daily limit and
         // LessEqThan(nBits=64) per task. A limit wider than its comparator makes that
-        // comparison meaningless Ã¢â‚¬â€ the policy check would silently stop biting Ã¢â‚¬â€ so a
+        // comparison meaningless — the policy check would silently stop biting — so a
         // treasury configured beyond the circuit's range cannot be attested for at all.
         // Checked here rather than at deploy time because `set_limits` can move them.
         if !fits_bits(&daily, 68) || !fits_bits(&per_task, 64) {

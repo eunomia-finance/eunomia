@@ -569,8 +569,9 @@ impl Treasury {
     }
 
     /// Admin (the owner / hirer) approves delivery → release the locked funds to the
-    /// payee. The rolling window is enforced here, at the real moment of outflow, and
-    /// the spend is accounted per task exactly like a direct `pay`.
+    /// payee. The rolling window was already charged when the escrow was created, so
+    /// release does not check or charge it again; the spend is accounted per task
+    /// exactly like a direct `pay`.
     pub fn release_escrow(env: Env, id: u64) -> Result<(), Error> {
         let cfg = Self::cfg(&env);
         cfg.admin.require_auth();

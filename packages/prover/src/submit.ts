@@ -9,7 +9,7 @@ export interface SubmitOptions {
    *  from here, and requires the treasury admin's signature — so `source` must be it. */
   treasuryId: string;
   proof: Buffer; // 256 bytes
-  publicSignals: Buffer; // 416 bytes (13 field elements)
+  publicSignals: Buffer; // 672 bytes (21 field elements)
   source?: string; // keychain identity, default zk-deployer
   network?: string; // default testnet
 }
