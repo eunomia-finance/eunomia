@@ -12,6 +12,7 @@ import {
   Contract,
   Keypair,
   Operation,
+  Transaction,
   TransactionBuilder,
   nativeToScVal,
   rpc,
@@ -85,6 +86,19 @@ async function servedToday(publicKey: string): Promise<number> {
   }
 }
 
+/** Send and wait for the ledger's verdict. A submission the network accepted can still fail
+ *  or never land, and reporting its hash as done tells the user funds are on the way when
+ *  nothing is coming. */
+async function submitAndConfirm(server: rpc.Server, tx: Transaction): Promise<string> {
+  const sent = await server.sendTransaction(tx);
+  if (sent.status === "ERROR") throw new Error("the network rejected the transaction");
+  const done = await server.pollTransaction(sent.hash, { attempts: 20 });
+  if (done.status !== rpc.Api.GetTransactionStatus.SUCCESS) {
+    throw new Error(`transaction ${sent.hash} did not succeed (${done.status})`);
+  }
+  return sent.hash;
+}
+
 /** Friendbot cannot top up an existing account, so a refill means funding a NEW account and
  *  merging it in — which transfers its whole balance and closes it. */
 async function refill(server: rpc.Server, dispenser: Keypair): Promise<void> {
@@ -100,7 +114,9 @@ async function refill(server: rpc.Server, dispenser: Keypair): Promise<void> {
     .setTimeout(60)
     .build();
   tx.sign(donor);
-  await server.sendTransaction(tx);
+  // Waited on, not fired and forgotten: the dispense right after simulates against the
+  // dispenser's balance, which only has the merged funds once this is in a ledger.
+  await submitAndConfirm(server, tx);
 }
 
 /** Move XLM into a contract account. Classic payments cannot do this; the SAC can. */
@@ -109,7 +125,7 @@ async function sendToWallet(
   dispenser: Keypair,
   wallet: string,
   amountXlm: number,
-): Promise<string | undefined> {
+): Promise<string> {
   const built = new TransactionBuilder(await server.getAccount(dispenser.publicKey()), {
     fee: BASE_FEE,
     networkPassphrase: NETWORK_PASSPHRASE,
@@ -127,7 +143,7 @@ async function sendToWallet(
 
   const prepared = await server.prepareTransaction(built);
   prepared.sign(dispenser);
-  return (await server.sendTransaction(prepared)).hash;
+  return submitAndConfirm(server, prepared);
 }
 
 // Exported as named HTTP methods, not as `export default`. Vercel treats a default export as

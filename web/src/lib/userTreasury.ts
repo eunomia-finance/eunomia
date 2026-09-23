@@ -193,6 +193,13 @@ export async function fundTreasury(
   const sent = await server.sendTransaction(
     TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE),
   );
+  if (sent.status === "ERROR") {
+    throw new Error("Stellar refused the transfer into the treasury before it reached a ledger.");
+  }
+  const done = await server.pollTransaction(sent.hash, { attempts: 40 });
+  if (done.status !== rpc.Api.GetTransactionStatus.SUCCESS) {
+    throw new Error(`The transfer into the treasury did not go through (${done.status}).`);
+  }
   return sent.hash;
 }
 
