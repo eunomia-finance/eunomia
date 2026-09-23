@@ -143,6 +143,13 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
         setLifecycle(null);
         console.error("[treasury] refusing", id, "— admin is", st.admin, "not", addr);
         toast("error", "That treasury is administered by a different wallet, so it wasn't opened.");
+        // Refused is final, so it must not stay the active treasury: left in place it kept
+        // every page on skeletons and blocked the owner's own treasury from being adopted.
+        if (getTreasuryId(addr) === id) {
+          clearTreasuryId(addr);
+          setTreasuryIdState(getTreasuryId(addr));
+          setLocalIds(listTreasuries(addr));
+        }
         return;
       }
       setState(st);
