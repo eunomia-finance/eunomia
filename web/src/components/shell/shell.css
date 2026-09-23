@@ -61,14 +61,13 @@
   border-right:1px solid var(--line);
   background:var(--surface);
 }
+/* The same lockup the landing nav carries (.lp__nav-brand): Kalnia 500 at 20px with the
+   mark sized to its cap band, 17. Signing in should not swap the wordmark for another face. */
 .shell__brand{
-  display:flex; align-items:center; gap:9px; margin:2px 6px 24px;
+  display:flex; align-items:center; gap:7px; margin:2px 6px 24px;
   background:none; border:none; padding:0; cursor:pointer;
-  color:var(--ink); font-family:var(--display); font-size:19px; letter-spacing:-0.01em;
-}
-.shell__glyph{
-  width:24px; height:24px; border-radius:6px;
-  background:url('/favicon.png') center/cover no-repeat;
+  color:var(--ink); font-family:"Kalnia", Georgia, serif; font-weight:500;
+  font-size:20px; letter-spacing:-0.014em;
 }
 .shell__nav{ display:flex; flex-direction:column; gap:2px; }
 .shell__item{

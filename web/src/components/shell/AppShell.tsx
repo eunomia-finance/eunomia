@@ -1,5 +1,6 @@
 // The product chrome: persistent sidebar (desktop) / bottom tabs (mobile) + a sticky
 // topbar carrying the treasury switcher and the shared wallet chip. Pages render inside.
+import EunomiaMark from "../EunomiaMark";
 import WalletChip from "../WalletChip";
 import TreasurySwitcher from "./TreasurySwitcher";
 import { APP_PAGES, type AppPage, type View } from "../../lib/routes";
@@ -27,7 +28,8 @@ export default function AppShell({
     <div className="shell">
       <aside className="shell__side">
         <button className="shell__brand" onClick={() => onGo("landing")} type="button">
-          <span className="shell__glyph" /> Eunomia
+          <EunomiaMark size={17} />
+          Eunomia
         </button>
         <nav className="shell__nav">
           {APP_PAGES.map((p) => (
