@@ -17,13 +17,18 @@ interface Row extends ExceptionRequest {
 export default function ExceptionRequests({ agent }: { agent: string }) {
   const t = useTreasury();
   const treasuryId = t.treasuryId;
-  const [rows, setRows] = useState<Row[]>([]);
-  const [err, setErr] = useState("");
+  // Rows and errors are tagged with the agent + treasury they were read for, so a switch
+  // never shows the previous treasury's requests (with live action buttons) against the new one.
+  const key = `${agent}:${treasuryId ?? ""}`;
+  const [loaded, setLoaded] = useState<{ key: string; rows: Row[]; err: string }>({ key: "", rows: [], err: "" });
+  const rows = loaded.key === key ? loaded.rows : [];
+  const err = loaded.key === key ? loaded.err : "";
   // A shared ticking clock (render-pure): the Leash cap stops binding the moment it expires.
   const nowSec = Math.floor(useNow(rows.length > 0) / 1000);
 
   useEffect(() => {
     if (!treasuryId) return;
+    const readKey = `${agent}:${treasuryId}`;
     let cancelled = false;
     const client = new Client({ contractId: treasuryId, networkPassphrase: NETWORK_PASSPHRASE, rpcUrl: RPC_URL });
     (async () => {
@@ -40,12 +45,13 @@ export default function ExceptionRequests({ agent }: { agent: string }) {
             return { ...r, payeeAllowed };
           }),
         );
-        if (!cancelled) {
-          setRows(withPayee);
-          setErr("");
-        }
+        if (!cancelled) setLoaded({ key: readKey, rows: withPayee, err: "" });
       } catch (e) {
-        if (!cancelled) setErr(e instanceof Error ? e.message : "Could not read the agent's requests.");
+        if (!cancelled) {
+          const msg = e instanceof Error ? e.message : "Could not read the agent's requests.";
+          // A failed refresh keeps the rows already read for this same treasury.
+          setLoaded((prev) => ({ key: readKey, rows: prev.key === readKey ? prev.rows : [], err: msg }));
+        }
       }
     })();
     return () => {
