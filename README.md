@@ -273,4 +273,4 @@ Full security model, audit-finding status, known limitations, and how to report 
 [MIT](LICENSE) © 2026 Bekir Erdem · Seyit Ali Değirmen — contracts, circuits, app and clients.
 The published agent package, [`packages/mcp`](packages/mcp) (`eunomia-mcp` on npm), is [Apache-2.0](packages/mcp/LICENSE).
 
-These licenses cover the code, not the brand: the Eunomia name, mark and logos are trademarks of Bekir Erdem and Seyit Ali Değirmen and are not licensed under MIT or Apache-2.0. You may use them unmodified to refer to the project; a fork must ship under its own name and logo.
+These licenses cover the code, not the brand: the Eunomia name, mark and logos are trademarks of Bekir Erdem and Seyit Ali Değirmen and are not licensed under MIT or Apache-2.0. You may use them unmodified to refer to the project; a fork must ship under its own name and logo. The full terms and the logo files are in the [brand repository](https://github.com/eunomia-finance/brand) — see its [usage policy](https://github.com/eunomia-finance/brand/blob/main/TRADEMARKS.md).
