@@ -712,7 +712,12 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
         //    ledger reads the same every time; if it has since been whitelisted, a fresh
         //    key is the one address that certainly isn't on the list.
         push("refused", { status: "running" });
-        const stranger = (await isApprovedPayee(treasuryId, ATTACKER)) ? Keypair.random().publicKey() : ATTACKER;
+        //    An unreadable answer counts as approved here: isApprovedPayee's "not approved"
+        //    default is the safe side for choosing whom to pay, the wrong side for this.
+        const attackerMayBeApproved = await readClient(treasuryId)
+          .is_payee({ payee: ATTACKER })
+          .then((r) => r.result, () => true);
+        const stranger = attackerMayBeApproved ? Keypair.random().publicKey() : ATTACKER;
         const taskId = BigInt(Date.now());
         const tried = await sessionPay(treasuryId, sessionSecret, taskId, stranger, amount);
         if (tried.ok) {
