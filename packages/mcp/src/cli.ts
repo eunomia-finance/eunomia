@@ -158,6 +158,18 @@ async function pay(): Promise<void> {
       reasons: rec.reasons,
       links: { tx: txUrl(ctx.net.name, rec.txHash) },
     };
+    // The refused call is resubmitted with its real amount. If state moved since the
+    // simulation (a window bucket rolled off, a limit was raised) it goes through, and
+    // the money has moved: say so instead of reporting the refusal that no longer holds.
+    if (rec.status === "SUCCESS") {
+      for (const k of ["stage", "reasons", "blockers", "nextStep", "note"]) delete out[k];
+      out.paid = true;
+      out.txHash = rec.txHash;
+      out.ledger = rec.ledger;
+      out.message = "The treasury accepted the payment on resubmission — state changed after the simulation refused it.";
+      console.log(JSON.stringify(out, null, 2));
+      return;
+    }
   }
   console.log(JSON.stringify(out, null, 2));
   if (!outcome.paid) process.exitCode = outcome.reasons.length > 0 ? 3 : 1;
