@@ -65,7 +65,14 @@ export function useTheme(): { theme: Theme; toggle: (e?: { clientX: number; clie
       Math.max(y, window.innerHeight - y),
     );
 
-    const transition = start.call(document, flip);
+    // The browser snapshots the new state as soon as this callback returns, and setTheme only
+    // schedules a render — the attribute would land later, in the effect, leaving both
+    // snapshots identical and the sweep revealing nothing. Write it here, synchronously.
+    const transition = start.call(document, () => {
+      const next: Theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      setTheme(next);
+    });
     void transition.ready.then(() => {
       document.documentElement.animate(
         {
