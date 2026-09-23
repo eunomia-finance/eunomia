@@ -60,3 +60,19 @@ test("reports every decision with its reason", () => {
   assert.equal(seen[1].gate.allowed, false);
   assert.match(seen[1].gate.reason!, /payee/);
 });
+
+test("counts what it lets through against the daily limit across requests", () => {
+  // x402 payments leave from the allowance account, so neither the snapshot nor the
+  // chain sees them. Without a running total a long-lived fetch would pay 5 XLM forever
+  // against a 20 XLM day.
+  const filter = makeBoundedPolicy(policy());
+  for (let i = 0; i < 4; i++) assert.equal(filter(2, [req()]).length, 1);
+  assert.equal(filter(2, [req()]).length, 0);
+});
+
+test("a refused request does not use up the day", () => {
+  const filter = makeBoundedPolicy(policy());
+  filter(2, [req({ payTo: "GATTACKER" })]);
+  filter(2, [req({ amount: "150000000" })]);
+  for (let i = 0; i < 4; i++) assert.equal(filter(2, [req()]).length, 1);
+});
