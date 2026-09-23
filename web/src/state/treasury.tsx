@@ -606,13 +606,14 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
     async (to?: string): Promise<ActionOutcome> => {
       if (!address || !treasuryId || !sessionSecret) return fail("No active Leash key on this device.");
       const dest = (to ?? "").trim() || SERVICE;
+      const unit = tokenCodeOf(state?.token);
       setBusy("task");
       toast("info", "Agent is paying autonomously — no wallet popup…");
       try {
         const res = await sessionPay(treasuryId, sessionSecret, BigInt(Date.now()), dest, 1);
         if (res.ok) {
           void logActivity({ walletAddress: address, treasuryId, action: "agent_pay", txHash: res.hash, amountXlm: 1 });
-          const msg = `Agent paid 1 XLM to ${shortAddr(dest)} autonomously ✓ — the contract enforced the policy.`;
+          const msg = `Agent paid 1 ${unit} to ${shortAddr(dest)} autonomously ✓ — the contract enforced the policy.`;
           toast("success", msg, { hash: res.hash });
           bump();
           await loadState(treasuryId, address);
@@ -633,7 +634,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
         setBusy(null);
       }
     },
-    [address, treasuryId, sessionSecret, bump, loadState, toast],
+    [address, treasuryId, sessionSecret, state?.token, bump, loadState, toast],
   );
 
   // The agent's own loop, the three steps in the order they matter: a payment the rules

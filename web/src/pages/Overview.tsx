@@ -166,8 +166,10 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
   const remaining = s ? (s.dailyLimit > s.daySpent ? s.dailyLimit - s.daySpent : 0n) : 0n;
   const dayPct = s && s.dailyLimit > 0n ? Math.min(100, Number((s.daySpent * 10000n) / s.dailyLimit) / 100) : 0;
   const session = t.lifecycle?.session ?? null;
-  const leashOn = t.sessionActive && session;
-  const now = useNow(!!leashOn);
+  const now = useNow(!!(t.sessionActive && session));
+  // sessionActive is computed when the treasury was last read; the clock keeps ticking past
+  // valid_until, and an expired Leash must stop reading "active" the moment it expires.
+  const leashOn = t.sessionActive && session && Number(session.valid_until) * 1000 > now;
   const leashPct = session && session.limit > 0n ? Math.min(100, Number((session.spent * 10000n) / session.limit) / 100) : 0;
 
   // The latest decision the contract made — the only thing worth a dark panel.
