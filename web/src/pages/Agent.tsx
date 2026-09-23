@@ -2,7 +2,7 @@
 // key. An active Leash is the one dark panel on this page — live cap, countdown, the demo
 // task, revoke. Inactive, the page explains the model and starts one. The single-spender
 // rule and the "registered but unfunded key" recovery path live in the provider.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AgentLoop from "../components/AgentLoop";
 import ExceptionRequests from "../components/ExceptionRequests";
 import { EXPLORER, fmtXlm, shortAddr } from "../config";
@@ -28,11 +28,18 @@ export default function Agent() {
   const active = t.sessionActive && session;
   const now = useNow(!!active);
 
-  // Auto-refresh once the session lapses so the UI flips itself.
+  // Auto-refresh once the session lapses so the UI flips itself. Once per expiry: the clock
+  // keeps ticking while the read is in flight, and every tick used to start another one.
+  const refreshedFor = useRef<bigint | null>(null);
+  const { refresh } = t;
   useEffect(() => {
     if (!active || !session) return;
-    if (Number(session.valid_until) * 1000 < Date.now()) void t.refresh({ markLoading: false });
-  }, [active, session, now, t]);
+    if (refreshedFor.current === session.valid_until) return;
+    if (Number(session.valid_until) * 1000 < now) {
+      refreshedFor.current = session.valid_until;
+      void refresh({ markLoading: false });
+    }
+  }, [active, session, now, refresh]);
 
   const doStart = async () => {
     setErr("");
