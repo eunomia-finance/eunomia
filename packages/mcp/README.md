@@ -4,7 +4,7 @@ Connect any MCP-capable AI agent (Claude Code, Claude Desktop, …) to a [Eunomi
 
 The agent gets a **scoped, revocable credential**. The treasury contract enforces the owner's budget **on-chain** — per-payment cap, rolling 24h limit, approved payees, a time-bound session cap — and refuses anything outside it. The agent never holds the funds and never sees the owner's key.
 
-> Week 2 of the Instawards sprint: the agent now **pays** (direct or from an x402 payment requirement), reads every refusal as the **contract's own error code**, and can **ask the owner for an exception** that the dashboard shows. Live **testnet** only; npm publish lands in Week 3. Nothing here touches mainnet.
+> Published on npm as [`eunomia-mcp`](https://www.npmjs.com/package/eunomia-mcp). The agent **pays** (direct or from an x402 payment requirement), reads every refusal as the **contract's own error code**, and can **ask the owner for an exception** that the dashboard shows. Live **testnet** only; nothing here touches mainnet.
 
 ## Connect your agent
 
