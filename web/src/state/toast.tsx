@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { EXPLORER } from "../config";
 import { ToastContext } from "./toastContext";
 import { dismissDelay, dismissToast, pushToast, type ToastItem, type ToastKind } from "./toastQueue";
-import { toastColor, toastStyles } from "./toastStyles";
+import { toastStyles } from "./toastStyles";
 import { currentDevice } from "../lib/funnel";
 
 const { stack, box, msg: msgStyle, closeBtn } = toastStyles;
@@ -45,12 +45,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.18 }}
-              style={{ ...box, borderColor: toastColor(t.kind) + "55", color: toastColor(t.kind) }}
+              className="toast"
+              style={box}
             >
               <span style={msgStyle}>{t.msg}</span>
               {t.hash && (
                 <a
-                  style={{ color: toastColor(t.kind), whiteSpace: "nowrap" }}
+                  style={{ whiteSpace: "nowrap" }}
                   href={`${EXPLORER}/tx/${t.hash}`}
                   target="_blank"
                   rel="noreferrer"

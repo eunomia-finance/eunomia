@@ -480,3 +480,32 @@ input, textarea, select{ font-family:inherit; font-size:14px; }
   background:#edf6d2; border-color:#edf6d2; color:#152a03;
   box-shadow:0 8px 24px -10px rgba(0,0,0,0.5);
 }
+
+/* ---- toasts --------------------------------------------------------------------
+   Like the feedback FAB, the stack sits outside .lp and .shell and carries the brand values
+   directly. Text is always ink; the kind is the ledger's own verdict mark (ledger.css
+   .mark): green fills for success, red outlines for an error, a quiet outline for info.
+   No left-accent stripe — the dashboard's design DNA refuses those. */
+.toast{
+  background:#f4fadc; color:#223e05;
+  border:1px solid rgba(34,62,5,0.16);
+  box-shadow:0 16px 40px -18px rgba(34,62,5,0.35);
+}
+.toast::before{
+  content:""; flex:0 0 auto; width:8px; height:8px; margin-top:5.5px; border-radius:2px;
+  box-sizing:border-box; border:1px solid rgba(34,62,5,0.16);
+}
+.toast[data-toast-kind="success"]::before{ background:#a2cb28; border-color:#a2cb28; }
+.toast[data-toast-kind="error"]::before{ border:1.5px solid #a62021; }
+.toast a{
+  color:inherit; text-decoration:underline; text-underline-offset:3px;
+  text-decoration-color:color-mix(in oklab, currentColor 35%, transparent);
+}
+:root[data-theme="dark"] .toast{
+  background:#1e3a06; color:#edf6d2;
+  border-color:rgba(162,203,40,0.24);
+  box-shadow:0 16px 40px -18px rgba(0,0,0,0.5);
+}
+:root[data-theme="dark"] .toast::before{ border-color:rgba(162,203,40,0.24); }
+:root[data-theme="dark"] .toast[data-toast-kind="success"]::before{ border-color:#a2cb28; }
+:root[data-theme="dark"] .toast[data-toast-kind="error"]::before{ border-color:#ff8a78; }

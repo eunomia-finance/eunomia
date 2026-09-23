@@ -1,10 +1,8 @@
 // Toast presentation, kept out of the provider so the overflow guards below stay testable
 // (and so the component file only exports a component).
+// Colour lives in index.css (.toast): the stack renders outside both .lp and .shell, so it
+// carries the brand values there; the kind is a small verdict mark, never the text colour.
 import type { CSSProperties } from "react";
-import type { ToastKind } from "./toastQueue";
-
-export const toastColor = (k: ToastKind) =>
-  k === "success" ? "#00FF43" : k === "error" ? "#FF5D5D" : "#A0A0B8";
 
 const stack: CSSProperties = {
   position: "fixed",
@@ -23,9 +21,6 @@ const box: CSSProperties = {
   gap: 10,
   padding: "10px 13px",
   borderRadius: 10,
-  border: "1px solid",
-  background: "rgba(18,18,28,0.92)",
-  backdropFilter: "blur(8px)",
   fontSize: 13.5,
   lineHeight: 1.4,
   pointerEvents: "auto",
