@@ -9,7 +9,8 @@ import { EXPLORER, HORIZON_URL, NETWORK_PASSPHRASE, shortAddr } from "../config"
 import { connectErr, sendErr } from "../lib/wallet-errors";
 import { kit, connect as kitConnect, disconnect as kitDisconnect } from "../lib/walletKit";
 import { useWalletAddress } from "../lib/useWalletAddress";
-import { getXlmBalance } from "../lib/funding";
+import { getContractXlmBalance, getXlmBalance } from "../lib/funding";
+import { isValidContractId } from "../lib/userTreasury";
 import { isValidPaymentDest, parseXlmAmount } from "../lib/validate";
 
 const server = new Horizon.Server(HORIZON_URL);
@@ -45,7 +46,8 @@ export default function Wallet() {
     try {
       // getXlmBalance distinguishes an unfunded account (404 → null) from a network/Horizon
       // failure (throws) — so a transient RPC outage no longer masquerades as a "0" balance.
-      const xlm = await getXlmBalance(addr);
+      // A passkey smart wallet (C…) has no Horizon account; its XLM lives in the SAC.
+      const xlm = isValidContractId(addr) ? await getContractXlmBalance(addr) : await getXlmBalance(addr);
       setBalance(xlm ?? 0);
       // Clear a previous failure on success: the refresh button and the post-send reload
       // both call this with the SAME address, so the address-change reset above never fires
@@ -183,27 +185,35 @@ export default function Wallet() {
               </button>
             </div>
 
-            <div style={{ marginTop: 18 }}>
-              <div style={label}>Send XLM (testnet)</div>
-              <input
-                style={input}
-                placeholder="Destination address (G…)"
-                aria-label="Destination address"
-                value={dest}
-                onChange={(e) => setDest(e.target.value)}
-              />
-              <input
-                style={input}
-                placeholder="Amount (XLM)"
-                aria-label="Amount in XLM"
-                inputMode="decimal"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-              <button style={{ ...primaryBtn, opacity: busy ? 0.6 : 1 }} onClick={send} disabled={busy}>
-                {busy ? "Sending…" : "Send payment"}
-              </button>
-            </div>
+            {isValidContractId(address) ? (
+              // This form builds a classic payment with the wallet as source, which a smart
+              // wallet cannot be — every attempt would fail.
+              <p style={{ color: "var(--ink-2)", marginTop: 18, fontSize: 13.5 }}>
+                This is a passkey wallet — it moves funds through your treasury, not from here.
+              </p>
+            ) : (
+              <div style={{ marginTop: 18 }}>
+                <div style={label}>Send XLM (testnet)</div>
+                <input
+                  style={input}
+                  placeholder="Destination address (G…)"
+                  aria-label="Destination address"
+                  value={dest}
+                  onChange={(e) => setDest(e.target.value)}
+                />
+                <input
+                  style={input}
+                  placeholder="Amount (XLM)"
+                  aria-label="Amount in XLM"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+                <button style={{ ...primaryBtn, opacity: busy ? 0.6 : 1 }} onClick={send} disabled={busy}>
+                  {busy ? "Sending…" : "Send payment"}
+                </button>
+              </div>
+            )}
           </>
         )}
 
