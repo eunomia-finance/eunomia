@@ -126,25 +126,27 @@ StellarWalletsKit.init({
   modules,
 });
 
-// Theme the wallet-select modal to match Eunomia — dark surface + Stellar-yellow accent.
+// Theme the wallet-select modal to the brand: cream canvas, ink text, green primary with ink
+// on it (never white on green), red only for errors. `gray` also colours text, so it is ink-2;
+// `shadow` is a whole box-shadow value, the one menus use in the shell.
 StellarWalletsKit.setTheme({
-  background: "#0b0b10",
-  "background-secondary": "#131319",
-  "foreground-strong": "#f3f1ec",
-  foreground: "#e8e6df",
-  "foreground-secondary": "#94939c",
-  primary: "#FDDA24",
-  "primary-foreground": "#0F0F0F",
+  background: "#fcffd5",
+  "background-secondary": "#f4fadc",
+  "foreground-strong": "#223e05",
+  foreground: "#223e05",
+  "foreground-secondary": "#55693f",
+  primary: "#a2cb28",
+  "primary-foreground": "#223e05",
   transparent: "transparent",
-  lighter: "rgba(255,255,255,0.08)",
-  light: "rgba(255,255,255,0.06)",
-  "light-gray": "rgba(255,255,255,0.12)",
-  gray: "#56555f",
-  danger: "#FF4D5E",
-  border: "rgba(255,255,255,0.13)",
-  shadow: "rgba(0,0,0,0.6)",
-  "border-radius": "16px",
-  "font-family": "'Inter', system-ui, sans-serif",
+  lighter: "#fcffd5",
+  light: "#f4fadc",
+  "light-gray": "rgba(34,62,5,0.16)",
+  gray: "#55693f",
+  danger: "#a62021",
+  border: "rgba(34,62,5,0.16)",
+  shadow: "0 16px 40px -18px rgba(34,62,5,0.35)",
+  "border-radius": "14px",
+  "font-family": "'Geist', system-ui, sans-serif",
 });
 
 export { StellarWalletsKit as kit };
