@@ -2,7 +2,7 @@
 // treasury, on-chain state/lifecycle, and every treasury action — lifted out of the old
 // Workspace so all shell pages read one context. Transaction progress/results surface as
 // toasts; validation failures return `{ validation: true }` and render inline at the form.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { connect as kitConnect, executorFor } from "../lib/walletKit";
 import { useWalletAddress } from "../lib/useWalletAddress";
 import {
@@ -121,11 +121,18 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
 
   const bump = useCallback(() => setRefreshKey((k) => k + 1), []);
 
+  // Reads race: switch treasuries (or act, then refresh) while a slow read is in flight and
+  // the older answer can land last, writing A's balance, limits and Leash key under B's id.
+  // Only the most recent read may write.
+  const loadSeq = useRef(0);
   const loadState = useCallback(async (id: string, addr: string, opts?: { markLoading?: boolean }) => {
+    const seq = ++loadSeq.current;
+    const stale = () => seq !== loadSeq.current;
     if (opts?.markLoading !== false) setLoading(true);
     try {
       const t = makeTreasury(id, await executorFor(addr));
       const st = await readState(t);
+      if (stale()) return;
       // The chain, not the registry, decides whose treasury this is. TreasuryRegistry
       // stores an unverified claim and this app adopts the newest one on a fresh
       // device, so without this check one signature on a zero-value "back up your
@@ -141,10 +148,12 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
       setState(st);
       // One probe decides v3 vs legacy: pre-M2 treasuries have no get_session/is_paused.
       const lc = await readLifecycle(t);
+      if (stale()) return;
       setLifecycle(lc);
       setLegacy(lc === null);
       setSessionSecret(loadSessionSecret(id));
     } catch (e) {
+      if (stale()) return;
       setState(null);
       setLifecycle(null);
       // The message below is deliberately vague; the reason is not. Without this, a client
@@ -153,7 +162,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
       console.error("[treasury] could not read", id, e);
       toast("error", "Could not read this treasury — it may not exist on testnet.");
     } finally {
-      setLoading(false);
+      if (!stale()) setLoading(false);
     }
   }, [toast]);
 
@@ -194,6 +203,10 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
 
   // Registry discovery: fills the switcher and (on a fresh device with no localStorage
   // mapping) adopts the latest registered treasury — M2 cross-device recovery.
+  // Adoption happens on the first discovery for an address only. The effect re-runs whenever
+  // treasuryId changes, so without this "Forget" on the active treasury cleared the id and
+  // the very next run adopted the same treasury straight back.
+  const discoveredFor = useRef<string | null>(null);
   useEffect(() => {
     if (!address) return;
     let alive = true;
@@ -201,7 +214,9 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
       const found = await discoverTreasuries(address);
       if (!alive) return;
       setRegistryIds(found);
-      if (!treasuryId && !creatingNew && found.length > 0) {
+      const firstDiscovery = discoveredFor.current !== address;
+      discoveredFor.current = address;
+      if (firstDiscovery && !treasuryId && !creatingNew && found.length > 0) {
         const latest = found[found.length - 1];
         setTreasuryId(address, latest);
         setTreasuryIdState(latest);
