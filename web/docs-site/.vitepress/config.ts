@@ -72,6 +72,7 @@ export default defineConfig({
           { text: "Try it (5 minutes)", link: "/try-it" },
           { text: "Hızlı başlangıç (TR)", link: "/try-it-tr" },
           { text: "Connect your agent (MCP)", link: "/connect-your-agent" },
+          { text: "Playbook: agent spending on Stellar", link: "/playbook" },
         ],
       },
       {
@@ -79,6 +80,7 @@ export default defineConfig({
         items: [
           { text: "Contracts & Addresses", link: "/contracts" },
           { text: "Security Model", link: "/security" },
+          { text: "Ecosystem comparison", link: "/comparison" },
           { text: "Roadmap", link: "/roadmap" },
           { text: "Changelog ↗", link: "https://github.com/eunomia-finance/eunomia/blob/main/CHANGELOG.md" },
         ],

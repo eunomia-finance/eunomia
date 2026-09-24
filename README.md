@@ -237,6 +237,8 @@ web/api/                        Vercel functions: fee-sponsoring relay + testnet
 web/docs-site/                  the docs site (VitePress) served at /docs
 supabase/migrations/            telemetry tables (activity with tx hashes, feedback, funnel)
 docs/ANCHOR.md                  the anchor leg — diagrams, constraints, what is simulated, evidence
+docs/PLAYBOOK.md                how to build policy-bounded agent spending on Stellar — patterns, addresses, gotchas
+COMPARISON.md                   where Eunomia sits among the platform pieces, funded projects and 2026 hackathon work, sourced
 DEPLOYMENT.md                   live testnet addresses & verified results
 ```
 

@@ -5,6 +5,16 @@ they were written under), grouped by release wave. Full detail lives in the
 [conventional-commit history](https://github.com/eunomia-finance/eunomia/commits/main);
 deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
+## [Unreleased]
+
+- **Docs** — [`docs/PLAYBOOK.md`](docs/PLAYBOOK.md): how to build policy-bounded agent
+  spending on Stellar — choosing a base, nine patterns with the code and testnet transaction
+  behind each, integration, the gotchas we paid for. [`COMPARISON.md`](COMPARISON.md): Eunomia
+  among the platform layer (OpenZeppelin smart accounts, Confidential Tokens, SPP, x402/MPP),
+  SCF-funded projects and the 2026 hackathon wave, every row sourced as of 2026-09-24. Both
+  on the docs site. The ZK page corrected to the live verifier (a 16-payment batch bound to
+  the treasury's recorded total — it still described the retired deploy-time policy anchor)
+
 ## [0.9.0] — 2026-09-18 → 09-19 · Money in: the TRY on-ramp, USDC treasuries, `eunomia-mcp` on npm
 
 The budget can now start as ordinary money, and any MCP agent can be connected with a

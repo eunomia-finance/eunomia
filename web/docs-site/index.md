@@ -47,4 +47,8 @@ you can verify, not something you have to trust.
 - [The anchor leg](/anchor) — how TRY becomes a spendable agent budget.
 - [Architecture](/architecture) — the contracts and how they fit.
 - [Confidential compliance (ZK)](/zk) — prove the rules held, reveal nothing.
+- [Playbook](/playbook) — how to build policy-bounded agent spending on Stellar, with or
+  without Eunomia.
+- [Ecosystem comparison](/comparison) — where Eunomia sits among the platform pieces, funded
+  projects and 2026 hackathon work on the same problem, sourced.
 - [Deployed contracts & addresses](/contracts) · [Security model](/security)

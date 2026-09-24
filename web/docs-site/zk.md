@@ -7,26 +7,30 @@ Eunomia's answer: **prove compliance, reveal nothing.**
 ## What is proven
 
 A Groth16 (BN254) proof, verified **on-chain** by the Compliance Verifier contract,
-attests that a batch of agent payments obeyed policy:
+attests that a closed period's agent payments (a batch of up to 16) obeyed policy:
 
 - every payment ≤ the per-payment cap,
 - the batch total ≤ the daily cap,
-- every payee ∈ a committed approved list —
+- every payee ∈ the treasury's published payee list (a Poseidon Merkle root),
+- the batch total **equals** what the treasury actually moved in that period —
 
 **without revealing a single amount or payee.** Payments are committed as
 `Poseidon(amount, payee, salt)`; only the commitments and the proof go on-chain.
-Public signals: `[dailyLimit, perTaskLimit, whitelistRoot, periodId, commitments[8]]`.
+Public signals: `[dailyLimit, perTaskLimit, whitelistRoot, periodId, periodSpent, commitments[16]]`.
 
 ## Why the verifier is "hardened", not just a math check
 
-- **Policy binding.** The verifier anchors the owner's policy at deploy time and requires
-  the proof's public `dailyLimit / perTaskLimit / whitelistRoot` to byte-match the anchor.
-  A valid proof for some *self-chosen* policy cannot attest.
-- **Replay guard.** Each `periodId` is consumed once (persistent guard) — a compliant
-  proof can't be replayed to mask a later non-compliant period. The replay rejection is
-  live on testnet as a real failed transaction.
-- **Fail-closed input validation.** Malformed proof or signal lengths trap with typed
-  errors instead of undefined behavior.
+- **Bound to chain state, not to a copy.** The verifier holds no policy of its own. For the
+  treasury named in the call it re-reads the limits, the published payee root and the
+  period's on-chain total, and every public signal must match them (`#4 PolicyMismatch`,
+  `#9 SpendMismatch`). A proof about a self-chosen policy, or about a batch that never
+  happened, cannot attest. Only that treasury's admin can submit one.
+- **Periods close and only move forward.** A period must be over before it can be attested
+  (`#6`), and each treasury's periods strictly advance (`#8`) — a compliant proof can't be
+  replayed to mask a later period. The replay (`#8`) and the fabricated batch (`#9`) are
+  both rejected live on testnet.
+- **Fail-closed input validation.** Malformed proof or signal lengths and non-canonical
+  field encodings trap with typed errors instead of undefined behavior.
 
 ## Honest scope
 
