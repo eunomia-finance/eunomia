@@ -326,3 +326,21 @@ pinned in `web/src/lib/token.ts` (`token.test.ts` asserts the derivation).
 
 Architecture, what is simulated and the testnet run with transaction hashes:
 [`docs/ANCHOR.md`](docs/ANCHOR.md#verified-on-testnet-2026-09-18).
+
+## ZK attestation in the loop — a period of real agent payments, attested (2026-09-28 → 29)
+
+Treasury `CDVCLLGG…YNJ2` (XLM, per-payment 10, daily 100), verifier `CD3TB3F4…DYZ3`. The
+agent pays through the published `eunomia-mcp` 0.2.1; the proof is built by
+`circuits/scripts/prove-and-submit.ts` from the treasury's own `paid` events, over a payee
+root rebuilt from real addresses (`packages/prover/src/payeeField.ts`).
+
+| Step | Result |
+| --- | --- |
+| `set_session` — agent `GB4GJNEZ…2QXZ`, 30 XLM, 7 days | [`37ee3c6f…`](https://stellar.expert/explorer/testnet/tx/37ee3c6f123339cbbcae4308213b5e0539f5f9e236821a17e2c5067628e69ea7) |
+| agent pays 2.5 → `service` · 4 → `supplier` · 1.5 → `service` | [`54deb8b7…`](https://stellar.expert/explorer/testnet/tx/54deb8b7b21fdd6e45ed3b6591a1758a4f53f248749bde84f591f7f5b51645ea) · [`0935cb2e…`](https://stellar.expert/explorer/testnet/tx/0935cb2e85afd10427f918e22b56f39ce8e85d4a32b2a2c789352442fdf31401) · [`b6b4ea45…`](https://stellar.expert/explorer/testnet/tx/b6b4ea452400166924e60ba1bbf697817c676c226d920196aafe677990e4c235) |
+| agent tries 15 → `service`, `--record-rejection` | [`d48e7ff8…`](https://stellar.expert/explorer/testnet/tx/d48e7ff8fdc0f93a5972d0d783e3861f29a3baebb96c5f82b2c9ff545e00f3b5) — ledger 4915565, **FAILED**, `Error(Contract, #3)` |
+| `period_spent(20724)` | `80000000` — equal to the three `paid` events |
+| `set_whitelist_root` — root over `service` + `supplier`, each confirmed with `is_payee` | [`714ed902…`](https://stellar.expert/explorer/testnet/tx/714ed9028d1b4674bc7f14db3b8719887e2039ae166aecf2a7a92b94621261b2) → `095aa6fc…1ccd` |
+| proof submitted while the period was still open | refused in simulation, `Error(Contract, #6)` PeriodNotClosed |
+| **`verify` for period 20724, after it closed** | [`4abba703…`](https://stellar.expert/explorer/testnet/tx/4abba7034041f956e417cd3c6b180d170439033f0e09afd0ddca702b67944940) — ledger 4933698, `attested` · `last_period` → `20724` |
+| `check-attestation.ts --tx 4abba703…` | 7/7 checks, `attested` — the verifier re-ran the pairing check, and limits, root and total match the treasury |

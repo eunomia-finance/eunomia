@@ -159,12 +159,16 @@ independent review has looked at them yet. That round is a precondition for main
   and every payee was a member of the published root."* It is **not** proof of the
   individual amounts and payees: a different split of the same total also satisfies the
   circuit. Two gaps remain behind that:
-  - The payee root is **declared, not derived**. `set_whitelist_root` is written by the
-    owner; nothing ties it to the treasury's actual `Payee` entries, and there is no
-    mapping from a Stellar address to the circuit's payee field element. The whitelist is
-    a key-per-payee map with no on-chain enumeration, and the circuit's Poseidon hash has
-    no host implementation to rebuild a tree with — so deriving it is real work, not a
-    config change. Root changes emit an event, which is what makes them auditable today.
+  - The payee root is **published by the owner, not derived on-chain** — but it is now
+    **checkable**. Since 2026-09-28 a payee's field element is a fixed function of its
+    Stellar address (`packages/prover/src/payeeField.ts`: SHA-256 of the StrKey, top 248
+    bits), the tree is built over the sorted set, and the pipeline refuses any member the
+    treasury does not confirm with `is_payee`. Anyone given the member addresses can
+    rebuild the root and compare it with `whitelist_root`. What stays open: the contract
+    cannot enforce that the root covers *every* approved payee (the whitelist is a
+    key-per-payee map with no on-chain enumeration, and Poseidon has no host function to
+    rebuild a tree with). A root that omits a payee only makes proofs harder, never
+    easier — a payment to an omitted payee cannot be proven. Root changes emit an event.
   - Proving the breakdown itself would require `pay()` to publish a commitment per payment,
     which runs into the same missing Poseidon primitive.
   The Groth16 setup is also a single-party dev setup — a multi-party ceremony is a mainnet

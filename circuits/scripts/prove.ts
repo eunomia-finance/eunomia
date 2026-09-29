@@ -2,9 +2,10 @@
 //
 // Generalises gen-sample (no hardcoded amounts/payees): take a batch + policy, emit
 // the exact bytes the on-chain verifier consumes. Salts are CSPRNG (see salt.ts), so
-// commitments actually hide. Run in WSL (needs circom/snarkjs via circomkit).
-import { execFileSync } from "node:child_process";
+// commitments actually hide.
 import { writeFileSync, readFileSync, mkdirSync } from "node:fs";
+// snarkjs comes in with circomkit and ships no type declarations; tsx does not type-check.
+import * as snarkjs from "snarkjs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { H, buildTree } from "../test/helpers.js";
@@ -95,20 +96,31 @@ export interface ProveResult {
   periodId: string;
 }
 
-/** Full pipeline: batch -> input -> circomkit prove + off-chain verify -> Soroban bytes. */
+/** Full pipeline: batch -> input -> Groth16 prove + off-chain verify -> Soroban bytes.
+ *
+ *  Proves with snarkjs directly against the compiled circuit (`compliance_js/compliance.wasm`)
+ *  and the proving key already in build/ — pure JavaScript, so it runs on any OS. Compiling
+ *  the circuit or redoing the setup still needs circom (`setup.sh`, WSL on Windows). */
 export async function proveCompliance(batch: ComplianceBatch, name = "live"): Promise<ProveResult> {
   const input = await buildInput(batch);
   mkdirSync(`${CIRCUITS}/inputs/compliance`, { recursive: true });
   writeFileSync(`${CIRCUITS}/inputs/compliance/${name}.json`, JSON.stringify(input, null, 2));
 
-  const run = (...args: string[]) =>
-    execFileSync("npx", ["circomkit", ...args], { cwd: CIRCUITS, stdio: "pipe" });
-  run("prove", "compliance", name);
-  run("verify", "compliance", name); // off-chain sanity before paying for an on-chain tx
-
-  const dir = `${CIRCUITS}/build/compliance/${name}`;
-  const proofJson = JSON.parse(readFileSync(`${dir}/groth16_proof.json`, "utf8"));
-  const pubJson = JSON.parse(readFileSync(`${dir}/public.json`, "utf8"));
+  const build = `${CIRCUITS}/build/compliance`;
+  const { proof: proofJson, publicSignals: pubJson } = await snarkjs.groth16.fullProve(
+    input,
+    `${build}/compliance_js/compliance.wasm`,
+    `${build}/groth16_pkey.zkey`,
+  );
+  // off-chain sanity before paying for an on-chain tx
+  const vkey = JSON.parse(readFileSync(`${build}/groth16_vkey.json`, "utf8"));
+  if (!(await snarkjs.groth16.verify(vkey, pubJson, proofJson))) {
+    throw new Error("the proof did not verify off-chain — nothing was submitted");
+  }
+  const dir = `${build}/${name}`;
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(`${dir}/groth16_proof.json`, JSON.stringify(proofJson, null, 2));
+  writeFileSync(`${dir}/public.json`, JSON.stringify(pubJson, null, 2));
   return {
     proof: Buffer.from(encodeProofHex(proofJson), "hex"),
     publicSignals: Buffer.from(encodePublicHex(pubJson), "hex"),

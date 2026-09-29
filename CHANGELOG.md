@@ -7,6 +7,16 @@ deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## [Unreleased]
 
+- **Added (ZK in the loop)** — a period of real agent payments closes with an on-chain
+  attestation. `circuits/scripts/prove-and-submit.ts` now reads the period's payments from
+  the treasury's own `paid` events, refuses a batch that does not add up to `period_spent`,
+  and rebuilds the payee root from real Stellar addresses (`payeeField.ts`: SHA-256 of the
+  StrKey, top 248 bits; every member confirmed with `is_payee`) — the root was a declared
+  set of placeholder numbers before. Proving runs on snarkjs directly, so WSL is no longer
+  needed. `packages/prover/src/check-attestation.ts` checks an attestation from its tx hash
+  alone. Evidence: [`docs/EVIDENCE.md`](docs/EVIDENCE.md)
+- **Changed** — `packages/prover` on `@stellar/stellar-sdk` ^16.2.0 like the other packages
+  (it declared ^14 and had 13 installed, which cannot parse today's simulation responses)
 - **Docs** — [`docs/PLAYBOOK.md`](docs/PLAYBOOK.md): how to build policy-bounded agent
   spending on Stellar — choosing a base, nine patterns with the code and testnet transaction
   behind each, integration, the gotchas we paid for. [`COMPARISON.md`](COMPARISON.md): Eunomia

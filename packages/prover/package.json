@@ -4,10 +4,10 @@
   "type": "module",
   "scripts": {
     "fixtures": "tsx src/emit-fixtures.ts",
-    "test": "node --import tsx --test src/salt.test.ts"
+    "test": "node --import tsx --test src/salt.test.ts src/payeeField.test.ts"
   },
   "dependencies": {
-    "@stellar/stellar-sdk": "^14.6.1"
+    "@stellar/stellar-sdk": "^16.2.0"
   },
   "devDependencies": {
     "tsx": "^4.19.0",

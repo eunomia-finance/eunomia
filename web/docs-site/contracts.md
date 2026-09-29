@@ -11,7 +11,7 @@ live and verifiable on [stellar.expert](https://stellar.expert/explorer/testnet)
 | **Treasury v3.5 wasm** (current — what the factory instantiates) | `824472060b3abec7c6c64e8985fa5d0c5a39ea277fbb67eab3125a483d059641` |
 | **Treasury Registry** (cross-device backup) | [`CBEPVXK6…4ZE7`](https://stellar.expert/explorer/testnet/contract/CBEPVXK6BN2FZ3IYHV5KQUGROFHNBWBYHKHRZ5U3O7UWGIOPFOFE4ZE7) |
 | **Compliance Verifier** (ZK, bound to treasury state, 16-payment batch — the one the app reads) | [`CD3TB3F4…DYZ3`](https://stellar.expert/explorer/testnet/contract/CD3TB3F4VQF2H56IQC4KV3YLA6QRIF272W5D6PK2SWVTYPXHS4NFDYZ3) |
-| Compliance Verifier, previous (holds the attestation linked below) | [`CCZKA3K4…D5Q`](https://stellar.expert/explorer/testnet/contract/CCZKA3K4SPIFWG7UBIY2CE7LPKPMCWROCHXZO2JAMYVVGU6TUKOWMD5Q) |
+| Compliance Verifier, previous (13 public signals, retired 2026-08-07) | [`CCZKA3K4…D5Q`](https://stellar.expert/explorer/testnet/contract/CCZKA3K4SPIFWG7UBIY2CE7LPKPMCWROCHXZO2JAMYVVGU6TUKOWMD5Q) |
 | **USDC the TRY anchor pays out** (asset contract of `USDC:GBBD47IF…FLA5` — what a USDC treasury holds) | [`CBIELTK6…DAMA`](https://stellar.expert/explorer/testnet/contract/CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA) |
 | **Eunomia Policy** (OpenZeppelin ComplianceHooks) | `CBWMYGL7E663UON6ER5KQX2JZZA4UDZZD4RIFEHGXXF2HMMBRAN7BLQF` |
 
@@ -25,7 +25,7 @@ in [`DEPLOYMENT.md`](https://github.com/eunomia-finance/eunomia/blob/main/DEPLOY
 
 | Claim | Proof |
 | --- | --- |
-| ZK compliance attested on-chain | [tx `426e55d6…4606`](https://stellar.expert/explorer/testnet/tx/426e55d6ce0a9157c156190cee39dc2a1d302cf4c7f4f98cc930da5ad63b4606) → `attested` |
+| ZK compliance attested on-chain — a day of real agent payments (3 payments, 8 XLM) | [tx `4abba703…4940`](https://stellar.expert/explorer/testnet/tx/4abba7034041f956e417cd3c6b180d170439033f0e09afd0ddca702b67944940) → `attested` |
 | A proof of a batch that never happened, rejected | `Error(Contract, #9)` — the total must match the treasury's own `period_spent` |
 | Replay of the same period rejected | `Error(Contract, #8)` — periods only move forward |
 | Rogue payment to an unapproved address rejected | `Error(Contract, #2)` — funds never moved |

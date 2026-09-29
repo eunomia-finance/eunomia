@@ -32,6 +32,23 @@ Public signals: `[dailyLimit, perTaskLimit, whitelistRoot, periodId, periodSpent
 - **Fail-closed input validation.** Malformed proof or signal lengths and non-canonical
   field encodings trap with typed errors instead of undefined behavior.
 
+## Check an attestation yourself
+
+One command, no keys and no ZK tooling — it asks the on-chain verifier to re-run the
+Groth16 check on the proof inside an attestation transaction and compares every public
+input with the treasury's own limits, payee root and recorded total:
+
+```bash
+git clone https://github.com/eunomia-finance/eunomia && cd eunomia/packages/prover && npm install
+npx tsx src/check-attestation.ts --tx <attestation tx hash>
+```
+
+The payee root is rebuilt from real Stellar addresses: a payee's field element is the top
+248 bits of SHA-256 over its address, the tree is built over the sorted set, and every
+member must be confirmed by the treasury's `is_payee` before the root is published.
+A live attestation over real agent payments, with its hash:
+[evidence](https://github.com/eunomia-finance/eunomia/blob/main/docs/EVIDENCE.md#the-loop-on-28-29-september).
+
 ## Honest scope
 
 - The ZK layer attests **after the fact** today: `pay()` does not yet require a proof.
