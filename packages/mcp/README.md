@@ -18,18 +18,35 @@ This generates an Ed25519 key, funds it on testnet (it pays its own transaction 
 
 **2. The treasury owner authorises that key** — Eunomia dashboard → your treasury → **Agent** → paste the public key, choose a spending cap and a duration → **Start Leash**. That signs one `set_session` transaction with the owner's passkey or wallet. The owner revokes it from the same page at any time (`revoke_session`), instantly.
 
-**3. Add the server to your MCP client** — `init` prints the snippet; `eunomia-mcp config` prints it again:
+**3. Add the server to your MCP client** — `init` prints the snippet; `eunomia-mcp config` prints it again. Needs Node 20 or newer.
+
+**Claude Desktop** (works on the free plan; no `claude mcp add`, that command is for Claude Code):
+
+1. Open **Settings → Developer → Edit Config**. That opens `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/`, Windows: `%APPDATA%\Claude\`).
+2. Add the server under `mcpServers`. If the file already has `"mcpServers": {}`, replace that line; if it lists other servers, add `"eunomia"` next to them. Do not overwrite the rest of the file.
+
+   ```json
+   "mcpServers": {
+     "eunomia": {
+       "command": "npx",
+       "args": ["-y", "eunomia-mcp"],
+       "env": { "EUNOMIA_TREASURY": "<C…>", "EUNOMIA_NETWORK": "testnet" }
+     }
+   }
+   ```
+
+3. **Quit Claude Desktop completely** (the menu's Quit, not just closing the window) and reopen it. The server only loads on a fresh start.
+4. Under **Settings → Developer**, `eunomia` should show as running, and its tools appear in the chat's tool menu. If it shows an error, open its log from that screen.
+
+If Claude Desktop cannot find `npx` (common when Node came from nvm), set `"command"` to the full path from `which npx` (macOS/Linux) or `where npx` (Windows).
+
+**Claude Code:**
 
 ```bash
-# Claude Code
 claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -e EUNOMIA_NETWORK=testnet -- npx -y eunomia-mcp
 ```
 
-```json
-// Claude Desktop (claude_desktop_config.json) or any JSON-configured client
-{ "mcpServers": { "eunomia": { "command": "npx", "args": ["-y", "eunomia-mcp"],
-  "env": { "EUNOMIA_TREASURY": "<C…>", "EUNOMIA_NETWORK": "testnet" } } } }
-```
+**Any other MCP client** (Cursor, Antigravity, …) takes the same `mcpServers` JSON shown above in its own config file.
 
 **4. Check it:** `eunomia-mcp status --treasury <C…>` prints what the agent may spend right now — `canSpend: true` with `session.isThisAgent: true` means the handshake worked.
 
