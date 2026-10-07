@@ -16,7 +16,7 @@ A non-custodial Soroban treasury that lets a business hand an autonomous AI agen
 ![Rust · Soroban](https://img.shields.io/badge/Rust_·_Soroban-A2CB28?style=flat-square&labelColor=223E05)
 ![License](https://img.shields.io/badge/license-MIT-A2CB28?style=flat-square&labelColor=223E05)
 
-**[▶ Live app](https://eunomia.finance) · [📖 Docs](https://eunomia.finance/docs/) · [🎥 Demo video](https://youtu.be/R7mw9ZTh94U) · [🔌 Connect your agent](packages/mcp/README.md) · [🏦 The anchor leg](docs/ANCHOR.md) · [🗺 Roadmap](ROADMAP.md) · [📄 Deployment & proofs](DEPLOYMENT.md)**
+**[▶ Live app](https://eunomia.finance) · [📖 Docs](https://eunomia.finance/docs/) · [🎥 Demo video](https://youtu.be/W9pUksD5i3I) · [🔌 Connect your agent](packages/mcp/README.md) · [🏦 The anchor leg](docs/ANCHOR.md) · [🗺 Roadmap](ROADMAP.md) · [📄 Deployment & proofs](DEPLOYMENT.md)**
 
 <br/>
 

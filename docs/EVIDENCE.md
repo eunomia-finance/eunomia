@@ -24,7 +24,7 @@ the contract, and the period closed with a zero-knowledge attestation.
 | "Connect your agent" quickstart | [eunomia.finance/docs/connect-your-agent](https://eunomia.finance/docs/connect-your-agent) |
 | Tools | `check_budget` · `list_allowed_payees` · `check_payee` · `pay` (incl. x402 requirements) · `request_exception` · `check_exception` |
 | Scoped, revocable agent credential | the agent makes its own key; the owner authorises its public half with a cap and an expiry: [`set_session`](https://stellar.expert/explorer/testnet/tx/542b2f253b0f5133c9d93c489bd887da9d0b8db2da51288c14332c7267455c92) · [`revoke_session`](https://stellar.expert/explorer/testnet/tx/f2e95670cbea720f07a27e08aa9d513a959203f37f4107cfed3a1d3bb65e2286) |
-| Short recording: an MCP client listing and calling the tools | *link added on submission* |
+| Short recording: an MCP client listing and calling the tools | [Claude Code segment of the demo (2:21–3:36)](https://youtu.be/W9pUksD5i3I?t=141) — connects with one command, pays on its own, is refused twice by the contract |
 
 ## Deliverable 2 — "Agent on a leash"
 
@@ -73,7 +73,7 @@ root and recorded total, then prints `attested`. Payee root members, to rebuild 
 | --- | --- |
 | Live walkthrough | [eunomia.finance](https://eunomia.finance) → create a treasury (passkey, no wallet needed) → **Agent → Run the agent**: pays, is refused, files the request — three real transactions, visible in the activity feed and the ledger |
 | Demo agent loop (source) | [`web/src/lib/agentLoop.ts`](https://github.com/eunomia-finance/eunomia/blob/main/web/src/lib/agentLoop.ts) · proof pipeline [`circuits/scripts/prove-and-submit.ts`](https://github.com/eunomia-finance/eunomia/blob/main/circuits/scripts/prove-and-submit.ts) |
-| ~3-minute recorded demo | *link added on submission* |
+| ~3-minute recorded demo | [youtu.be/W9pUksD5i3I](https://youtu.be/W9pUksD5i3I) (3:53) — passkey setup → rules → Leash → TRY funding → Claude Code pays → two refusals → revoke |
 
 ## Deliverable 3 — Playbook + comparison
 
