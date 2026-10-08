@@ -7,6 +7,15 @@ deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## [Unreleased]
 
+- **Fixed (found in a user session)** — a payee with no trustline for the treasury's token
+  was approved without a word, then every payment to it failed with a bare `#13` that the
+  agent could not explain. `#13` is the token contract's `TrustlineMissingError`, not the
+  treasury's policy; testers hit it by paying their agent's own key, which `eunomia-mcp init`
+  funds with XLM only. `eunomia-mcp` now names the code, checks the payee's trustline before
+  paying (refusing up front instead of simulating), reports `canReceive` in `check_payee`,
+  and does not file an exception the owner could never approve. The dashboard warns before
+  approving such a payee, and says so when it is the agent's own key.
+
 - **Added (ZK in the loop)** — a period of real agent payments closes with an on-chain
   attestation. `circuits/scripts/prove-and-submit.ts` now reads the period's payments from
   the treasury's own `paid` events, refuses a batch that does not add up to `period_spent`,

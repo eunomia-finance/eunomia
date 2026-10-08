@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { nativeToScVal, xdr } from "@stellar/stellar-sdk";
+import { Errors } from "./bindings/treasury.js";
 import { contractCodeFromMessage, reasonFromCode, reasonFromErrorName, reasonsFromDiagnostics } from "./errors.js";
 
 test("contractCodeFromMessage reads the host's Error(Contract, #N) out of any message", () => {
@@ -14,6 +15,16 @@ test("reasonFromCode / reasonFromErrorName use the binding's names", () => {
   assert.equal(reasonFromCode(99).name, "ContractError99");
   assert.equal(reasonFromErrorName("PayeeNotWhitelisted")?.code, 2);
   assert.equal(reasonFromErrorName("Nope"), null);
+});
+
+test("#13 is the token contract's TrustlineMissing, and the treasury's own codes stay below it", () => {
+  // If the treasury ever gains a code 13, this mapping would mislabel a policy verdict.
+  assert.ok(Math.max(...Object.keys(Errors).map(Number)) < 13);
+  const r = reasonFromCode(13);
+  assert.equal(r.name, "TrustlineMissing");
+  assert.match(r.detail, /trustline/);
+  assert.match(r.detail, /not the treasury's policy/);
+  assert.equal(reasonFromCode(13, "custom").detail, "custom");
 });
 
 function diag(topics: xdr.ScVal[]): xdr.DiagnosticEvent {

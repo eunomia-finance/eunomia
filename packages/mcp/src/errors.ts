@@ -19,6 +19,19 @@ const DETAILS: Record<number, string> = {
   10: "amount exceeds what is left of the Leash cap",
 };
 
+/** Codes the token contract raises from inside pay(), not the treasury's policy. They reach
+ *  the agent as the same `Error(Contract, #N)`; the treasury's own codes end at 12
+ *  (errors.test.ts pins that), so these numbers cannot be confused with a policy verdict. */
+const TOKEN_ERRORS: Record<number, { name: string; detail: string }> = {
+  13: {
+    name: "TrustlineMissing",
+    detail:
+      "the payee cannot hold the treasury's token: a G… account needs a trustline for the asset first. " +
+      "The token contract refused, not the treasury's policy — approving the payee or raising limits will not help; " +
+      "the payee's owner must add the trustline, or pay a different address",
+  },
+};
+
 export const errText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 export function contractCodeFromMessage(msg: string): number | null {
@@ -28,6 +41,8 @@ export function contractCodeFromMessage(msg: string): number | null {
 
 export function reasonFromCode(code: number, detail?: string): Reason {
   const known = (Errors as Record<number, { message: string }>)[code];
+  const token = known ? undefined : TOKEN_ERRORS[code];
+  if (token) return { code, name: token.name, detail: detail ?? token.detail };
   return {
     code,
     name: known?.message ?? `ContractError${code}`,

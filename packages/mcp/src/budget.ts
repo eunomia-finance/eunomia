@@ -31,7 +31,8 @@ export interface SessionView {
 }
 
 export interface Reason {
-  /** the treasury contract's error code (see `Errors` in the binding) */
+  /** the treasury contract's error code (see `Errors` in the binding); 13 is the token
+   *  contract's TrustlineMissing, raised from inside pay() */
   code: number;
   name: string;
   detail: string;

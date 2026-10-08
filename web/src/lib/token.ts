@@ -8,6 +8,9 @@ import { XLM_SAC } from "./userTreasury";
  *  out so a label never has to wait for the anchor's stellar.toml. */
 export const ANCHOR_USDC = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
 
+/** The classic issuer behind ANCHOR_USDC — a G… payee must trust it to receive USDC. */
+export const ANCHOR_USDC_ISSUER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+
 export type TokenCode = "XLM" | "USDC";
 
 export const tokenIdOf = (code: TokenCode): string => (code === "USDC" ? ANCHOR_USDC : XLM_SAC);

@@ -76,6 +76,45 @@ test("preflightReasons adds the whitelist verdict to the budget's limit reasons"
   assert.deepEqual(pre.blockers, []);
 });
 
+test("a payee without a trustline is refused before simulation, with #13 and no policy noise", async () => {
+  const signing = {
+    pay: async () => {
+      throw new Error("must not simulate");
+    },
+  } as never;
+  const out = await payFromTreasury(
+    ctx(),
+    { to: "GPAYEE", amount: 10_000_000n, taskId: 0n },
+    { readClient: readClient(), signingClient: signing, lacksTrustline: async () => true },
+  );
+  assert.equal(out.paid, false);
+  if (!out.paid) {
+    assert.equal(out.stage, "preflight");
+    assert.deepEqual(out.reasons.map((r) => r.code), [13]);
+    assert.match(out.message, /trustline/);
+  }
+});
+
+test("paying the agent's own key names that as the cause", async () => {
+  const pre = await preflightReasons(
+    ctx(),
+    { to: AGENT, amount: 10_000_000n, taskId: 0n },
+    { readClient: readClient(), lacksTrustline: async () => true },
+  );
+  const r = pre.reasons.find((x) => x.code === 13);
+  assert.ok(r);
+  assert.match(r.detail, /agent's own key/);
+});
+
+test("a payee that can receive the token adds no reason", async () => {
+  const pre = await preflightReasons(
+    ctx(),
+    { to: "GPAYEE", amount: 10_000_000n, taskId: 0n },
+    { readClient: readClient(), lacksTrustline: async () => false },
+  );
+  assert.deepEqual(pre.reasons, []);
+});
+
 test("no credential → preflight blocker, nothing simulated", async () => {
   const out = await payFromTreasury(
     ctx({ credential: null }),

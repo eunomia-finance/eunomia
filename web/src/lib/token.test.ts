@@ -1,13 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { Asset, Networks } from "@stellar/stellar-sdk";
-import { ANCHOR_USDC, tokenCodeOf, tokenIdOf } from "./token";
+import { ANCHOR_USDC, ANCHOR_USDC_ISSUER, tokenCodeOf, tokenIdOf } from "./token";
 import { XLM_SAC } from "./userTreasury";
 
 describe("token", () => {
   it("pins ANCHOR_USDC to the contract the anchor's issuer derives", () => {
     // The issuer is the one tr-mock-anchor.fly.dev publishes in its stellar.toml. If the
     // anchor ever changes issuers, this fails before a treasury is created over dead money.
-    const usdc = new Asset("USDC", "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5");
+    const usdc = new Asset("USDC", ANCHOR_USDC_ISSUER);
     expect(usdc.contractId(Networks.TESTNET)).toBe(ANCHOR_USDC);
   });
 

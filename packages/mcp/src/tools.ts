@@ -10,7 +10,8 @@ import { errText, reasonFromCode } from "./errors.js";
 import { closeException, readExceptionEntry, submitException } from "./exception.js";
 import { EXCEPTION_PREFIX, exceptionIdOf } from "./exceptionCodec.js";
 import { contractUrl, fromStroops, toStroops, txUrl, type NetworkName } from "./format.js";
-import { payFromTreasury, preflightReasons, type PayOutcome } from "./pay.js";
+import { payFromTreasury, preflightReasons, TRUSTLINE_MISSING, type PayOutcome } from "./pay.js";
+import { lacksTrustline } from "./receiver.js";
 import { listAllowedPayees } from "./payees.js";
 import type { ServerContext } from "./server.js";
 import { isPayee, makeClient, readTreasury } from "./treasury.js";
@@ -203,10 +204,13 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
       try {
         const client = makeClient(ctx.net, ctx.treasuryId);
         const [allowed, snap] = await Promise.all([isPayee(client, address), readTreasury(client, ctx.treasuryId)]);
+        const canReceive = !(await lacksTrustline(ctx.net, snap.config.token, address));
         return ok({
           treasury: ctx.treasuryId,
           address,
           allowed,
+          canReceive,
+          ...(canReceive ? {} : { receiveNote: reasonFromCode(TRUSTLINE_MISSING).detail }),
           via: allowed ? "whitelist" : "none",
           reputationPolicy: snap.reputationPolicy && {
             registry: snap.reputationPolicy.registry,
@@ -314,6 +318,15 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
         }
         if (pre.reasons.length === 0) {
           return ok({ requested: false, allowed: true, message: "This payment is inside the policy — call pay." });
+        }
+        const noTrustline = pre.reasons.find((r) => r.code === TRUSTLINE_MISSING);
+        if (noTrustline) {
+          return ok({
+            requested: false,
+            allowed: false,
+            reasons: [noTrustline],
+            message: "Not filed: the owner cannot approve this — the payee has no trustline for the treasury's token.",
+          });
         }
         const requestedAt = now();
         const codes = pre.reasons.map((r) => r.code);

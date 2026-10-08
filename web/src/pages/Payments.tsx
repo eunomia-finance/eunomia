@@ -8,6 +8,7 @@ import { useTreasury } from "../state/useTreasury";
 import { executorFor } from "../lib/walletKit";
 import { isPayee, makeTreasury } from "../lib/userTreasury";
 import { isValidPaymentDest } from "../lib/validate";
+import { payeeLacksTrustline } from "../lib/receivable";
 import { dedupeRefusals, useAgentRejections } from "../lib/agentRejections";
 import { loadLedger } from "../lib/eventLedger";
 import { loadPayeeBook, mergePayees, payeesFromEvents, rememberPayee, forgetPayee, type PayeeEntry } from "../lib/payees";
@@ -87,10 +88,22 @@ export default function Payments() {
   // ---- add / remove payee -------------------------------------------------------
   const [newPayee, setNewPayee] = useState("");
   const [payeeErr, setPayeeErr] = useState("");
+  // An address the owner chose to approve despite the trustline warning — a second click goes through.
+  const [approveAnyway, setApproveAnyway] = useState("");
 
   const doAdd = async () => {
     setPayeeErr("");
     const addr = newPayee.trim();
+    if (addr !== approveAnyway && (await payeeLacksTrustline(addr, t.tokenCode))) {
+      const own = addr === t.lifecycle?.session?.agent ? "This is your agent's own key. " : "";
+      setPayeeErr(
+        `${own}This account has no USDC trustline, so the token refuses every payment to it (error #13) — approving it won't change that. ` +
+          "Add the trustline on that account first, or press Add payee again to approve it anyway.",
+      );
+      setApproveAnyway(addr);
+      return;
+    }
+    setApproveAnyway("");
     const res = await t.whitelist(addr);
     if (res.ok) {
       rememberPayee(treasuryId, addr);

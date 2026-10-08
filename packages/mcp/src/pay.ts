@@ -7,6 +7,7 @@ import type { Client } from "./bindings/treasury.js";
 import { computeBudget, type Budget, type Reason } from "./budget.js";
 import { contractCodeFromMessage, errText, reasonFromCode, reasonFromErrorName, reasonsFromDiagnostics } from "./errors.js";
 import type { ServerContext } from "./server.js";
+import { lacksTrustline } from "./receiver.js";
 import { diagnosticsOf, makeSigningClient } from "./signer.js";
 import { isPayee, makeClient, readTreasury } from "./treasury.js";
 
@@ -37,7 +38,17 @@ export interface PayDeps {
   readClient?: Client;
   signingClient?: Client;
   now?: () => number;
+  lacksTrustline?: (tokenId: string, payee: string) => Promise<boolean>;
 }
+
+/** The agent's own key is the payee this check catches most: `eunomia-mcp init` funds it
+ *  with XLM only, so it holds no trustline for an issued token. */
+const SELF_PAYEE_NOTE =
+  "this is the agent's own key, which `eunomia-mcp init` funds with XLM only — it has no trustline for the treasury's token. " +
+  "Pay the service you are buying from, not yourself";
+
+/** The token contract's TrustlineMissingError (errors.ts). */
+export const TRUSTLINE_MISSING = 13;
 
 export function requireTreasury(ctx: ServerContext): string {
   if (!ctx.treasuryId) {
@@ -62,6 +73,11 @@ export async function preflightReasons(
   // With a reputation gate the contract may still admit an unlisted payee; only the
   // whitelist-only case is a certain refusal.
   if (!allowedPayee && !snap.reputationPolicy) reasons.push(reasonFromCode(2));
+  const lacks = deps.lacksTrustline ?? ((token: string, payee: string) => lacksTrustline(ctx.net, token, payee));
+  if (await lacks(snap.config.token, args.to)) {
+    const self = args.to === ctx.credential?.agentPublicKey;
+    reasons.push(reasonFromCode(TRUSTLINE_MISSING, self ? SELF_PAYEE_NOTE : undefined));
+  }
   return { reasons, blockers: budget.blockers, budget };
 }
 
@@ -78,6 +94,18 @@ export async function payFromTreasury(ctx: ServerContext, args: PayArgs, deps: P
       reasons: pre.reasons,
       blockers: pre.blockers,
       message: `Not attempted: ${pre.blockers.join(" ")}`,
+      ...base,
+    };
+  }
+  // A payee that cannot hold the token is refused by the token contract whatever the policy
+  // says. Nothing to simulate, and nothing the owner could approve.
+  if (pre.reasons.some((r) => r.code === TRUSTLINE_MISSING)) {
+    return {
+      paid: false,
+      stage: "preflight",
+      reasons: pre.reasons.filter((r) => r.code === TRUSTLINE_MISSING),
+      blockers: [],
+      message: "Not attempted: the payee has no trustline for the treasury's token, so the token contract would refuse the transfer (#13).",
       ...base,
     };
   }
