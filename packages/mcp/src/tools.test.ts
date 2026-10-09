@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeBudget, type TreasurySnapshot } from "./budget.js";
-import { ownerActionsFor, serializeBudget, serializeOutcome } from "./tools.js";
+import { badTreasury, ownerActionsFor, serializeBudget, serializeOutcome } from "./tools.js";
 
 const AGENT = "GAGENT";
 const NOW = 1_800_000_000;
@@ -95,4 +95,11 @@ test("ownerActionsFor maps codes to what the dashboard can do", () => {
   assert.match(ownerActionsFor([3, 4]).join(" "), /limits/);
   assert.match(ownerActionsFor([10]).join(" "), /Leash/);
   assert.match(ownerActionsFor([9]).join(" "), /Resume/);
+});
+
+test("a placeholder treasury id is named back, with where the real one lives", () => {
+  const msg = badTreasury("<C…>");
+  assert.match(msg, /"<C…>"/);
+  assert.match(msg, /not a treasury id/);
+  assert.match(msg, /dashboard/);
 });

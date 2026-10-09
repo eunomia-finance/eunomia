@@ -23,7 +23,7 @@ This generates an Ed25519 key, funds it on testnet (it pays its own transaction 
 **Claude Desktop** (works on the free plan; no `claude mcp add`, that command is for Claude Code):
 
 1. Open **Settings → Developer → Edit Config**. That opens `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/`, Windows: `%APPDATA%\Claude\`).
-2. Add the server under `mcpServers`. If the file already has `"mcpServers": {}`, replace that line; if it lists other servers, add `"eunomia"` next to them. Do not overwrite the rest of the file.
+2. Add the server under `mcpServers`. If the file already has `"mcpServers": {}`, replace that line; if it lists other servers, add `"eunomia"` next to them. Do not overwrite the rest of the file. Replace `<C…>` with your treasury id (56 characters, starts with C) — or copy the block `eunomia-mcp init` printed, which has it filled in.
 
    ```json
    "mcpServers": {

@@ -6,6 +6,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { computeBudget, type Budget } from "./budget.js";
+import { isValidContractId } from "./credential.js";
 import { errText, reasonFromCode } from "./errors.js";
 import { closeException, readExceptionEntry, submitException } from "./exception.js";
 import { EXCEPTION_PREFIX, exceptionIdOf } from "./exceptionCodec.js";
@@ -115,6 +116,9 @@ const fail = (msg: string): ToolResult => ({ isError: true, content: [{ type: "t
 
 const NO_TREASURY =
   "No treasury configured. Set EUNOMIA_TREASURY to the treasury's contract id (C…) or run `eunomia-mcp init --treasury <id>`.";
+// A placeholder pasted from the docs (`<C…>`) used to reach the agent as a bare "Invalid contract ID".
+export const badTreasury = (id: string) =>
+  `EUNOMIA_TREASURY is "${id}", which is not a treasury id (C…, 56 characters). Copy your treasury id from the Eunomia dashboard, put it in the MCP config and restart the client.`;
 const NO_CREDENTIAL = "No agent credential — run `eunomia-mcp init --treasury <id>` first.";
 
 const x402Schema = z
@@ -144,6 +148,7 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
     },
     async ({ amount }) => {
       if (!ctx.treasuryId) return fail(NO_TREASURY);
+      if (!isValidContractId(ctx.treasuryId)) return fail(badTreasury(ctx.treasuryId));
       try {
         const client = makeClient(ctx.net, ctx.treasuryId);
         const snap = await readTreasury(client, ctx.treasuryId);
@@ -171,6 +176,7 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
     },
     async () => {
       if (!ctx.treasuryId) return fail(NO_TREASURY);
+      if (!isValidContractId(ctx.treasuryId)) return fail(badTreasury(ctx.treasuryId));
       try {
         const client = makeClient(ctx.net, ctx.treasuryId);
         const snap = await readTreasury(client, ctx.treasuryId);
@@ -201,6 +207,7 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
     },
     async ({ address }) => {
       if (!ctx.treasuryId) return fail(NO_TREASURY);
+      if (!isValidContractId(ctx.treasuryId)) return fail(badTreasury(ctx.treasuryId));
       try {
         const client = makeClient(ctx.net, ctx.treasuryId);
         const [allowed, snap] = await Promise.all([isPayee(client, address), readTreasury(client, ctx.treasuryId)]);
@@ -243,6 +250,7 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
     },
     async ({ to, amount, taskId, x402 }) => {
       if (!ctx.treasuryId) return fail(NO_TREASURY);
+      if (!isValidContractId(ctx.treasuryId)) return fail(badTreasury(ctx.treasuryId));
       try {
         let target: string;
         let stroops: bigint;
@@ -309,6 +317,7 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
     },
     async ({ to, amount, taskId }) => {
       if (!ctx.treasuryId) return fail(NO_TREASURY);
+      if (!isValidContractId(ctx.treasuryId)) return fail(badTreasury(ctx.treasuryId));
       try {
         const stroops = toStroops(amount);
         const task = BigInt(taskId ?? 0);
@@ -368,6 +377,7 @@ export function registerTools(server: McpServer, ctx: ServerContext): void {
     },
     async ({ id, close }) => {
       if (!ctx.treasuryId) return fail(NO_TREASURY);
+      if (!isValidContractId(ctx.treasuryId)) return fail(badTreasury(ctx.treasuryId));
       if (!ctx.credential) return fail(NO_CREDENTIAL);
       try {
         const name = id.startsWith(EXCEPTION_PREFIX) ? id : EXCEPTION_PREFIX + id;

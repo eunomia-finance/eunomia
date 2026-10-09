@@ -42,7 +42,9 @@ also funds the key, which pays its own transaction fees.
 **2 · In the app — authorise it.** Paste the public key, set a cap and a duration,
 **Authorise agent**. One signature. *Revoke Leash* on the same page ends it instantly.
 
-**3 · Add the server to your MCP client.**
+**3 · Add the server to your MCP client.** Easiest: copy the block `eunomia-mcp init`
+printed in step 1 — your treasury id is already in it. Writing it by hand, replace `<C…>`
+with your treasury id (56 characters, starts with C).
 
 ```bash
 # Claude Code

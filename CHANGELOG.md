@@ -15,6 +15,10 @@ deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
   paying (refusing up front instead of simulating), reports `canReceive` in `check_payee`,
   and does not file an exception the owner could never approve. The dashboard warns before
   approving such a payee, and says so when it is the agent's own key.
+- **Fixed (same sessions)** — a config pasted with the docs' `<C…>` placeholder left in
+  reached the agent as a bare "Invalid contract ID". Every tool now names the bad value and
+  where the real treasury id is; the docs say to replace the placeholder or copy the block
+  `init` prints.
 
 - **Added (ZK in the loop)** — a period of real agent payments closes with an on-chain
   attestation. `circuits/scripts/prove-and-submit.ts` now reads the period's payments from
