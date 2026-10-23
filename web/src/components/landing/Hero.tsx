@@ -6,6 +6,7 @@ import { TRACTION } from "./traction";
 import Words from "./Words";
 import { useTheme } from "./useTheme";
 import EunomiaMark from "../EunomiaMark";
+import { SHOW_PRIVACY } from "./Privacy";
 
 const WalletChip = lazy(() => import("../WalletChip"));
 
@@ -108,7 +109,7 @@ export default function Hero({
               ["Proof", "#proof"],
               ["How it works", "#how"],
               ["Guarantees", "#guarantees"],
-              ["Privacy", "#privacy"],
+              ...(SHOW_PRIVACY ? [["Privacy", "#privacy"]] : []),
             ].map(([label, href]) => (
               <span className="lp__nav-mask" key={href}>
                 <a className="lp__nav-link" href={href}>
