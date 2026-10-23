@@ -4,6 +4,8 @@
  *  "Sealed Receipt" all live in the docs now. A finance lead does not buy a proof system;
  *  they buy not showing their suppliers and margins to competitors. */
 export default function Privacy() {
+  if (__EUNOMIA_NETWORK__ !== "testnet") return null;
+
   return (
     <section className="lp__section lp__divide lp__privacy" id="privacy">
       <div className="lp__in">
