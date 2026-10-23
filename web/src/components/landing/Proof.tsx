@@ -6,7 +6,7 @@ import { TRACTION } from "./traction";
  *  cap alone can be drained by repeated payments, so "it was refused" only means something
  *  when the caps are cumulative. The tx hash makes it checkable rather than claimed. It ran
  *  on testnet, so it links there whichever network this build serves. */
-const BLOCKED_TX = "d48e7ff8fdc0f93a5972d0d783e3861f29a3baebb96c5f82b2c9ff545e00f3b5";
+export const BLOCKED_TX = "d48e7ff8fdc0f93a5972d0d783e3861f29a3baebb96c5f82b2c9ff545e00f3b5";
 const TESTNET_EXPLORER = "https://stellar.expert/explorer/testnet";
 
 export default function Proof() {
