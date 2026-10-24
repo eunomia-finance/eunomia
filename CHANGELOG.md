@@ -6,19 +6,7 @@ they were written under), grouped by release wave. Full detail lives in the
 deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## [Unreleased]
-
-- **Added (eunomia-mcp 0.3.0, SOW 2 deliverables 2-3)** — agents buy real services.
-  `find_services` searches the ROZO MPP Router catalog (hundreds of paid APIs on Stellar
-  mainnet USDC); `fund_float` tops up the agent's own account through the treasury's
-  `pay()`; `call_service` pays a 402 from that float with the official x402 client, only
-  inside the treasury's rules (token, price caps, approved payee, task budget) — nothing is
-  signed otherwise; `sweep_float` returns the rest; `float_status` lists what was bought.
-  `request_budget` gives the owner a signed link the app's Agent page shows and approves with
-  one signature (`set_task_budget`). `init --client claude-desktop|cursor|claude-code` writes
-  the client config itself (merged, with a `.bak`); `trustline` prepares a mainnet agent
-  account for USDC. Proven on testnet end to end (`scripts/live-spend.ts`, DEPLOYMENT.md).
-  The direct-settlement test came back negative and is written up in
-  [`docs/MPP-DIRECT-SETTLEMENT.md`](docs/MPP-DIRECT-SETTLEMENT.md).
+- **eunomia-mcp** — package releases are tracked in [`packages/mcp/CHANGELOG.md`](packages/mcp/CHANGELOG.md).
 
 - **Fixed (the 08-07 silent deploy)** — a relayed transaction could be announced as done
   before the ledger agreed. The relay waits a few seconds and then answers 200 with whatever
@@ -294,7 +282,16 @@ Built during Stellar Hacks: Real-World ZK; submitted to DoraHacks.
   muxed-account funding rail (zero-cost sub-address attribution) · spectral landing + pitch
   deck · build-time guard refusing the demo key off-testnet
 
-[0.3.1]: https://github.com/eunomia-finance/eunomia/commits/main
-[0.3.0]: https://github.com/eunomia-finance/eunomia/commits/main
-[0.2.0]: https://github.com/eunomia-finance/eunomia/commits/main
-[0.1.0]: https://github.com/eunomia-finance/eunomia/commits/main
+[Unreleased]: https://github.com/eunomia-finance/eunomia/commits/main?since=2026-09-20
+[0.9.0]: https://github.com/eunomia-finance/eunomia/commits/main?since=2026-09-18&until=2026-09-19
+[0.8.0]: https://github.com/eunomia-finance/eunomia/commits/main?since=2026-09-16&until=2026-09-17
+[0.7.0]: https://github.com/eunomia-finance/eunomia/commits/main?since=2026-09-14&until=2026-09-15
+[0.6.0]: https://github.com/eunomia-finance/eunomia/commits/main?since=2026-08-05&until=2026-08-12
+[0.5.0]: https://github.com/eunomia-finance/eunomia/commits/main?since=2026-07-08&until=2026-08-04
+[0.4.1]: https://github.com/eunomia-finance/eunomia/commits/main?since=2026-07-07&until=2026-07-07
+[0.4.0]: https://github.com/eunomia-finance/eunomia/commits/main?since=2026-07-07&until=2026-07-07
+[0.3.2]: https://github.com/eunomia-finance/eunomia/commits/main?since=2026-07-06&until=2026-07-06
+[0.3.1]: https://github.com/eunomia-finance/eunomia/commits/main?since=2026-07-02&until=2026-07-02
+[0.3.0]: https://github.com/eunomia-finance/eunomia/commits/main?since=2026-07-01&until=2026-07-01
+[0.2.0]: https://github.com/eunomia-finance/eunomia/commits/main?since=2026-06-18&until=2026-06-23
+[0.1.0]: https://github.com/eunomia-finance/eunomia/commits/main?since=2026-06-03&until=2026-06-03
