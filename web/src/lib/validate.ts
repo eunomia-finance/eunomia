@@ -6,14 +6,36 @@ import { StrKey } from "@stellar/stellar-sdk";
 
 export type AmountResult = { ok: true; value: number } | { ok: false; msg: string };
 
+const XLM_AMOUNT_PATTERN = /^\d+(?:[.,]\d{1,7})?$/;
+const AMBIGUOUS_THOUSANDS_PATTERN = /^\d{1,3}[.,]\d{3}$/;
+
+/** Parse decimal XLM input without accepting Number()'s hex or exponent forms. */
+function parseXlmValue(raw: string): number | undefined {
+  const s = raw.trim();
+  if (!XLM_AMOUNT_PATTERN.test(s)) return undefined;
+  const value = Number(s.replace(",", "."));
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function invalidXlmAmount(label: string): AmountResult {
+  return {
+    ok: false,
+    msg: `Enter a valid ${label} greater than zero (up to 7 decimal places).`,
+  };
+}
+
 /** Parse an XLM amount that must be a finite, strictly-positive number. */
 export function parseXlmAmount(raw: string, label = "amount"): AmountResult {
   const s = raw.trim();
   if (!s) return { ok: false, msg: `Enter ${aOrAn(label)}.` };
-  const value = Number(s);
-  if (!Number.isFinite(value) || value <= 0) {
-    return { ok: false, msg: `Enter a valid ${label} greater than zero.` };
+  if (AMBIGUOUS_THOUSANDS_PATTERN.test(s)) {
+    return {
+      ok: false,
+      msg: `The value "${s}" is ambiguous; write 1000 for one thousand or 1.0 for one.`,
+    };
   }
+  const value = parseXlmValue(s);
+  if (value === undefined || value <= 0) return invalidXlmAmount(label);
   return { ok: true, value };
 }
 
@@ -22,7 +44,8 @@ export function parseXlmAmount(raw: string, label = "amount"): AmountResult {
  *  the strict parser above made that sentence false by refusing the zero. */
 export function parseOptionalXlmAmount(raw: string, label = "amount"): AmountResult {
   const s = raw.trim();
-  if (!s || Number(s) === 0) return { ok: true, value: 0 };
+  if (!s) return { ok: true, value: 0 };
+  if (parseXlmValue(s) === 0) return { ok: true, value: 0 };
   return parseXlmAmount(s, label);
 }
 
