@@ -6,7 +6,7 @@ import { TRACTION } from "./traction";
 import Words from "./Words";
 import { useTheme } from "./useTheme";
 import EunomiaMark from "../EunomiaMark";
-import { SHOW_PRIVACY } from "./Privacy";
+import { SHOW_PRIVACY } from "./landingConfig";
 
 const WalletChip = lazy(() => import("../WalletChip"));
 

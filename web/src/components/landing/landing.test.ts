@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPrivacyVisible } from "./Privacy";
-import { BLOCKED_TX } from "./Proof";
+import { BLOCKED_TX, isPrivacyVisible } from "./landingConfig";
 
 describe("landing claims", () => {
   it("shows the privacy section only on testnet", () => {
