@@ -4,7 +4,7 @@
 import { parseArgs } from "node:util";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { computeBudget } from "./budget.js";
-import { CLIENTS, writeClientConfig, type ClientName } from "./clientConfig.js";
+import { CLIENTS, PINNED_PACKAGE, writeClientConfig, type ClientName } from "./clientConfig.js";
 import { createCredential, isValidContractId, saveCredential } from "./credential.js";
 import { addTrustline } from "./float.js";
 import { toStroops, txUrl } from "./format.js";
@@ -36,7 +36,10 @@ usage:
 
 Stellar mainnet only.
 env: EUNOMIA_TREASURY, EUNOMIA_RPC_URL (required: a mainnet RPC), EUNOMIA_HOME (~/.eunomia), EUNOMIA_AGENT_SECRET,
-     EUNOMIA_APP_URL (where budget requests link; default https://eunomia.finance)
+     EUNOMIA_APP_URL (where budget requests link; default https://eunomia.finance),
+     EUNOMIA_MAX_PRICE (the most one call_service may pay, in the treasury's token; default 1),
+     EUNOMIA_SERVICE_HOSTS (hosts call_service may call, comma-separated, or * for any;
+                            default: the service catalog's host)
 `;
 
 const { values: opts, positionals } = parseArgs({
@@ -79,6 +82,10 @@ function serverEnv(env: NodeJS.ProcessEnv): Record<string, string> {
   if (env.EUNOMIA_RPC_URL) envBlock.EUNOMIA_RPC_URL = env.EUNOMIA_RPC_URL;
   if (env.EUNOMIA_HOME) envBlock.EUNOMIA_HOME = env.EUNOMIA_HOME;
   if (env.EUNOMIA_APP_URL) envBlock.EUNOMIA_APP_URL = env.EUNOMIA_APP_URL;
+  // The operator's bounds on call_service travel with the config, so the server the client
+  // starts is held to them — they are read from its environment, never from the model.
+  if (env.EUNOMIA_MAX_PRICE) envBlock.EUNOMIA_MAX_PRICE = env.EUNOMIA_MAX_PRICE;
+  if (env.EUNOMIA_SERVICE_HOSTS) envBlock.EUNOMIA_SERVICE_HOSTS = env.EUNOMIA_SERVICE_HOSTS;
   return envBlock;
 }
 
@@ -87,12 +94,12 @@ function configSnippet(env: NodeJS.ProcessEnv, client: string): string {
   switch (client) {
     case "claude-code": {
       const flags = Object.entries(envBlock).map(([k, v]) => `-e ${k}=${v}`).join(" ");
-      return `claude mcp add eunomia ${flags} -- npx -y eunomia-mcp`;
+      return `claude mcp add eunomia ${flags} -- npx -y ${PINNED_PACKAGE}`;
     }
     case "claude-desktop":
     case "json":
       return JSON.stringify(
-        { mcpServers: { eunomia: { command: "npx", args: ["-y", "eunomia-mcp"], env: envBlock } } },
+        { mcpServers: { eunomia: { command: "npx", args: ["-y", PINNED_PACKAGE], env: envBlock } } },
         null,
         2,
       );

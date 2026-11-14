@@ -114,9 +114,11 @@ jobs:
       # …and the budget request links the agent signs, read by the Agent page.
       - name: mcp — budget request codec copy in web in sync
         run: cmp packages/mcp/src/budgetRequestCodec.ts web/src/lib/budgetRequestCodec.ts
+      # npm ci: the published shrinkwrap is the tree that is tested, and a package.json that
+      # has drifted from it fails here instead of resolving something new.
       - name: mcp — unit tests + build
         working-directory: packages/mcp
         run: |
-          npm install
+          npm ci
           npm test
           npm run build

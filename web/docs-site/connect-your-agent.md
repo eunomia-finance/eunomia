@@ -35,11 +35,11 @@ with your treasury id (56 characters, starts with C).
 
 ```bash
 # Claude Code
-claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -e EUNOMIA_RPC_URL=<https://…> -- npx -y eunomia-mcp
+claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -e EUNOMIA_RPC_URL=<https://…> -- npx -y eunomia-mcp@0.3.1
 ```
 
 ```json
-{ "mcpServers": { "eunomia": { "command": "npx", "args": ["-y", "eunomia-mcp"],
+{ "mcpServers": { "eunomia": { "command": "npx", "args": ["-y", "eunomia-mcp@0.3.1"],
   "env": { "EUNOMIA_TREASURY": "<C…>", "EUNOMIA_RPC_URL": "<https://…>" } } } }
 ```
 

@@ -6,6 +6,7 @@ import { execFileSync } from "node:child_process";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { VERSION } from "./version.js";
 
 export type ClientName = "claude-desktop" | "cursor" | "claude-code";
 export const CLIENTS: ClientName[] = ["claude-desktop", "cursor", "claude-code"];
@@ -16,12 +17,22 @@ export interface ServerEntry {
   env: Record<string, string>;
 }
 
+/** What a client config starts: this exact release, not whatever is newest.
+ *
+ *  The client runs this line every time it starts, in the process that holds the agent's
+ *  key. Unpinned, each start installed the latest release and whatever its dependency ranges
+ *  resolved to that day — a bad publish anywhere in the tree would have reached every agent
+ *  on its next restart (fifth review, F6). Pinned, an upgrade is something the operator does:
+ *  run `init --client` again with the release they chose. The package ships a shrinkwrap, so
+ *  the version also fixes everything beneath it. */
+export const PINNED_PACKAGE = `eunomia-mcp@${VERSION}`;
+
 /** How the client should start the server. On Windows a desktop app spawning `npx` directly
  *  finds no executable (it is npx.cmd), so it goes through cmd. */
 export function serverEntry(env: Record<string, string>, platform: NodeJS.Platform = process.platform): ServerEntry {
   return platform === "win32"
-    ? { command: "cmd", args: ["/c", "npx", "-y", "eunomia-mcp"], env }
-    : { command: "npx", args: ["-y", "eunomia-mcp"], env };
+    ? { command: "cmd", args: ["/c", "npx", "-y", PINNED_PACKAGE], env }
+    : { command: "npx", args: ["-y", PINNED_PACKAGE], env };
 }
 
 /** Where each client keeps its MCP servers. */
@@ -64,7 +75,7 @@ export function writeClientConfig(client: ClientName, env: Record<string, string
     // Claude Code owns its config; `claude mcp add` is the supported way in.
     const args = ["mcp", "add", "--scope", "user", "eunomia"];
     for (const [k, v] of Object.entries(env)) args.push("-e", `${k}=${v}`);
-    args.push("--", "npx", "-y", "eunomia-mcp");
+    args.push("--", "npx", "-y", PINNED_PACKAGE);
     execFileSync(process.platform === "win32" ? "claude.cmd" : "claude", args, { stdio: "ignore" });
     return { client, where: `claude ${args.join(" ")}` };
   }

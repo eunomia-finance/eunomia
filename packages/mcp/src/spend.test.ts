@@ -113,7 +113,7 @@ const TOKEN = "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75";
 const TREASURY = "CAP7SNLZZT6VGC7ULSBTGPIGTC5EBAFSDMA37YFYTIROJUTIYXTMANFK";
 const NOW = 1_800_000_000;
 
-function ctx(): ServerContext {
+function ctx(over: Partial<ServerContext> = {}): ServerContext {
   return {
     net: { ...NETWORKS.pubnet, rpcUrl: "https://rpc.invalid" },
     treasuryId: TREASURY,
@@ -129,6 +129,9 @@ function ctx(): ServerContext {
     exceptions: memoryExceptionStore(),
     purchases: memoryPurchaseLog(),
     now: () => NOW,
+    serviceHosts: ["seller.example", "free.example", "metadata.internal"],
+    unsettled: new Map(),
+    ...over,
   };
 }
 
@@ -274,6 +277,197 @@ test("of several acceptable options the cheapest is the one signed", async () =>
   });
   assert.equal(picked, "90000");
   assert.ok(!("refused" in out) && out.paid);
+});
+
+// ---- the float is spent only while the owner's permission stands (fifth review, F2) -------
+
+/** Runs one call against a seller and reports whether anything was signed. */
+async function attempt(over: Record<string, unknown>, context: ServerContext = ctx()) {
+  const s = seller([requirement()]);
+  let signed = false;
+  const out = await callService(context, { url: "https://seller.example/api", maxPrice: 200_000n }, {
+    ...deps(s.fetchImpl, over),
+    sign: async () => {
+      signed = true;
+      return { "PAYMENT-SIGNATURE": "signed" };
+    },
+  });
+  return { out, signed, requests: s.seen.length };
+}
+
+test("a paused treasury stops the float: nothing is signed", async () => {
+  const { out, signed, requests } = await attempt({ is_paused: () => Promise.resolve({ result: true }) });
+  assert.equal(signed, false);
+  assert.equal(requests, 1);
+  assert.ok("refused" in out);
+  assert.match(out.message, /paused by its owner/);
+  assert.match(out.nextStep ?? "", /sweep_float/);
+});
+
+test("a revoked Leash stops the float", async () => {
+  const { out, signed } = await attempt({ get_session: () => Promise.resolve({ result: undefined }) });
+  assert.equal(signed, false);
+  assert.ok("refused" in out);
+  assert.match(out.message, /ended, or the owner revoked it/);
+});
+
+test("a Leash past its deadline stops the float, and does not widen who may be paid", async () => {
+  // The expired budget named another payee only. Before the fix an expired session read as
+  // "no task budget", so the float could suddenly pay every approved payee.
+  const { out, signed } = await attempt({
+    get_session: () => Promise.resolve({ result: { agent: agent.publicKey(), valid_until: BigInt(NOW - 1), limit: 500_000_000n, spent: 0n } }),
+    this_month: () => Promise.resolve({ result: 24_321 }),
+    monthly_limit: () => Promise.resolve({ result: 0n }),
+    month_spent: () => Promise.resolve({ result: 0n }),
+    deposit_cap: () => Promise.resolve({ result: 0n }),
+    session_payees: () => Promise.resolve({ result: ["GCB32DDRIOE24JJ66IYB2V44UAYYPRA4UIPGQKM2OINHDK2NPW365XTA"] }),
+  });
+  assert.equal(signed, false);
+  assert.ok("refused" in out);
+});
+
+test("a Leash that belongs to another agent stops the float", async () => {
+  const other = Keypair.random().publicKey();
+  const { out, signed } = await attempt({
+    get_session: () => Promise.resolve({ result: { agent: other, valid_until: BigInt(NOW + 3600), limit: 500_000_000n, spent: 0n } }),
+  });
+  assert.equal(signed, false);
+  assert.ok("refused" in out);
+  assert.match(out.message, /another agent/);
+});
+
+test("a pause state that could not be read is not taken for 'not paused'", async () => {
+  const { out, signed } = await attempt({ is_paused: () => Promise.reject(new Error("rpc down")) });
+  assert.equal(signed, false);
+  assert.ok("refused" in out);
+  assert.match(out.message, /could not be read/);
+});
+
+test("the treasury's own agent needs no Leash to spend its float", async () => {
+  const { out, signed } = await attempt({
+    get_config: () => Promise.resolve({ result: { admin: "GADMIN", agent: agent.publicKey(), token: TOKEN, daily_limit: 1_000_000_000n, per_task_limit: 100_000_000n } }),
+    get_session: () => Promise.resolve({ result: undefined }),
+  });
+  assert.equal(signed, true);
+  assert.ok(!("refused" in out) && out.paid);
+});
+
+// ---- bounds the model cannot move (fifth review, F4) -------------------------------------
+
+test("a host the operator has not allowed is never called", async () => {
+  let called = false;
+  const fetchImpl = (async () => {
+    called = true;
+    return new Response("{}");
+  }) as unknown as typeof fetch;
+  await assert.rejects(
+    callService(ctx(), { url: "https://attacker.example/api", maxPrice: 200_000n }, deps(fetchImpl)),
+    /not a host this agent may call/,
+  );
+  assert.equal(called, false);
+});
+
+test("with no hosts named, only the service catalog's host is called", async () => {
+  const s = seller([requirement()]);
+  const bare = ctx({ serviceHosts: undefined });
+  await assert.rejects(callService(bare, { url: "https://seller.example/api", maxPrice: 200_000n }, deps(s.fetchImpl)), /not a host/);
+  const out = await callService(bare, { url: "https://apiserver.mpprouter.dev/v1/services/exa/search", maxPrice: 200_000n }, deps(s.fetchImpl));
+  assert.ok(!("refused" in out) && out.paid);
+});
+
+test("an operator who opts out with * may call any host", async () => {
+  const s = seller([requirement()]);
+  const out = await callService(ctx({ serviceHosts: null }), { url: "https://anything.example/x", maxPrice: 200_000n }, deps(s.fetchImpl));
+  assert.ok(!("refused" in out) && out.paid);
+});
+
+test("maxPrice from the model cannot lift a call above the operator's ceiling", async () => {
+  // 2 units asked by the service, 5 offered by the model, 100 allowed per payment on chain
+  // and 50 in the float: only the ceiling (1 unit by default) stands in the way.
+  const s = seller([requirement({ amount: "20000000" })]);
+  const big = { ...deps(s.fetchImpl), floatBalance: async () => 500_000_000n };
+  const out = await callService(ctx(), { url: "https://seller.example/api", maxPrice: 50_000_000n }, big);
+  assert.ok("refused" in out);
+  assert.match(out.options[0].problems.join(), /per-call ceiling/);
+
+  const raised = await callService(ctx({ maxCallPrice: 30_000_000n }), { url: "https://seller.example/api", maxPrice: 50_000_000n }, big);
+  assert.ok(!("refused" in raised) && raised.paid);
+});
+
+test("the operator's bounds are read from the environment, and a typo stops the server", async () => {
+  const { maxCallPriceFromEnv, serviceHostsFromEnv } = await import("./server.js");
+  assert.equal(maxCallPriceFromEnv({}), undefined);
+  assert.equal(maxCallPriceFromEnv({ EUNOMIA_MAX_PRICE: " 0.25 " }), 2_500_000n);
+  assert.throws(() => maxCallPriceFromEnv({ EUNOMIA_MAX_PRICE: "25 cents" }), /not an amount/);
+  assert.throws(() => maxCallPriceFromEnv({ EUNOMIA_MAX_PRICE: "0" }), /above zero/);
+  assert.equal(serviceHostsFromEnv({}), undefined);
+  assert.equal(serviceHostsFromEnv({ EUNOMIA_SERVICE_HOSTS: "*" }), null);
+  assert.deepEqual(serviceHostsFromEnv({ EUNOMIA_SERVICE_HOSTS: "API.Example.com, apiserver.mpprouter.dev" }), ["api.example.com", "apiserver.mpprouter.dev"]);
+  assert.throws(() => serviceHostsFromEnv({ EUNOMIA_SERVICE_HOSTS: "https://api.example.com/x" }), /not a host name/);
+});
+
+// ---- a signed payment does not outlive the call by much (fifth review, F5) ----------------
+
+test("a service asking for a payment that stays collectable too long is refused", async () => {
+  for (const window of [100_000, 301, 0, 12.5, undefined, "300"]) {
+    const s = seller([requirement({ maxTimeoutSeconds: window })]);
+    const out = await callService(ctx(), { url: "https://seller.example/api", maxPrice: 200_000n }, deps(s.fetchImpl));
+    assert.ok("refused" in out, `window ${String(window)}`);
+    assert.match(out.options[0].problems.join(), /stay collectable/);
+  }
+  const s = seller([requirement({ maxTimeoutSeconds: 300 })]);
+  const ok = await callService(ctx(), { url: "https://seller.example/api", maxPrice: 200_000n }, deps(s.fetchImpl));
+  assert.ok(!("refused" in ok) && ok.paid);
+});
+
+/** A seller that takes the payment header and answers without reporting a settlement. */
+function silentSeller() {
+  let signedRequests = 0;
+  const fetchImpl = (async (_url: string, init?: RequestInit) => {
+    const headers = Object.fromEntries(new Headers(init?.headers).entries());
+    if (!headers["payment-signature"]) {
+      const required = encodePaymentRequiredHeader({
+        x402Version: 2,
+        resource: { url: "https://seller.example/api", description: "", mimeType: "application/json" },
+        accepts: [requirement()],
+      } as never);
+      return new Response("{}", { status: 402, headers: { "PAYMENT-REQUIRED": required } });
+    }
+    signedRequests++;
+    return new Response(JSON.stringify({ error: "try again" }), { status: 500 });
+  }) as typeof fetch;
+  return { fetchImpl, signed: () => signedRequests };
+}
+
+test("a payment handed over without a settlement is not followed by another", async () => {
+  const s = silentSeller();
+  const context = ctx();
+  const first = await callService(context, { url: "https://seller.example/api", maxPrice: 200_000n }, deps(s.fetchImpl));
+  assert.ok(!("refused" in first));
+  assert.equal(first.paid, false);
+  // 60 s the service asked for, plus the slack for the ledger estimate
+  assert.equal(first.collectableUntil, NOW + 60 + 60);
+
+  // The model sees "not paid" and tries again: nothing more is signed.
+  const again = await callService(context, { url: "https://seller.example/api", maxPrice: 200_000n }, deps(s.fetchImpl));
+  assert.ok("refused" in again);
+  assert.match(again.options[0].problems.join(), /can still be collected/);
+  assert.equal(s.signed(), 1);
+
+  // Once the first can no longer be collected, the service may be paid again.
+  const later = { ...context, now: () => NOW + 121 };
+  const third = await callService(later, { url: "https://seller.example/api", maxPrice: 200_000n }, deps(s.fetchImpl));
+  assert.ok(!("refused" in third));
+  assert.equal(s.signed(), 2);
+});
+
+test("a settled payment leaves nothing to wait for", async () => {
+  const s = seller([requirement()]);
+  const context = ctx();
+  const first = await callService(context, { url: "https://seller.example/api", maxPrice: 200_000n }, deps(s.fetchImpl));
+  assert.ok(!("refused" in first) && first.paid && first.collectableUntil === undefined);
+  const second = await callService(context, { url: "https://seller.example/api", maxPrice: 200_000n }, deps(s.fetchImpl));
+  assert.ok(!("refused" in second) && second.paid);
 });
 
 // ---- where call_service may go -------------------------------------------------------

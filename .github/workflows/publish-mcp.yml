@@ -26,15 +26,19 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      # Staged publishing needs npm 11.15 or newer (and Node 22.14).
-      - run: npm install -g npm@11
+      # Staged publishing needs npm 11.15 or newer (and Node 22.14). Named exactly: the tool
+      # that builds and signs a release is not left to whatever is newest that day.
+      - run: npm install -g npm@11.21.1
       - name: Tag matches package version
         run: |
           want="mcp-v$(node -p "require('./package.json').version")"
           if [ "$GITHUB_REF_NAME" != "$want" ]; then
             echo "tag $GITHUB_REF_NAME does not match package.json ($want)"; exit 1
           fi
-      - run: npm install
+      # npm ci installs exactly what npm-shrinkwrap.json names and fails if package.json has
+      # drifted from it. The shrinkwrap is published with the package, so the tree tested here
+      # is the tree an agent's machine installs.
+      - run: npm ci
       # The binding and codec sync checks, the tests and the build, run here rather than left
       # to prepublishOnly.
       - run: npm run prepublishOnly

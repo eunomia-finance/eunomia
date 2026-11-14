@@ -96,7 +96,7 @@ EUNOMIA_RPC_URL=<a Stellar mainnet RPC> npx -y eunomia-mcp init --treasury <C…
 # 2 · the owner pastes that key in the dashboard (Agent page) and signs once
 
 # 3 · add the server to the MCP client — for Claude Code:
-claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -e EUNOMIA_RPC_URL=<https://…> -- npx -y eunomia-mcp
+claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -e EUNOMIA_RPC_URL=<https://…> -- npx -y eunomia-mcp@0.3.1
 ```
 
 The agent's key pays its own fees, so its account needs a few XLM first (`eunomia-mcp init` says how much). The dashboard prints command 1 with the treasury's id already in it — on the Agent page, and during setup too: a treasury's address follows from its salt, so the form settles it before the treasury exists, and **one signature creates the treasury and puts the agent on its Leash**.

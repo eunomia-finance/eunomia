@@ -31,11 +31,13 @@ The key pays its own transaction fees, so its account needs XLM before it can do
    "mcpServers": {
      "eunomia": {
        "command": "npx",
-       "args": ["-y", "eunomia-mcp"],
+       "args": ["-y", "eunomia-mcp@0.3.1"],
        "env": { "EUNOMIA_TREASURY": "<C…>", "EUNOMIA_RPC_URL": "<https://…>" }
      }
    }
    ```
+
+   Keep the version in that line. The client runs it on every start, in the process that holds the agent's key: without a version, each start installs whatever was published last. `init --client` and `eunomia-mcp config` write the version of the release you ran them with; to upgrade, run them again with the new one.
 
 3. **Quit Claude Desktop completely** (the menu's Quit, not just closing the window) and reopen it. The server only loads on a fresh start.
 4. Under **Settings → Developer**, `eunomia` should show as running, and its tools appear in the chat's tool menu. If it shows an error, open its log from that screen.
@@ -45,7 +47,7 @@ If Claude Desktop cannot find `npx` (common when Node came from nvm), set `"comm
 **Claude Code:**
 
 ```bash
-claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -e EUNOMIA_RPC_URL=<https://…> -- npx -y eunomia-mcp
+claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -e EUNOMIA_RPC_URL=<https://…> -- npx -y eunomia-mcp@0.3.1
 ```
 
 **Any other MCP client** (Cursor, Antigravity, …) takes the same `mcpServers` JSON shown above in its own config file.
@@ -64,7 +66,7 @@ claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -e EUNOMIA_RPC_URL=<https://�
 | `check_exception` | `id` (+ `close?`) | `approved` when the treasury would now accept that payment (then call `pay`), `pending` while it would still refuse, `closed` when the entry is gone. `close: true` removes the entry. |
 | `find_services` | `query?`, `category?`, `verifiedOnly?`, `limit?` | Paid APIs from the ROZO MPP Router catalog (Stellar mainnet USDC): `url`, `method`, price, `payTo` and whether ROZO has paid through the route itself. Free. |
 | `fund_float` | `amount` (+ `taskId?`) | Moves `amount` from the treasury to the agent's own account — an ordinary `pay()`, so every on-chain limit applies, including a monthly cap the owner sets on the agent's address. |
-| `call_service` | `url`, `maxPrice` (+ `method?`, `body?`, `service?`) | One HTTP request; its `402` is paid from the float with the official x402 client — only if the price is within `maxPrice`, the per-payment cap and the float, and `payTo` is a treasury-approved payee (inside the task budget when there is one). Returns the service's answer and the payment `txHash`; a refusal lists each payment option and why, with nothing signed. |
+| `call_service` | `url`, `maxPrice` (+ `method?`, `body?`, `service?`) | One HTTP request to a host the operator allows; its `402` is paid from the float with the official x402 client — only while a Leash for this agent is running and the treasury is not paused, and only if the price is within `maxPrice`, the operator's per-call ceiling, the per-payment cap and the float, and `payTo` is a treasury-approved payee (inside the task budget when there is one). Returns the service's answer and the payment `txHash`; a refusal lists each payment option and why, with nothing signed. `paymentHandedOver` means a signed payment was given and no settlement came back: the service may still collect it until `collectableUntil`, and no second one is signed before then. |
 | `sweep_float` | `amount?` | Sends the rest of the float back to the treasury. |
 | `float_status` | `last?` | The float's balance and what `call_service` bought (service, price, payee, tx hash). |
 | `request_budget` | `amount`, `hours`, `payees[]`, `task` | A link for the owner: their app shows the request and approves it with one signature (`set_task_budget`). The request is signed with the agent's key, so an edited link does not verify. |
@@ -112,6 +114,8 @@ Prints the same JSON the tool returns. Exit code `0` paid, `3` refused by policy
 - **Payee listing is rebuilt from events.** The whitelist is not enumerable on-chain, so `list_allowed_payees` replays the contract's `payee_add` / `payee_rm` events (the public RPC keeps ~7 days) and a local cache, then confirms each address with `is_payee`. A payee approved before that window on a machine that never saw it will not be listed — `check_payee` is exact for any address.
 - **Exception requests are visible while the Leash is.** The dashboard reads them from the session agent's account; after a revoke there is no agent to read. There is no "deny" signal yet — an unresolved request simply stays pending until the agent closes it (Week 3 folds requests into the activity feed).
 - **The float is outside the contract.** What `fund_float` moved is the agent's until it is spent or swept; the bounds above keep it small and short-lived, not untouchable. Purchases are logged locally (`float_status`) — the chain records the payment, not the service.
+- **Which service is bought is decided here, not on chain.** A task budget names addresses, and almost every catalog route settles to one. What keeps a call to what the owner meant is this server: the hosts it may call (`EUNOMIA_SERVICE_HOSTS` — the catalog's host unless you name others, comma-separated, or `*` for any), the most one call may pay (`EUNOMIA_MAX_PRICE`, in the treasury's token; default `1`), the approved payees, and a running Leash — once the owner revokes it, pauses the treasury or its deadline passes, `call_service` stops and what is left goes back with `sweep_float`. Both variables are read from the server's environment, so the model cannot change them; `init --client` carries them into the config it writes. A service on an allowed host that charges too much inside the ceiling is still paid: keep floats small.
+- **A signed payment lasts minutes.** `call_service` refuses a service that wants its payment collectable for more than 300 seconds.
 - **Mainnet only.** There is no test-network mode: `EUNOMIA_NETWORK`, if set, must say `pubnet`, and a client config written for another network stops the server instead of signing on mainnet.
 - `check_budget` is a pre-flight. The contract is the final word at payment time; the two use the same rules and the same error codes.
 

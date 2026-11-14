@@ -97,7 +97,7 @@ export function registerSpendTools(server: McpServer, ctx: ServerContext): void 
     {
       title: "Call a paid service",
       description:
-        "Make one HTTP request to a paid service (a `url` from find_services, or any x402 endpoint) and pay its 402 from the task float. Nothing is signed unless the price is within `maxPrice`, the treasury's per-payment cap and the float, the payee is one the treasury approves, and — under a task budget — one the budget names. Returns the service's answer and the payment's tx hash. Refusals list each payment option and why.",
+        "Make one HTTP request to a paid service (a `url` from find_services; other x402 hosts only when the operator has allowed them) and pay its 402 from the task float. Nothing is signed unless a Leash for this agent is running and the treasury is not paused, the price is within `maxPrice`, the operator's per-call ceiling, the treasury's per-payment cap and the float, the payee is one the treasury approves, and — under a task budget — one the budget names. Returns the service's answer and the payment's tx hash. Refusals list each payment option and why. If the result says paymentHandedOver, do not retry: the service may still collect that payment.",
       inputSchema: {
         url: z.string().url(),
         method: z.string().optional().describe("Use the method find_services gives; default POST"),
@@ -111,7 +111,7 @@ export function registerSpendTools(server: McpServer, ctx: ServerContext): void 
       if (notReady) return fail(notReady);
       try {
         const out = await callService(ctx, { url, method, body, maxPrice: toStroops(maxPrice) }, { now });
-        if ("refused" in out) return ok({ ...out, nextStep: refusalNextStep(out.options) });
+        if ("refused" in out) return ok({ ...out, nextStep: out.nextStep ?? refusalNextStep(out.options) });
         if (out.amount !== undefined && out.payTo) {
           ctx.purchases?.append(ctx.treasuryId!, {
             at: now(),
@@ -128,6 +128,13 @@ export function registerSpendTools(server: McpServer, ctx: ServerContext): void 
           status: out.status,
           ...(out.amount !== undefined ? { price: fromStroops(out.amount), priceStroops: out.amount.toString(), payTo: out.payTo } : {}),
           ...(out.txHash ? { txHash: out.txHash, links: { tx: txUrl(ctx.net.name, out.txHash) } } : {}),
+          ...(out.collectableUntil !== undefined
+            ? {
+                paymentHandedOver: true,
+                collectableUntil: new Date(out.collectableUntil * 1000).toISOString(),
+                note: "A signed payment was given to this service and it reported no settlement. It is not confirmed paid, and the service can still collect it until collectableUntil. Do not call this service again before then — call_service will refuse; check float_status to see whether the money left.",
+              }
+            : {}),
           body: out.body,
         });
       } catch (e) {
@@ -247,6 +254,8 @@ function refusalNextStep(options: Array<{ problems: string[] }>): string {
   if (/not a payee the treasury approves|outside the task budget/.test(all)) {
     return "request_budget naming this payTo (or ask the owner to approve it)";
   }
+  if (/can still be collected/.test(all)) return "wait until the earlier payment can no longer be collected, then call again; float_status shows whether it was taken";
+  if (/per-call ceiling/.test(all)) return "this call costs more than the operator lets one call pay — only the operator can raise EUNOMIA_MAX_PRICE";
   if (/maxPrice/.test(all)) return "raise maxPrice if the price is acceptable";
   return "this service cannot be paid from this treasury";
 }

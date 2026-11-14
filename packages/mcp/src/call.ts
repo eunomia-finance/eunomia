@@ -9,18 +9,44 @@
 //   - paid to an address the treasury approves (is_payee), and inside the task budget's
 //     payee list when the Leash has one
 // An option that fails any of them is never offered to the signer.
+//
+// The float is plain money in the agent's account: the contract no longer stands between it
+// and a payee. So the rest of what the owner decided is held here as well (fifth review):
+//   - the float is spent only while the owner's permission stands — an active Leash for this
+//     agent on a treasury that is not paused. Revoking, pausing or the deadline stop it (F2);
+//   - the model chooses the URL and `maxPrice`, and what a service answers comes back to the
+//     model, so neither is trusted to bound a call: the operator names the hosts and a price
+//     ceiling in the server's environment, where the model cannot reach them (F4);
+//   - a signed payment is good until the ledger its 402 asked for. A service is given a few
+//     minutes, not months, and one that took a signature without reporting a settlement is
+//     not handed another until the first has run out (F5).
 import { lookup } from "node:dns/promises";
 import { request } from "node:https";
 import { isIP } from "node:net";
 import { x402Client, x402HTTPClient } from "@x402/core/client";
 import { createEd25519Signer } from "@x402/stellar";
 import { ExactStellarScheme } from "@x402/stellar/exact/client";
-import { computeBudget } from "./budget.js";
+import { computeBudget, type Budget, type TreasurySnapshot } from "./budget.js";
+import { ROZO_BASE_URL } from "./catalog.js";
 import { tokenBalance } from "./float.js";
 import { requireTreasury } from "./pay.js";
 import type { ServerContext } from "./server.js";
 import { isPayee, makeClient, readTreasury } from "./treasury.js";
 import { caip2, type PaymentRequirements } from "./x402.js";
+
+/** The most one call may pay when the operator names no ceiling: one unit of the treasury's
+ *  token. Catalog calls cost cents; this stops a single call from emptying a float. */
+export const DEFAULT_MAX_CALL_PRICE = 10_000_000n;
+
+/** Where call_service may go when the operator names no hosts: the service catalog. */
+export const DEFAULT_SERVICE_HOSTS: readonly string[] = [new URL(ROZO_BASE_URL).hostname];
+
+/** The longest a signed payment may stay collectable, in seconds. The catalog asks for 300. */
+export const MAX_PAYMENT_WINDOW_SEC = 300;
+
+/** Added to a payment's window before another may be signed for the same service: the
+ *  window is turned into a ledger number by an estimate of how fast ledgers close. */
+const WINDOW_SLACK_SEC = 60;
 
 export interface CallArgs {
   url: string;
@@ -49,8 +75,11 @@ export type CallOutcome =
       payTo?: string;
       txHash?: string;
       options?: OptionVerdict[];
+      /** set when a signed payment was handed over and no settlement came back: the service
+       *  can still collect it until this time (unix seconds) */
+      collectableUntil?: number;
     }
-  | { paid: false; status: 402; refused: true; options: OptionVerdict[]; message: string };
+  | { paid: false; status: 402; refused: true; options: OptionVerdict[]; message: string; nextStep?: string };
 
 export interface CallDeps {
   fetchImpl?: typeof fetch;
@@ -187,6 +216,35 @@ const defaultResolve = async (host: string) => (await lookup(host, { all: true }
 
 const keyOf = (r: PaymentRequirements) => `${r.network}|${r.asset}|${r.payTo}|${r.amount}`;
 
+/** Whether `raw`'s host is one the operator lets call_service call. `hosts` null = any. */
+export function hostAllowed(raw: string, hosts: readonly string[] | null): boolean {
+  if (hosts === null) return true;
+  const host = new URL(raw).hostname.toLowerCase();
+  return hosts.some((h) => h.toLowerCase() === host);
+}
+
+/** Why this agent may not spend its float right now, or null.
+ *
+ *  The float was handed over under a Leash, and it is spent only while that permission
+ *  stands: once the owner pauses the treasury or revokes the Leash, or its deadline passes,
+ *  what is left is the owner's to get back (sweep_float), not the agent's to finish. The
+ *  treasury's own agent with no Leash running spends under the treasury's limits and needs
+ *  none. */
+export function floatStop(snap: TreasurySnapshot, budget: Budget, agentPublicKey: string): string | null {
+  // A read that failed must not pass for "not paused": readTreasury marks that as `legacy`
+  // (no pause surface answered), and every treasury on mainnet has one.
+  if (snap.legacy) return "whether the treasury is paused could not be read";
+  if (snap.paused) return "the treasury is paused by its owner";
+  const session = budget.session;
+  if (agentPublicKey === snap.config.agent && !session?.active) return null;
+  if (!session || !session.active) return "no Leash or task budget is running for this agent — it ended, or the owner revoked it";
+  if (!session.isThisAgent) return "the Leash that is running belongs to another agent";
+  return null;
+}
+
+/** The key a handed-over payment is remembered under. */
+const unsettledKey = (url: string, payTo: string) => `${url}|${payTo}`;
+
 export async function callService(ctx: ServerContext, args: CallArgs, deps: CallDeps = {}): Promise<CallOutcome> {
   const treasuryId = requireTreasury(ctx);
   if (!ctx.credential) throw new Error("No agent credential — run `eunomia-mcp init` first.");
@@ -194,6 +252,12 @@ export async function callService(ctx: ServerContext, args: CallArgs, deps: Call
   const method = (args.method ?? "POST").toUpperCase();
   const bad = await urlProblem(args.url, deps.resolve ?? defaultResolve);
   if (bad) throw new Error(`refusing to call ${args.url}: ${bad}`);
+  const hosts = ctx.serviceHosts === undefined ? DEFAULT_SERVICE_HOSTS : ctx.serviceHosts;
+  if (!hostAllowed(args.url, hosts)) {
+    throw new Error(
+      `refusing to call ${args.url}: ${new URL(args.url).hostname} is not a host this agent may call (${(hosts ?? []).join(", ")}) — the operator adds hosts in EUNOMIA_SERVICE_HOSTS`,
+    );
+  }
   const init: RequestInit = {
     method,
     // A redirect is never followed: it would take the request — and on the second leg the
@@ -215,11 +279,23 @@ export async function callService(ctx: ServerContext, args: CallArgs, deps: Call
   const now = deps.now ?? ctx.now ?? (() => Math.floor(Date.now() / 1000));
   const snap = await readTreasury(client, treasuryId);
   const budget = computeBudget(snap, ctx.credential.agentPublicKey, now());
+  const stopped = floatStop(snap, budget, ctx.credential.agentPublicKey);
+  if (stopped) {
+    return {
+      paid: false,
+      status: 402,
+      refused: true,
+      options: [],
+      message: `The float can no longer be spent: ${stopped}. Nothing was signed.`,
+      nextStep: "sweep_float to return what is left to the treasury; ask the owner for a new budget (request_budget) if the work is not done",
+    };
+  }
   const float = await (deps.floatBalance ?? (() => tokenBalance(ctx.net, snap.config.token, ctx.credential!.agentPublicKey)))();
   const approved = new Map<string, boolean>();
   for (const r of paymentRequired.accepts) {
     if (!approved.has(r.payTo)) approved.set(r.payTo, await isPayee(client, r.payTo).catch(() => false));
   }
+  const ceiling = ctx.maxCallPrice ?? DEFAULT_MAX_CALL_PRICE;
 
   const options: OptionVerdict[] = paymentRequired.accepts.map((r) => {
     const problems: string[] = [];
@@ -229,11 +305,24 @@ export async function callService(ctx: ServerContext, args: CallArgs, deps: Call
     if (r.asset !== snap.config.token) problems.push(`asset ${r.asset} is not the treasury's token`);
     if (amount <= 0n) problems.push(`amount "${r.amount}" is not a positive integer`);
     if (amount > args.maxPrice) problems.push(`price ${amount} is above maxPrice ${args.maxPrice}`);
+    if (amount > ceiling) problems.push(`price ${amount} is above this agent's per-call ceiling ${ceiling} (EUNOMIA_MAX_PRICE, set by the operator)`);
     if (amount > snap.config.per_task_limit) problems.push(`price ${amount} is above the treasury's per-payment cap`);
     if (amount > float) problems.push(`price ${amount} is more than the float holds (${float}) — fund_float first`);
     if (!approved.get(r.payTo)) problems.push(`${r.payTo} is not a payee the treasury approves`);
     if (budget.taskPayees.length > 0 && !budget.taskPayees.includes(r.payTo)) {
       problems.push(`${r.payTo} is outside the task budget the owner approved`);
+    }
+    // The signature is valid until the ledger this many seconds away. Missing or not a
+    // number, the client would sign with no usable deadline at all.
+    const window = r.maxTimeoutSeconds;
+    if (typeof window !== "number" || !Number.isInteger(window) || window <= 0 || window > MAX_PAYMENT_WINDOW_SEC) {
+      problems.push(`the service wants the payment to stay collectable for ${String(window)} seconds — more than ${MAX_PAYMENT_WINDOW_SEC}, or not a whole number`);
+    }
+    const until = ctx.unsettled?.get(unsettledKey(args.url, r.payTo)) ?? 0;
+    if (until > now()) {
+      problems.push(
+        `a payment already signed for this service was never reported settled and can still be collected until ${new Date(until * 1000).toISOString()} — not signing another before then`,
+      );
     }
     return { payTo: r.payTo, amount: r.amount, asset: r.asset, network: r.network, problems };
   });
@@ -277,6 +366,14 @@ export async function callService(ctx: ServerContext, args: CallArgs, deps: Call
   } catch {
     /* no PAYMENT-RESPONSE header: the service did not report a settlement */
   }
+  // The service holds a signed payment and reported no settlement. It may still collect it
+  // until the signature runs out, so it is remembered: reporting plain "not paid" invited a
+  // retry, and every retry handed over another payment the service could collect later.
+  let collectableUntil: number | undefined;
+  if (txHash === undefined) {
+    collectableUntil = now() + (chosen.maxTimeoutSeconds ?? MAX_PAYMENT_WINDOW_SEC) + WINDOW_SLACK_SEC;
+    ctx.unsettled?.set(unsettledKey(args.url, chosen.payTo), collectableUntil);
+  }
   return {
     paid: second.ok && txHash !== undefined,
     status: second.status,
@@ -284,6 +381,7 @@ export async function callService(ctx: ServerContext, args: CallArgs, deps: Call
     amount: BigInt(chosen.amount),
     payTo: chosen.payTo,
     ...(txHash ? { txHash } : {}),
+    ...(collectableUntil !== undefined ? { collectableUntil } : {}),
     options,
   };
 }
