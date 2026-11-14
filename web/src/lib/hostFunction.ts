@@ -3,16 +3,16 @@
 // The proxy must not trust a caller-supplied "this call goes to contract X" claim: anyone can
 // post a permitted address alongside a different payload. Decoding the host function here means
 // the admission check in relayGuard sees what the chain will see.
-import { Address, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
+import { Address, Keypair, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
 
 export type HostCall =
-  | { kind: "invoke"; contractId: string }
+  | { kind: "invoke"; contractId: string; fn: string }
   | { kind: "deploy"; wasmHash: string }
   | { kind: "other" };
 
 const OTHER: HostCall = { kind: "other" };
 
-/** Decode a base64 host function into the one fact the relay needs to admit or reject it.
+/** Decode a base64 host function into the facts the relay needs to admit or reject it.
  *  Anything we don't explicitly recognise — a raw wasm upload above all — comes back "other",
  *  which the caller rejects. */
 export function classifyHostFunction(funcXdr: string): HostCall {
@@ -25,8 +25,12 @@ export function classifyHostFunction(funcXdr: string): HostCall {
 
   switch (fn.switch().name) {
     case "hostFunctionTypeInvokeContract": {
-      const address = fn.invokeContract().contractAddress();
-      return { kind: "invoke", contractId: Address.fromScAddress(address).toString() };
+      const call = fn.invokeContract();
+      return {
+        kind: "invoke",
+        contractId: Address.fromScAddress(call.contractAddress()).toString(),
+        fn: call.functionName().toString(),
+      };
     }
     case "hostFunctionTypeCreateContractV2":
     case "hostFunctionTypeCreateContract": {
@@ -42,21 +46,45 @@ export function classifyHostFunction(funcXdr: string): HostCall {
   }
 }
 
-/** The host function inside a signed transaction envelope, or null when there isn't one.
+/** The host function of a signed smart-wallet deployment, or null for anything else.
  *
  *  passkey-kit's `createWallet` returns a fully signed deploy transaction rather than a bare
- *  host function, so the relay has to be able to look inside an envelope and apply the same
- *  admission rules. The network passphrase is irrelevant here — we are reading, not verifying
- *  signatures — so any valid one parses. */
-export function hostFunctionFromEnvelope(envelopeXdr: string): string | null {
-  let operations: ReadonlyArray<{ type: string; func?: xdr.HostFunction }>;
+ *  host function, and that is the one envelope the relay wraps in a fee bump. An envelope is
+ *  not simulated here and carries no wallet to rate-limit by, so everything it could smuggle
+ *  is ruled out by its shape instead (fifth review, F1 — the gate used to read only the first
+ *  host function, and a caller could book a whole transaction's fee against the day with an
+ *  envelope the network was never going to accept):
+ *
+ *    - a plain transaction, never a fee bump of somebody else's;
+ *    - exactly one operation, a contract deployment, with no source of its own;
+ *    - of wallet code this deployment sponsors (`walletWasm`), nothing else — not a treasury,
+ *      which is created through the factory and its deposit cap;
+ *    - signed by its own source account for this network, so a transaction nobody signed
+ *      never reaches the fee account. */
+export function walletDeployFromEnvelope(
+  envelopeXdr: string,
+  networkPassphrase: string,
+  walletWasm: string[],
+): string | null {
   try {
-    const tx = TransactionBuilder.fromXDR(envelopeXdr, "Test SDF Network ; September 2015");
-    operations = ("operations" in tx ? tx.operations : []) as typeof operations;
+    const tx = TransactionBuilder.fromXDR(envelopeXdr, networkPassphrase);
+    if ("innerTransaction" in tx) return null;
+    if (tx.operations.length !== 1) return null;
+    const op = tx.operations[0];
+    if (op.type !== "invokeHostFunction" || op.source) return null;
+
+    const func = op.func.toXDR("base64");
+    const call = classifyHostFunction(func);
+    if (call.kind !== "deploy") return null;
+    const seen = call.wasmHash.toLowerCase();
+    if (!walletWasm.some((h) => h.toLowerCase() === seen)) return null;
+
+    // A muxed (M…) source has no key of its own to check against: refused by the throw.
+    const source = Keypair.fromPublicKey(tx.source);
+    const hash = tx.hash();
+    if (!tx.signatures.some((s) => source.verify(hash, s.signature()))) return null;
+    return func;
   } catch {
     return null;
   }
-
-  const op = operations.find((o) => o.type === "invokeHostFunction");
-  return op?.func ? op.func.toXDR("base64") : null;
 }

@@ -15,12 +15,17 @@
 // refused when it costs more than one call should, would take the day past its budget, or
 // would leave the fee account below its floor.
 //
+// A passkey owner has no other way to pay a fee, so the relay is also their off switch: with
+// the day's budget gone they could not revoke an agent, pause or withdraw. Those calls keep a
+// reserve of their own (see EXIT_CALLS), and nothing is charged to the day for a transaction
+// the network refused.
+//
 // Explicit .js extensions throughout: see the note in relayGuard.ts.
 import { Address, Keypair, rpc, xdr } from "@stellar/stellar-sdk";
-import { classifyHostFunction, hostFunctionFromEnvelope } from "./hostFunction.js";
-import type { FeeBudget } from "./relayBudget.js";
+import { classifyHostFunction, walletDeployFromEnvelope, type HostCall } from "./hostFunction.js";
+import { SAFETY_LANE, safetyCallsLane, type FeeBudget } from "./relayBudget.js";
 import { allowedWasmHashes, authEntriesAreSafe, isRelayAllowed } from "./relayGuard.js";
-import { submitEnvelope, submitHostFunction } from "./relaySubmit.js";
+import { submitEnvelope, submitHostFunction, type Release } from "./relaySubmit.js";
 
 export interface RelayEnv {
   /** pubnet, the only network; anything else is refused rather than guessed at */
@@ -38,7 +43,16 @@ export interface RelayEnv {
   RELAY_MAX_FEE_XLM?: string;
   /** below this balance the fee account stops sponsoring, in XLM (default 5) */
   RELAY_MIN_BALANCE_XLM?: string;
+  /** what an owner's exit calls may still spend in a UTC day once the daily budget is gone,
+   *  in XLM (default 5) */
+  RELAY_SAFETY_BUDGET_XLM?: string;
 }
+
+/** The RPC the relay talks to, narrowed to what it uses. */
+export type RelayRpc = Pick<
+  rpc.Server,
+  "getAccount" | "getAccountEntry" | "getContractData" | "simulateTransaction" | "sendTransaction" | "getTransaction"
+>;
 
 /** Cloudflare's rate-limiting binding has this shape; anything with it will do. */
 export interface RateLimiter {
@@ -53,6 +67,8 @@ export interface RelayGuards {
   walletLimiter?: RateLimiter;
   /** the day's total, shared by every instance */
   budget?: FeeBudget;
+  /** the RPC to use instead of the configured one — how the handler is tested offline */
+  server?: RelayRpc;
 }
 
 export interface RelayNetwork {
@@ -67,7 +83,31 @@ export interface RelayNetwork {
   maxTxFee: bigint;
   /** stroops; 0 means no floor */
   minBalance: bigint;
+  /** stroops; what exit calls may spend in a day after the daily budget is gone */
+  safetyBudget: bigint;
 }
+
+/** The calls that stop an agent or take the owner's money out of a treasury. A passkey owner
+ *  reaches the chain only through this relay, so these must not depend on the day's budget
+ *  having room: an empty budget is exactly what someone who wants an owner unable to react
+ *  would arrange. They draw on the day like any call, and on a reserve of their own once the
+ *  day is spent. */
+export const EXIT_CALLS: ReadonlySet<string> = new Set([
+  "revoke_session",
+  "set_paused",
+  "admin_withdraw",
+  "admin_cancel_escrow",
+  "remove_payee",
+]);
+
+/** How often one wallet may draw on the reserve in a day. The reserve only admits calls a
+ *  treasury's own admin signed, so emptying it takes real treasuries; this makes each of
+ *  them worth a few calls and no more. */
+export const SAFETY_CALLS_PER_WALLET = 10n;
+
+/** The balance the fee account keeps even for exit calls: above what the account itself
+ *  must hold to exist, below the floor everything else stops at. */
+export const EXIT_FLOOR = 2n * 10_000_000n;
 
 // Invisible characters smuggled into an env value have bitten this project twice (a BOM in
 // the Supabase key, a BOM+CRLF in the WalletConnect id) — both times the symptom was a silent
@@ -112,6 +152,7 @@ export function relayNetwork(env: RelayEnv): RelayNetwork {
     // room for that and refuses anything an order of magnitude dearer.
     maxTxFee: xlmEnv("RELAY_MAX_FEE_XLM", env.RELAY_MAX_FEE_XLM, XLM) as bigint,
     minBalance: xlmEnv("RELAY_MIN_BALANCE_XLM", env.RELAY_MIN_BALANCE_XLM, 5n * XLM) as bigint,
+    safetyBudget: xlmEnv("RELAY_SAFETY_BUDGET_XLM", env.RELAY_SAFETY_BUDGET_XLM, 5n * XLM) as bigint,
   };
 }
 
@@ -126,29 +167,51 @@ export class Refused extends Error {
 
 /** Every limit on money, checked against the priced transaction just before it is sent: the
  *  per-call cap first (free), then the fee account's floor, and the day's budget last, so a
- *  refusal on the way never spends budget. */
+ *  refusal on the way never spends budget. Resolves to the way to give the charge back, for
+ *  a transaction the network then refuses to take in.
+ *
+ *  `exit` names the wallets behind an exit call (EXIT_CALLS): with the day's budget spent,
+ *  such a call is charged to the reserve instead, each wallet a limited number of times. It
+ *  also runs under a lower floor (EXIT_FLOOR): a day's budget that was really spent leaves
+ *  the account at its floor, and a reserve nobody could reach there would be one in name. */
 export function feeGate(
-  net: Pick<RelayNetwork, "maxTxFee" | "minBalance" | "dailyBudget">,
+  net: Pick<RelayNetwork, "maxTxFee" | "minBalance" | "dailyBudget"> & { safetyBudget?: bigint },
   budget: FeeBudget | undefined,
   balance: () => Promise<bigint>,
-): (stroops: bigint) => Promise<void> {
+  exit?: { wallets: string[] },
+): (stroops: bigint) => Promise<Release> {
+  const fromReserve = async (stroops: bigint): Promise<boolean> => {
+    const reserve = net.safetyBudget ?? 0n;
+    if (!budget || !exit || exit.wallets.length === 0 || reserve <= 0n) return false;
+    for (const wallet of exit.wallets) {
+      if (!(await budget.reserve(1n, SAFETY_CALLS_PER_WALLET, safetyCallsLane(wallet)))) return false;
+    }
+    return budget.reserve(stroops, reserve, SAFETY_LANE);
+  };
   return async (stroops) => {
     if (stroops > net.maxTxFee) {
       console.error(`[relay] refused a ${stroops}-stroop transaction (cap ${net.maxTxFee})`);
       throw new Refused(403, "Not allowed.");
     }
-    if (net.minBalance > 0n) {
+    const floor = exit && net.minBalance > EXIT_FLOOR ? EXIT_FLOOR : net.minBalance;
+    if (floor > 0n) {
       const held = await balance();
-      if (held - stroops < net.minBalance) {
+      if (held - stroops < floor) {
         // The line to alert on: sponsorship is off until the account is topped up.
-        console.error(`[relay] fee account below floor: ${held} stroops (floor ${net.minBalance})`);
+        console.error(`[relay] fee account below floor: ${held} stroops (floor ${floor})`);
         throw new Refused(503, "The relay is paused. Try again later.");
       }
     }
-    if (!budget || !(await budget.reserve(stroops, net.dailyBudget))) {
-      console.error(`[relay] daily budget reached (${net.dailyBudget} stroops)`);
-      throw new Refused(503, "The relay has reached today's limit. Try again tomorrow.");
+    if (budget && (await budget.reserve(stroops, net.dailyBudget))) {
+      return () => budget.release(stroops);
     }
+    // The line to alert on: from here until midnight UTC only exit calls are sponsored.
+    console.error(`[relay] daily budget reached (${net.dailyBudget} stroops)`);
+    if (await fromReserve(stroops)) {
+      console.error(`[relay] exit call charged to the reserve (${stroops} stroops)`);
+      return () => budget!.release(stroops, SAFETY_LANE);
+    }
+    throw new Refused(503, "The relay has reached today's limit. Try again tomorrow.");
   };
 }
 
@@ -221,9 +284,14 @@ export async function handleRelay(req: Request, env: RelayEnv, guards: RelayGuar
   const isEnvelope = typeof envelope === "string" && envelope.length > 0;
   if (!isFuncCall && !isEnvelope) return json({ error: "Malformed request." }, 400);
 
+  const server: RelayRpc = guards.server ?? new rpc.Server(net.rpcUrl);
+  // The wallet code this deployment sponsors, as the env names it. `wasmHashes` adds every
+  // treasury version to it: contracts running either may be called, but only a wallet may be
+  // deployed from a signed envelope.
+  const walletWasm = csv(env.RELAY_ALLOWED_WASM);
   const wasmHashes = allowedWasmHashes(clean(env.RELAY_ALLOWED_WASM));
   const readWasmHash = async (contractId: string): Promise<string | null> => {
-    const entry = await new rpc.Server(net.rpcUrl).getContractData(
+    const entry = await server.getContractData(
       contractId,
       xdr.ScVal.scvLedgerKeyContractInstance(),
       rpc.Durability.Persistent,
@@ -232,8 +300,7 @@ export async function handleRelay(req: Request, env: RelayEnv, guards: RelayGuar
     if (executable.switch().name !== "contractExecutableWasm") return null;
     return executable.wasmHash().toString("hex");
   };
-  const admit = async (hostFunction: string): Promise<boolean> => {
-    const call = classifyHostFunction(hostFunction);
+  const admit = async (call: HostCall): Promise<boolean> => {
     if (call.kind === "invoke") {
       return isRelayAllowed(call.contractId, { contracts: net.contracts, wasmHashes, readWasmHash });
     }
@@ -244,8 +311,13 @@ export async function handleRelay(req: Request, env: RelayEnv, guards: RelayGuar
     return false; // raw wasm uploads and anything unrecognised
   };
 
-  const gated = isFuncCall ? (func as string) : hostFunctionFromEnvelope(envelope as string);
-  if (!gated || !(await admit(gated))) return json({ error: "Not allowed." }, 403);
+  // An envelope is admitted only as what passkey-kit sends: one signed wallet deployment.
+  const gated = isFuncCall
+    ? (func as string)
+    : walletDeployFromEnvelope(envelope as string, net.passphrase, walletWasm);
+  if (!gated) return json({ error: "Not allowed." }, 403);
+  const call = classifyHostFunction(gated);
+  if (!(await admit(call))) return json({ error: "Not allowed." }, 403);
 
   let entries: xdr.SorobanAuthorizationEntry[] = [];
   if (isFuncCall) {
@@ -255,20 +327,35 @@ export async function handleRelay(req: Request, env: RelayEnv, guards: RelayGuar
       return json({ error: "Malformed request." }, 400);
     }
     if (!authEntriesAreSafe(entries, keypair.publicKey())) return json({ error: "Not allowed." }, 403);
-    // A wallet asking from many addresses is still one wallet. The envelope path (creating a
-    // wallet) has no wallet yet to key on; the IP limiter and the daily total cover it.
-    for (const wallet of signingAddresses(entries)) {
-      if (!(await walletLimiter.limit({ key: wallet })).success) {
-        return json({ error: "Too many requests — wait a minute and try again." }, 429);
-      }
-    }
+    // Everything a passkey wallet sends carries the wallet's signed entry. A call that needs
+    // nobody's authorisation is a read: free to simulate, and not something to pay a fee for.
+    if (entries.length === 0) return json({ error: "Not allowed." }, 403);
   }
 
-  const server = new rpc.Server(net.rpcUrl);
+  // An exit call on a treasury (admitted by its code, not one of the fixed addresses) may
+  // fall back on the reserve when the day's budget is gone.
+  const wallets = signingAddresses(entries);
+  const isExit = call.kind === "invoke" && EXIT_CALLS.has(call.fn) && !net.contracts.includes(call.contractId);
   const feeAccount = keypair.publicKey();
-  const charge = feeGate(net, budget, async () =>
-    BigInt((await server.getAccountEntry(feeAccount)).balance().toString()),
+  const gate = feeGate(
+    net,
+    budget,
+    async () => BigInt((await server.getAccountEntry(feeAccount)).balance().toString()),
+    isExit ? { wallets } : undefined,
   );
+  // Runs once the transaction has been simulated and priced, so the entries it counts are
+  // ones the chain accepted as signed. Counting them as they arrive let anyone name a wallet
+  // in an unsigned entry and use up that wallet's allowance for it (fifth review, F1). A
+  // wallet asking from many addresses is still one wallet; the envelope path (creating a
+  // wallet) has none yet to key on, and the IP limiter and the daily total cover it.
+  const charge = async (stroops: bigint): Promise<Release> => {
+    for (const wallet of wallets) {
+      if (!(await walletLimiter.limit({ key: wallet })).success) {
+        throw new Refused(429, "Too many requests — wait a minute and try again.");
+      }
+    }
+    return gate(stroops);
+  };
   const deps = { server, keypair, networkPassphrase: net.passphrase, charge };
 
   try {

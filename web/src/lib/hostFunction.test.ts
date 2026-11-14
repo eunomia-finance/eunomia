@@ -9,7 +9,7 @@ import {
   BASE_FEE,
   xdr,
 } from "@stellar/stellar-sdk";
-import { classifyHostFunction, hostFunctionFromEnvelope } from "./hostFunction";
+import { classifyHostFunction, walletDeployFromEnvelope } from "./hostFunction";
 
 const TREASURY = "CAYWNXHANRY5GSJAZOR4YTKBKNOKTCITE52ZRKDKCAWLDTYWFFVFSPAZ";
 const WASM_HASH = "475cfbe2ca79d7977c8e4d29438ae70b9d95a12cb2bfcd9fed4e4f7a26d798b2";
@@ -43,8 +43,8 @@ function uploadXdr(): string {
 }
 
 describe("classifyHostFunction", () => {
-  it("reads the contract id out of an invoke, rather than trusting the caller", () => {
-    expect(classifyHostFunction(invokeXdr(TREASURY))).toEqual({ kind: "invoke", contractId: TREASURY });
+  it("reads the contract id and the function out of an invoke, rather than trusting the caller", () => {
+    expect(classifyHostFunction(invokeXdr(TREASURY))).toEqual({ kind: "invoke", contractId: TREASURY, fn: "get_state" });
   });
 
   it("reads the wasm hash out of a deploy", () => {
@@ -62,34 +62,78 @@ describe("classifyHostFunction", () => {
 });
 
 // passkey-kit's createWallet hands back a fully signed deploy transaction, not a bare host
-// function — so the relay has to be able to look inside an envelope and apply the same gate.
-const PASSPHRASE = "Test SDF Network ; September 2015";
+// function — the one envelope the relay sponsors, and only when it is exactly that.
+const PASSPHRASE = "Public Global Stellar Network ; September 2015";
+const SIGNER = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 1));
 
-function envelopeXdr(op: xdr.Operation): string {
-  const account = new Account(DEPLOYER, "1");
-  return new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: PASSPHRASE })
-    .addOperation(op)
-    .setTimeout(60)
-    .build()
-    .toXDR();
+function envelopeXdr(
+  ops: xdr.Operation[],
+  opts: { signer?: Keypair | null; passphrase?: string } = {},
+): string {
+  const builder = new TransactionBuilder(new Account(DEPLOYER, "1"), {
+    fee: BASE_FEE,
+    networkPassphrase: opts.passphrase ?? PASSPHRASE,
+  });
+  for (const op of ops) builder.addOperation(op);
+  const tx = builder.setTimeout(60).build();
+  const signer = opts.signer === undefined ? SIGNER : opts.signer;
+  if (signer) tx.sign(signer);
+  return tx.toXDR();
 }
 
-describe("hostFunctionFromEnvelope", () => {
-  it("pulls the host function out of a signed transaction envelope", () => {
-    const op = new Contract(TREASURY).call("get_config");
-    const found = hostFunctionFromEnvelope(envelopeXdr(op));
+const deployOp = (wasmHex = WASM_HASH, source?: string) =>
+  Operation.createCustomContract({
+    address: Address.fromString(DEPLOYER),
+    wasmHash: Buffer.from(wasmHex, "hex"),
+    salt: Buffer.alloc(32),
+    constructorArgs: [],
+    ...(source ? { source } : {}),
+  });
 
+describe("walletDeployFromEnvelope", () => {
+  const check = (envelope: string) => walletDeployFromEnvelope(envelope, PASSPHRASE, [WASM_HASH]);
+
+  it("pulls the deployment out of a signed wallet-deploy envelope", () => {
+    const found = check(envelopeXdr([deployOp()]));
     expect(found).not.toBeNull();
-    expect(classifyHostFunction(found!)).toEqual({ kind: "invoke", contractId: TREASURY });
+    expect(classifyHostFunction(found!)).toEqual({ kind: "deploy", wasmHash: WASM_HASH });
   });
 
-  it("returns null for an envelope carrying no contract call", () => {
-    // A classic (non-Soroban) operation has no host function to gate on.
-    expect(hostFunctionFromEnvelope(envelopeXdr(Operation.bumpSequence({ bumpTo: "2" })))).toBeNull();
+  it("matches the wallet code whatever the case it was configured in", () => {
+    expect(walletDeployFromEnvelope(envelopeXdr([deployOp()]), PASSPHRASE, [WASM_HASH.toUpperCase()])).not.toBeNull();
   });
 
-  it("returns null for input that is not an envelope", () => {
-    expect(hostFunctionFromEnvelope("garbage")).toBeNull();
-    expect(hostFunctionFromEnvelope("")).toBeNull();
+  it("refuses a contract call, however permitted its target is elsewhere", () => {
+    expect(check(envelopeXdr([new Contract(TREASURY).call("get_config")]))).toBeNull();
+  });
+
+  it("refuses other code, and everything when no wallet code is named", () => {
+    expect(check(envelopeXdr([deployOp("ab".repeat(32))]))).toBeNull();
+    expect(walletDeployFromEnvelope(envelopeXdr([deployOp()]), PASSPHRASE, [])).toBeNull();
+  });
+
+  it("refuses an envelope its source did not sign", () => {
+    expect(check(envelopeXdr([deployOp()], { signer: null }))).toBeNull();
+    expect(check(envelopeXdr([deployOp()], { signer: Keypair.random() }))).toBeNull();
+    // Signed, but for another network: the hash it signed is not this network's.
+    expect(check(envelopeXdr([deployOp()], { passphrase: "Test SDF Network ; September 2015" }))).toBeNull();
+  });
+
+  it("refuses more than one operation, and an operation with a source of its own", () => {
+    expect(check(envelopeXdr([deployOp(), Operation.bumpSequence({ bumpTo: "2" })]))).toBeNull();
+    expect(check(envelopeXdr([deployOp(WASM_HASH, Keypair.random().publicKey())]))).toBeNull();
+  });
+
+  it("refuses a fee bump wrapped around somebody else's transaction", () => {
+    const inner = TransactionBuilder.fromXDR(envelopeXdr([deployOp()]), PASSPHRASE);
+    const bump = TransactionBuilder.buildFeeBumpTransaction(SIGNER, "200", inner as never, PASSPHRASE);
+    bump.sign(SIGNER);
+    expect(check(bump.toXDR())).toBeNull();
+  });
+
+  it("returns null for an envelope carrying no contract call, and for input that is not an envelope", () => {
+    expect(check(envelopeXdr([Operation.bumpSequence({ bumpTo: "2" })]))).toBeNull();
+    expect(check("garbage")).toBeNull();
+    expect(check("")).toBeNull();
   });
 });

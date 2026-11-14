@@ -46,7 +46,7 @@ Once, on a small treasury, before trusting an agent with a real one:
 
 | What | Where | How often |
 |---|---|---|
-| Relay fee account `GCN5E5FB…46FXM` holds more than 10 XLM | [stellar.expert](https://stellar.expert/explorer/public/account/GCN5E5FBQCVBWY6BK2JQOI7SVUVEFF5FUCHCVHAVFHGUJV2DNQR46FXM) | weekly, and on any alert below |
+| Relay fee account `GCN5E5FB…46FXM` holds more than 10 XLM — and, to be able to spend a whole day's budget and still pay for exit calls, the floor + the daily budget + the reserve (5 + 20 + 5 = 30 XLM as configured) | [stellar.expert](https://stellar.expert/explorer/public/account/GCN5E5FBQCVBWY6BK2JQOI7SVUVEFF5FUCHCVHAVFHGUJV2DNQR46FXM) | weekly, and on any alert below |
 | The indexer runs | `cd workers/chain-indexer && npx wrangler tail` shows `{"ok":true,"network":"mainnet",…}` every 15 minutes | weekly |
 | The passkey wallet wasm `fdefad64…` stays live | it was live to ledger 67,934,065 on 2026-10-24; extend well before | monthly |
 | The provider plan is not near its limit | Validation Cloud dashboard (free plan: 50M compute units a month) | monthly |
@@ -65,7 +65,8 @@ stellar contract extend --wasm-hash fdefad64b96837147e1c333e51f537b696eab925e9f1
 | Line | Meaning | Action |
 |---|---|---|
 | `[relay] fee account below floor` | Sponsorship is off: passkey users cannot transact | Send XLM to the fee account. Wallet users are unaffected |
-| `[relay] daily budget reached` | The day's fee total (`RELAY_DAILY_BUDGET_XLM`) is spent; it resets at 00:00 UTC | If it is real use, raise the var in `wrangler.jsonc` and deploy. If not, find the caller first |
+| `[relay] daily budget reached` | The day's fee total (`RELAY_DAILY_BUDGET_XLM`) is spent; it resets at 00:00 UTC. Until then only an owner's exit calls are sponsored (revoke, pause, withdraw, cancel an escrow, remove a payee), from the reserve | If it is real use, raise the var in `wrangler.jsonc` and deploy. If not, find the caller first |
+| `[relay] exit call charged to the reserve` | An owner got out while the day's budget was gone. The reserve is `RELAY_SAFETY_BUDGET_XLM` (default 5) a day, ten calls per wallet | Nothing, unless it repeats: then the budget is being emptied on purpose |
 | `[relay] refused a … transaction (cap …)` | A single call priced above `RELAY_MAX_FEE_XLM` | Usually an abuse attempt; nothing to do |
 | `[rpc] not configured` | `/api/rpc` lost `RELAY_RPC_URL` or its limiter | `npx wrangler secret put RELAY_RPC_URL` |
 | `[rpc] upstream failed` | The provider is down or the key was revoked | Check the provider; rotate the key below |

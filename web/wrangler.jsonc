@@ -33,7 +33,9 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RelayBudget"] }],
   // Mainnet only. Without any of these, or without its secrets, the relay answers 503 rather
   // than guess (fails closed).
-  // Optional: RELAY_MAX_FEE_XLM (default 1) and RELAY_MIN_BALANCE_XLM (default 5).
+  // Optional: RELAY_MAX_FEE_XLM (default 1), RELAY_MIN_BALANCE_XLM (default 5) and
+  // RELAY_SAFETY_BUDGET_XLM (default 5): what an owner's exit calls — revoke, pause, withdraw —
+  // may still spend in a day once the daily budget below is gone.
   // Secrets (wrangler secret put …): RELAY_SECRET, the fee account; RELAY_RPC_URL, the RPC
   // provider's URL — it carries the account key, so it is never a var. The relay submits
   // through it and /api/rpc forwards the browser's calls to it.

@@ -40,9 +40,14 @@ export interface SubmitDeps {
   pollAttempts?: number;
   wait?: (ms: number) => Promise<void>;
   /** Called once with the most the transaction may cost, before anything is sent; throws to
-   *  stop it. The caller's spending limits live here, so nothing is sent unpriced. */
-  charge?: (stroops: bigint) => Promise<void>;
+   *  stop it. The caller's spending limits live here, so nothing is sent unpriced. It may
+   *  hand back a way to undo the charge, called when the network refuses to take the
+   *  transaction in: no fee is collected for one that never entered a ledger. */
+  charge?: (stroops: bigint) => Promise<void | Release>;
 }
+
+/** Gives a charge back. */
+export type Release = () => Promise<void>;
 
 export class RelaySubmitError extends Error {}
 
@@ -115,7 +120,7 @@ export async function submitHostFunction(
   // Handing sorobanData to the builder counts it exactly once.
   const data = padResourceFee(sim.transactionData.build());
   let tx = build(data);
-  await deps.charge?.(BigInt(tx.fee));
+  const release = await deps.charge?.(BigInt(tx.fee));
 
   for (let attempt = 1; ; attempt++) {
     tx.sign(deps.keypair);
@@ -125,7 +130,7 @@ export async function submitHostFunction(
       tx = build(data);
       continue;
     }
-    assertAccepted(sent);
+    await assertAccepted(sent, release);
     return { hash: sent.hash, status: await settle(deps, sent.hash, sent.status) };
   }
 }
@@ -151,26 +156,30 @@ export async function submitEnvelope(
   );
   // A fee bump has no sequence of its own (it rides on the inner transaction's), so it cannot
   // race other requests; it is priced like everything else.
-  await deps.charge?.(BigInt(tx.fee));
+  const release = await deps.charge?.(BigInt(tx.fee));
   tx.sign(deps.keypair);
 
   const sent = await deps.server.sendTransaction(tx);
-  assertAccepted(sent);
+  await assertAccepted(sent, release);
   return { hash: sent.hash, status: await settle(deps, sent.hash, sent.status) };
 }
 
 /** A send the network did not take in. ERROR is a rejection; TRY_AGAIN_LATER means it was
  *  never queued, so polling its hash can only ever come back NOT_FOUND — which the caller
- *  would otherwise receive as a 200. */
-function assertAccepted(sent: { status: string; errorResult?: unknown }): void {
+ *  would otherwise receive as a 200.
+ *
+ *  Either way the transaction never entered a ledger and no fee was collected, so its charge
+ *  is given back. Nothing else is: once the network has taken a transaction in, it may cost
+ *  its whole bid whether it succeeds or fails, and a send that threw leaves that unknown. */
+async function assertAccepted(sent: { status: string; errorResult?: unknown }, release?: Release | void): Promise<void> {
+  if (sent.status !== "ERROR" && sent.status !== "TRY_AGAIN_LATER") return;
+  await release?.();
   if (sent.status === "ERROR") {
     throw new RelaySubmitError(
       `the network rejected the transaction: ${JSON.stringify(sent.errorResult ?? {})}`,
     );
   }
-  if (sent.status === "TRY_AGAIN_LATER") {
-    throw new RelaySubmitError("the network is busy and did not accept the transaction");
-  }
+  throw new RelaySubmitError("the network is busy and did not accept the transaction");
 }
 
 /** Wait briefly for a verdict. A transaction that is still pending is reported as such rather

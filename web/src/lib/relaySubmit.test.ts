@@ -201,6 +201,57 @@ describe("submitHostFunction", () => {
     expect(s.getTransaction).not.toHaveBeenCalled();
   });
 
+  it("gives the charge back for a transaction the network would not take in (F1)", async () => {
+    // Nothing that never entered a ledger can be charged a fee, so keeping its charge only
+    // lets rejected transactions use up the day.
+    for (const sent of [
+      { hash: "H", status: "ERROR", errorResult: { x: 1 } },
+      { hash: "H", status: "TRY_AGAIN_LATER" },
+    ]) {
+      const release = vi.fn().mockResolvedValue(undefined);
+      const s = server({ sendTransaction: vi.fn().mockResolvedValue(sent) });
+      const charge = vi.fn().mockResolvedValue(release);
+      await expect(submitHostFunction({ ...deps(s), charge }, FUNC, [signedEntry()])).rejects.toBeInstanceOf(RelaySubmitError);
+      expect(release).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("keeps the charge once the network has the transaction, whatever becomes of it", async () => {
+    for (const status of ["SUCCESS", "FAILED", "NOT_FOUND"]) {
+      const release = vi.fn();
+      const s = server({ getTransaction: vi.fn().mockResolvedValue({ status }) });
+      const charge = vi.fn().mockResolvedValue(release);
+      await submitHostFunction({ ...deps(s), charge, pollAttempts: 1 }, FUNC, [signedEntry()]).catch(() => undefined);
+      expect(release).not.toHaveBeenCalled();
+    }
+  });
+
+  it("gives the charge back once, after the last lost sequence race", async () => {
+    const badSeq = new xdr.TransactionResult({
+      feeCharged: xdr.Int64.fromString("0"),
+      result: xdr.TransactionResultResult.txBadSeq(),
+      ext: new xdr.TransactionResultExt(0),
+    });
+    const release = vi.fn().mockResolvedValue(undefined);
+    const s = server({ sendTransaction: vi.fn().mockResolvedValue({ hash: "H", status: "ERROR", errorResult: badSeq }) });
+    const charge = vi.fn().mockResolvedValue(release);
+    await expect(submitHostFunction({ ...deps(s), charge }, FUNC, [signedEntry()])).rejects.toBeInstanceOf(RelaySubmitError);
+    expect(charge).toHaveBeenCalledTimes(1);
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives a wrapped envelope's charge back when the network refuses it", async () => {
+    const inner = new TransactionBuilder(new Account(keypair.publicKey(), "7"), { fee: "100", networkPassphrase: PASSPHRASE })
+      .addOperation(Operation.invokeHostFunction({ func: FUNC, auth: [] }))
+      .setTimeout(60)
+      .build();
+    inner.sign(keypair);
+    const release = vi.fn().mockResolvedValue(undefined);
+    const s = server({ sendTransaction: vi.fn().mockResolvedValue({ hash: "H", status: "ERROR", errorResult: {} }) });
+    await expect(submitEnvelope({ ...deps(s), charge: vi.fn().mockResolvedValue(release) }, inner.toXDR())).rejects.toBeInstanceOf(RelaySubmitError);
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+
   it("refuses to call an on-chain failure a success", async () => {
     // The caller shows the user a treasury on success; a FAILED ledger result must not
     // arrive looking like one.
