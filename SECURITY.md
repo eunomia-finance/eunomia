@@ -126,9 +126,31 @@ treasury.** Its IDs restart at H1/M1/L1; the commits name them as "review M1" an
 | L9 | Low | The CSP allowed `*.supabase.co` and `*.stellar.org` | ✅ Fixed 2026-10-24 — exact hosts from the build (the app's own RPC, Horizon, the Supabase project) and `Cross-Origin-Opener-Policy`. `img-src https:` and inline styles stay: wallet icons come from the WalletConnect registry, and React writes style attributes |
 | L10 | Info | Semantics: the window holds spend 24–25h; refunded escrows do not give back window or cap allowance; old month buckets may need a restore | ℹ️ Conservative by design; documented |
 
-Written after the fourth round and not yet reviewed: factory v4.1 (a deposit cap per token)
-and the registry's owner check, both 2026-10-24. Until an independent audit, the beta's
-deposit caps stay.
+A fifth round (agent-assisted, **2026-11-14**, before the first real-money runs on mainnet)
+read the three contracts as deployed — treasury v4, factory v4.1 and the registry, including
+what the fourth round had not yet seen — and, separately, everything off chain: the relay,
+the passkey signing path and `eunomia-mcp`. **Nothing was found in the contracts, and no path
+to drain a treasury.** What it found was off chain, and the worst of it was not theft but an
+owner locked out: the relay is a passkey owner's only way to the chain, and anyone could
+switch it off for the day.
+
+| ID | Severity | Finding | Status |
+|----|----------|---------|--------|
+| F1 | High | The relay's daily fee budget could be emptied in about a minute by anyone, for free: a signed envelope was admitted on its first host function alone, charged to the day before it was sent, and the charge stayed when the network refused it. With the day gone, no passkey owner could revoke a Leash, pause or withdraw until 00:00 UTC | ✅ Fixed 2026-11-14 — a refused transaction's charge is given back; an envelope is admitted only as one signed deployment of the wallet code for this network; calls nobody signed are not paid for; a wallet's limiter counts only signatures the chain accepted; exit calls (`revoke_session`, `set_paused`, `admin_withdraw`, `admin_cancel_escrow`, `remove_payee`) have a reserve and a lower floor of their own |
+| F2 | Medium | `call_service` went on spending the float after the owner revoked the Leash, paused the treasury or the deadline passed — and with the task budget expired, its payee list no longer applied | ✅ Fixed 2026-11-14 (`eunomia-mcp` 0.3.1) — the float is spent only under an active Leash for this agent on a treasury that is not paused; a pause state that cannot be read counts as paused |
+| F3 | Medium | The exception card showed the payee as `GABC…WXYZ` and approved it for good in one click — the shape address poisoning imitates | ✅ Fixed 2026-11-14 — the whole address, and the owner pastes the address they mean to pay before the button works |
+| F4 | Medium | The model chose the URL and `maxPrice` of every `call_service`, and one catalog address covers hundreds of services: text returned by a service could talk the agent into emptying the float through it | ✅ Fixed 2026-11-14 (0.3.1) — hosts and a per-call ceiling come from the server's environment (`EUNOMIA_SERVICE_HOSTS`, default the catalog only; `EUNOMIA_MAX_PRICE`, default 1). The float remains the outer bound: a service on an allowed host that overcharges inside the ceiling is still paid |
+| F5 | Low | A signed x402 payment stayed collectable for as long as the service asked (months), and "not paid" after a missing settlement invited another signature on every retry | ✅ Fixed 2026-11-14 (0.3.1) — at most 300 seconds, and no second payment to the same service until the first can no longer be collected |
+| F6 | Low | Every start of the agent's MCP server ran `npx -y eunomia-mcp`: the newest release and freshly resolved dependencies, in the process that holds the agent's key | ✅ Fixed 2026-11-14 (0.3.1) — configs pin the exact version, the package ships a shrinkwrap, CI and publishing use `npm ci` with a named npm |
+| N1 | Info | The relay sponsors a direct deployment of the treasury code from a smart wallet, which skips the factory and so its deposit cap — for the wallet's own treasury only | 🟡 Open — the app creates treasuries through the factory; the direct path goes when the legacy treasuries are retired |
+| N2 | Info | A task budget names addresses, and nearly every catalog service settles to one: the contract bounds how much reaches the agent and until when, not which service it buys. Which service is decided on the agent's machine | ℹ️ By design, documented under "Known limitations" |
+| N3 | Info | One Leash at a time: approving a budget replaces the one that is running | ℹ️ By design; the budget card says so before the owner signs |
+
+Still open from this round's own notes, for a live test rather than a reading: whether a
+wallet-scoped recovery signer can authorise anything beyond adding a signer in the deployed
+wallet code, and what a fee bump with inflated declared resources really costs (bounded by
+the per-transaction cap and the daily budget either way). Until an independent audit, the
+beta's deposit caps stay.
 
 ## Known limitations (honest scope)
 
@@ -147,6 +169,17 @@ deposit caps stay.
   leak is survivable, but whoever holds it can spend up to the Leash's cap until the owner
   revokes it. The key pays its own fees; sponsoring agent accounts is open (M3). The browser
   never holds an agent key: the in-browser Leash key was retired at the mainnet cutover.
+- **The float is outside the contract, and which service is bought is decided off chain.**
+  Stellar's x402 and MPP facilitators settle from a regular account only, so the agent pays
+  services from a float on its own account, topped up by the treasury's `pay()`. The contract
+  bounds how much can reach that account and until when — the Leash or task budget, the
+  per-payment, daily and monthly limits, a cap on the agent's own address — and nothing after
+  that. A task budget names addresses, and nearly every catalog service settles to one router
+  address, so "only these services" is kept by `eunomia-mcp` on the agent's machine (allowed
+  hosts, a per-call ceiling, the approved payees, the running Leash), not by the chain. The
+  worst case is the budget the owner approved, spent on something they did not mean; revoking
+  stops further top-ups on chain at once, and stops the float through `eunomia-mcp`. Someone
+  holding the key itself can still spend what the float already holds.
 - **The web app is the soft spot.** The contracts need no trust in us; the page that builds
   the transactions does. Whoever controls what `eunomia.finance` serves can put a harmful call
   in front of an owner — a withdrawal to the wrong address, an attacker approved as a payee, an

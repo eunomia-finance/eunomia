@@ -7,6 +7,34 @@ deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## [Unreleased]
 
+- **Fixed (relay, fifth review F1)** — anyone could empty the relay's daily fee budget in
+  about a minute, at no cost, and leave every passkey owner unable to revoke an agent, pause
+  or withdraw until midnight UTC. A signed envelope was admitted on its first host function
+  alone and charged to the day before it was sent; when the network refused it, the charge
+  stayed. Now: a charge is given back when the network does not take the transaction in; an
+  envelope is admitted only as what passkey-kit sends (one signed deployment of the wallet
+  code, for this network); a call nobody had to sign is not paid for; a wallet's rate limit
+  is counted only after the chain accepted its signature; and an owner's exit calls
+  (`revoke_session`, `set_paused`, `admin_withdraw`, `admin_cancel_escrow`, `remove_payee`)
+  keep a reserve of their own (`RELAY_SAFETY_BUDGET_XLM`, default 5) and a lower balance
+  floor, so they go through when the day's budget is gone.
+- **Fixed (app, fifth review F3)** — an agent's exception request showed its payee as four
+  characters and four, and one click approved it for good. The address is shown whole and
+  the button stays off until the owner pastes the address they mean to pay.
+- **Fixed (eunomia-mcp 0.3.1, fifth review F2, F4–F6)** — `call_service` spends the float
+  only while a Leash for this agent is running on a treasury that is not paused: revoking,
+  pausing and the deadline now stop it, and an expired task budget no longer widens who may
+  be paid (F2). The operator bounds every call from the server's environment, where the
+  model cannot reach: `EUNOMIA_SERVICE_HOSTS` (default: the service catalog's host only; `*`
+  for any) and `EUNOMIA_MAX_PRICE` (default 1, in the treasury's token) — **breaking** for
+  anyone calling other x402 hosts, who now names them (F4). A service may keep a signed
+  payment collectable for at most 300 seconds, and one that took a payment without reporting
+  a settlement is not handed another until the first has run out; the tool says
+  `paymentHandedOver` instead of a bare "not paid" (F5). Client configs written by `init`
+  and printed by `config` start `eunomia-mcp@<this version>`, the package ships an
+  `npm-shrinkwrap.json`, and CI and the publish workflow install with `npm ci` under a named
+  npm version (F6).
+
 - **Changed (mainnet only)** — the app, the relay, the chain indexer and `eunomia-mcp` run on
   Stellar mainnet and nothing else. Removed: the guided testnet demo and its embedded agent
   key, the in-browser Leash key (the agent always brings its own key), friendbot and the
