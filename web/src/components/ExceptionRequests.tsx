@@ -2,8 +2,15 @@
 // from the agent account on Horizon. The owner resolves one with the same on-chain actions
 // the rest of the dashboard already has; a request shows as allowed only once the chain
 // would accept the payment. Nothing here is approved off-chain.
+//
+// The payee in a request is whatever the agent wrote, and an agent can be talked into writing
+// an address made to look like one the owner knows: same first four characters, same last
+// four. Approving it is permanent — the address stays on the list for every later Leash. So
+// the payee is shown whole, and the approve button stays off until the owner has pasted the
+// address they mean to pay from their own source (fifth review, F3; the budget card does the
+// same for an agent key it has not seen).
 import { useEffect, useState } from "react";
-import { EXPLORER, NETWORK_PASSPHRASE, RPC_URL, fmtXlm, shortAddr } from "../config";
+import { EXPLORER, NETWORK_PASSPHRASE, RPC_URL, fmtXlm } from "../config";
 import { exceptionStatus, fetchAgentExceptions, ownerActionFor, type ExceptionRequest } from "../lib/exceptions";
 import { Client } from "../lib/treasuryClient";
 import { useNow } from "../lib/useNow";
@@ -23,6 +30,8 @@ export default function ExceptionRequests({ agent }: { agent: string }) {
   const [loaded, setLoaded] = useState<{ key: string; rows: Row[]; err: string }>({ key: "", rows: [], err: "" });
   const rows = loaded.key === key ? loaded.rows : [];
   const err = loaded.key === key ? loaded.err : "";
+  // What the owner pasted to confirm each request's payee, by request id.
+  const [pasted, setPasted] = useState<Record<string, string>>({});
   // A shared ticking clock (render-pure): the Leash cap stops binding the moment it expires.
   const nowSec = Math.floor(useNow(rows.length > 0) / 1000);
 
@@ -92,11 +101,23 @@ export default function ExceptionRequests({ agent }: { agent: string }) {
           <div key={r.id} style={{ paddingTop: 12, borderTop: "1px solid var(--line)", display: "flex", flexDirection: "column", gap: 8 }}>
             <div className="rowline">
               <span className="num" style={{ fontSize: 14 }}>
-                {fmtXlm(r.amount)} {t.tokenCode} <span style={{ color: "var(--ink-2)" }}>→</span> {shortAddr(r.payee)}
+                {fmtXlm(r.amount)} {t.tokenCode}
               </span>
               <span className={status === "resolved" ? "pill pill--ok" : "pill pill--rule"}>
                 {status === "resolved" ? "allowed now" : "pending"}
               </span>
+            </div>
+            <div className="panel__kv">
+              <span>To</span>
+              <a
+                className="num"
+                style={{ wordBreak: "break-all", textAlign: "right" }}
+                href={`${EXPLORER}/account/${r.payee}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {r.payee} ↗
+              </a>
             </div>
             <ul style={{ margin: 0, padding: "0 0 0 18px", fontSize: 13, lineHeight: 1.5, color: "var(--ink-2)" }}>
               {r.reasonCodes.map((c) => (
@@ -110,11 +131,34 @@ export default function ExceptionRequests({ agent }: { agent: string }) {
             {status === "resolved" ? (
               <div className="panel__note">The agent can pay this now; it clears the request when it does.</div>
             ) : primary?.kind === "whitelist" ? (
-              <div>
-                <button className="btn" onClick={() => void t.whitelist(r.payee)} disabled={!!t.busy} type="button">
-                  {t.busy === "whitelist" ? "Approving…" : `Approve payee ${shortAddr(r.payee)}`}
-                </button>
-              </div>
+              <>
+                <label className="lab">
+                  <span className="eyebrow">An address your treasury does not pay yet</span>
+                  <input
+                    className="field field--mono"
+                    aria-label="The address you mean to pay"
+                    placeholder="Paste the address you mean to pay, from your own source"
+                    spellCheck={false}
+                    value={pasted[r.id] ?? ""}
+                    onChange={(e) => setPasted((p) => ({ ...p, [r.id]: e.target.value }))}
+                  />
+                  <span className="panel__note">
+                    Your agent wrote the address above, and approving it is permanent. Approve only when the address
+                    you got from the payee yourself matches it
+                    {(pasted[r.id] ?? "").trim() && (pasted[r.id] ?? "").trim() !== r.payee ? " — this one does not." : "."}
+                  </span>
+                </label>
+                <div>
+                  <button
+                    className="btn"
+                    onClick={() => void t.whitelist(r.payee)}
+                    disabled={!!t.busy || (pasted[r.id] ?? "").trim() !== r.payee}
+                    type="button"
+                  >
+                    {t.busy === "whitelist" ? "Approving…" : "Approve this payee"}
+                  </button>
+                </div>
+              </>
             ) : primary?.kind === "pause" ? (
               <div>
                 <button className="btn" onClick={() => void t.togglePause()} disabled={!!t.busy} type="button">
