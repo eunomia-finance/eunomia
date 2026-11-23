@@ -13,7 +13,7 @@ import { fromStroops, toStroops, txUrl } from "./format.js";
 import { TRUSTLINE_MISSING } from "./pay.js";
 import type { ServerContext } from "./server.js";
 import { agentKeypair } from "./signer.js";
-import { makeClient, readTreasury } from "./treasury.js";
+import { isPayee, makeClient, readTreasury } from "./treasury.js";
 import { treasuryUnit } from "./unit.js";
 import { serializeOutcome } from "./tools.js";
 
@@ -33,6 +33,37 @@ const NEEDS_SETUP =
 
 const ready = (ctx: ServerContext): string | null =>
   !ctx.treasuryId || !isValidContractId(ctx.treasuryId) || !ctx.credential ? NEEDS_SETUP : null;
+
+/**
+ * What the owner still has to do, or the agent got wrong, for a budget request to be usable.
+ * A budget names payees but approves none of them, and with a payee list set the float itself
+ * needs this agent's own key on it — both were found the hard way on the first mainnet run.
+ */
+export function budgetRequestNotes(
+  payees: string[],
+  agentKey: string,
+  approved: Record<string, boolean>,
+): { ownerMustApproveFirst: string[]; warnings: string[] } {
+  const ownerMustApproveFirst = payees.filter((p) => approved[p] === false);
+  const warnings: string[] = [];
+  if (ownerMustApproveFirst.length > 0) {
+    warnings.push(
+      "The treasury does not pay these addresses yet, and approving the budget does not change that. Tell the owner to approve each one first (Eunomia app → Payments → Approve a payee), then open the link: " +
+        ownerMustApproveFirst.join(", "),
+    );
+  }
+  if (!payees.includes(agentKey)) {
+    warnings.push(
+      "This agent's own key is not among the payees, so fund_float will be refused inside this budget. Add it if the task pays services with call_service.",
+    );
+  }
+  if (payees.length === 1 && payees[0] === agentKey) {
+    warnings.push(
+      "Only this agent's own key is listed. call_service also needs the service's payTo (find_services shows it) among the payees, or every paid call will be refused.",
+    );
+  }
+  return { ownerMustApproveFirst, warnings };
+}
 
 export function registerSpendTools(server: McpServer, ctx: ServerContext): void {
   const now = ctx.now ?? (() => Math.floor(Date.now() / 1000));
@@ -201,7 +232,7 @@ export function registerSpendTools(server: McpServer, ctx: ServerContext): void 
     {
       title: "Ask the owner for a task budget",
       description:
-        "Ask the treasury owner for a budget for one task: an amount, how long it lasts and which payees it may pay. Returns a link to give the owner; they approve it once with their passkey and this agent can then pay inside it with no further prompts. The request is signed with this agent's key, so an edited link will not verify. Poll check_budget — the budget is live when its session belongs to this agent and `taskPayees` lists the payees asked for.",
+        "Ask the treasury owner for a budget for one task: an amount, how long it lasts and which payees it may pay. Returns a link to give the owner; they approve it once with their passkey or wallet and this agent can then pay inside it with no further prompts. For a task that buys services with call_service, name BOTH this agent's own key (the float is paid to it) and the service's payTo from find_services. A budget approves no payees: the result lists any address the treasury does not pay yet, which the owner must approve first. The request is signed with this agent's key, so an edited link will not verify. Poll check_budget — the budget is live when its session belongs to this agent and `taskPayees` lists the payees asked for.",
       inputSchema: {
         amount: z.string().describe('Total for the task, in the treasury\'s token, e.g. "5"'),
         hours: z.number().int().min(1).max(MAX_REQUEST_HOURS).describe("How long the budget lasts"),
@@ -230,9 +261,24 @@ export function registerSpendTools(server: McpServer, ctx: ServerContext): void 
         const params = encodeBudgetRequest(request, agentKeypair(ctx.credential!));
         // The app routes by hash; the request rides in the query and opens on the Agent page.
         const approvalUrl = `${(ctx.appUrl ?? "https://eunomia.finance").replace(/\/$/, "")}/?${params}#agent`;
+        // An unreadable answer is left out rather than reported as "not approved".
+        const client = makeClient(ctx.net, ctx.treasuryId!);
+        const approved: Record<string, boolean> = {};
+        await Promise.all(
+          payees.map(async (p) => {
+            try {
+              approved[p] = await isPayee(client, p);
+            } catch {
+              /* unknown */
+            }
+          }),
+        );
+        const notes = budgetRequestNotes(payees, request.agent, approved);
         return ok({
           requested: true,
           approvalUrl,
+          ...(notes.ownerMustApproveFirst.length > 0 ? { ownerMustApproveFirst: notes.ownerMustApproveFirst } : {}),
+          ...(notes.warnings.length > 0 ? { warnings: notes.warnings } : {}),
           agentPublicKey: request.agent,
           request: { ...request, limit: amount, unit: await treasuryUnit(ctx.net, ctx.treasuryId!) },
           expiresAt: new Date(request.expires * 1000).toISOString(),

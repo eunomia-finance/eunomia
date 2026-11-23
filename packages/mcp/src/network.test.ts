@@ -2,8 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { homeDir, resolveNetwork } from "./network.js";
 
-test("runs on mainnet, through the RPC the operator names", () => {
-  assert.throws(() => resolveNetwork({}), /EUNOMIA_RPC_URL/);
+test("runs on mainnet, through the app's RPC unless the operator names one", () => {
+  assert.equal(resolveNetwork({}).rpcUrl, "https://eunomia.finance/api/rpc");
+  assert.equal(resolveNetwork({ EUNOMIA_RPC_URL: "  " }).rpcUrl, "https://eunomia.finance/api/rpc");
   const n = resolveNetwork({ EUNOMIA_RPC_URL: " https://rpc.example " });
   assert.equal(n.name, "pubnet");
   assert.equal(n.rpcUrl, "https://rpc.example");

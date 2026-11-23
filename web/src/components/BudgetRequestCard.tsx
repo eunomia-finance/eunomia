@@ -142,6 +142,9 @@ export default function BudgetRequestCard({ onDone }: { onDone: () => void }) {
             </button>
             <button className="linkbtn" onClick={dismiss} type="button">not now</button>
           </div>
+          {!keyConfirmed && (
+            <div className="panel__note">Paste your agent's key in the box above to unlock Approve budget.</div>
+          )}
           <div className="panel__note">Link valid until {new Date(r.expires * 1000).toLocaleString()}.</div>
           {err && <div className="err">{err}</div>}
         </>

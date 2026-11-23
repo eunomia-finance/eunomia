@@ -529,3 +529,24 @@ test("call_service refuses a private target before any request is made", async (
   );
   assert.equal(called, false);
 });
+
+// ---- request_budget notes ----------------------------------------------------------------
+
+test("budgetRequestNotes: names the payees the owner must approve before the link is useful", async () => {
+  const { budgetRequestNotes } = await import("./spendTools.js");
+  const me = Keypair.random().publicKey();
+  const notes = budgetRequestNotes([me, ROZO_PAY_TO], me, { [me]: true, [ROZO_PAY_TO]: false });
+  assert.deepEqual(notes.ownerMustApproveFirst, [ROZO_PAY_TO]);
+  assert.equal(notes.warnings.length, 1);
+  assert.match(notes.warnings[0], /Approve a payee/);
+});
+
+test("budgetRequestNotes: warns when the float key or the service payTo is missing", async () => {
+  const { budgetRequestNotes } = await import("./spendTools.js");
+  const me = Keypair.random().publicKey();
+  assert.match(budgetRequestNotes([ROZO_PAY_TO], me, { [ROZO_PAY_TO]: true }).warnings.join(" "), /fund_float will be refused/);
+  assert.match(budgetRequestNotes([me], me, { [me]: true }).warnings.join(" "), /service's payTo/);
+  // Both named and approved, or approval unreadable: nothing to say.
+  assert.deepEqual(budgetRequestNotes([me, ROZO_PAY_TO], me, { [me]: true, [ROZO_PAY_TO]: true }).warnings, []);
+  assert.deepEqual(budgetRequestNotes([me, ROZO_PAY_TO], me, {}).ownerMustApproveFirst, []);
+});

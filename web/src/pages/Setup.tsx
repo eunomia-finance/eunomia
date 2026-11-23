@@ -28,7 +28,7 @@ export default function Setup() {
   // The salt decides the treasury's address, so it is drawn when the form opens, not at the
   // moment of signing: an agent connected below needs that address before it exists.
   const [salt, setSalt] = useState(freshSalt);
-  const initCommand = `npx -y eunomia-mcp init --treasury ${predictTreasuryId(salt)}`;
+  const initCommand = `npx -y eunomia-mcp@0.3.2 init --treasury ${predictTreasuryId(salt)}`;
   const [copied, setCopied] = useState(false);
   const copyInit = () => {
     void navigator.clipboard?.writeText(initCommand);

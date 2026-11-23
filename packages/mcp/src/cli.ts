@@ -35,7 +35,7 @@ usage:
                                             print the MCP client configuration for this treasury
 
 Stellar mainnet only.
-env: EUNOMIA_TREASURY, EUNOMIA_RPC_URL (required: a mainnet RPC), EUNOMIA_HOME (~/.eunomia), EUNOMIA_AGENT_SECRET,
+env: EUNOMIA_TREASURY, EUNOMIA_RPC_URL (a mainnet RPC; default https://eunomia.finance/api/rpc), EUNOMIA_HOME (~/.eunomia), EUNOMIA_AGENT_SECRET,
      EUNOMIA_APP_URL (where budget requests link; default https://eunomia.finance),
      EUNOMIA_MAX_PRICE (the most one call_service may pay, in the treasury's token; default 1),
      EUNOMIA_SERVICE_HOSTS (hosts call_service may call, comma-separated, or * for any;

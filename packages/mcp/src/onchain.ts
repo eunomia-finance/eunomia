@@ -55,6 +55,15 @@ export async function recordRejectionOnChain(
   const sim = probe.simulation;
   if (!sim || rpc.Api.isSimulationError(sim)) {
     const why = sim && "error" in sim ? sim.error : "no simulation";
+    // A cap or budget that is completely used refuses even one stroop, so there is no
+    // passing call to borrow a footprint from.
+    if (/Error\(Contract, #(14|15)\)/.test(why)) {
+      throw new Error(
+        "the refusal cannot be recorded: this payee's cap (or the monthly budget) is completely used, so even the 1-stroop probe is refused. " +
+          "A refusal can be recorded only while a little of the cap is left — the owner can raise it slightly, or record next month. " +
+          `(${why.match(/Error\(Contract, #\d+\)/)?.[0]})`,
+      );
+    }
     throw new Error(`probe simulation failed — the refusal cannot be recorded for this payee: ${why}`);
   }
   const txData = probe.simulationData.transactionData;

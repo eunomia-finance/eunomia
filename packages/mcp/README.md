@@ -11,10 +11,10 @@ The agent gets a **scoped, revocable credential**. The treasury contract enforce
 **1. Create the agent's credential** (on the machine that runs the agent):
 
 ```bash
-EUNOMIA_RPC_URL=<a Stellar mainnet RPC> npx eunomia-mcp init --treasury <C…treasury id>
+npx -y eunomia-mcp@0.3.2 init --treasury <C…treasury id>
 ```
 
-`EUNOMIA_RPC_URL` is required: there is no public mainnet default, so name a provider you trust ([the list](https://developers.stellar.org/docs/data/apis/rpc/providers)). `init` generates an Ed25519 key, stores it at `~/.eunomia/pubnet/<treasury>.json` (mode 0600) and prints the **agent public key**. The secret never leaves this machine.
+The agent reads and submits through `https://eunomia.finance/api/rpc` unless `EUNOMIA_RPC_URL` names another Stellar mainnet RPC ([providers](https://developers.stellar.org/docs/data/apis/rpc/providers)) — set it if you would rather not depend on ours; the endpoint is rate-limited per address. `init` generates an Ed25519 key, stores it at `~/.eunomia/pubnet/<treasury>.json` (mode 0600) and prints the **agent public key**. The secret never leaves this machine.
 
 The key pays its own transaction fees, so its account needs XLM before it can do anything: send it ~3 XLM (account reserve, the USDC trustline and fees), then run `eunomia-mcp trustline`.
 
@@ -31,8 +31,8 @@ The key pays its own transaction fees, so its account needs XLM before it can do
    "mcpServers": {
      "eunomia": {
        "command": "npx",
-       "args": ["-y", "eunomia-mcp@0.3.1"],
-       "env": { "EUNOMIA_TREASURY": "<C…>", "EUNOMIA_RPC_URL": "<https://…>" }
+       "args": ["-y", "eunomia-mcp@0.3.2"],
+       "env": { "EUNOMIA_TREASURY": "<C…>" }
      }
    }
    ```
@@ -47,7 +47,7 @@ If Claude Desktop cannot find `npx` (common when Node came from nvm), set `"comm
 **Claude Code:**
 
 ```bash
-claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -e EUNOMIA_RPC_URL=<https://…> -- npx -y eunomia-mcp@0.3.1
+claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -- npx -y eunomia-mcp@0.3.2
 ```
 
 **Any other MCP client** (Cursor, Antigravity, …) takes the same `mcpServers` JSON shown above in its own config file.

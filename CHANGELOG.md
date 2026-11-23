@@ -7,6 +7,19 @@ deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## [Unreleased]
 
+- **Changed (eunomia-mcp 0.3.2, from the first mainnet run)** — `EUNOMIA_RPC_URL` is no
+  longer required: the agent talks to Stellar through the app's own RPC proxy
+  (`https://eunomia.finance/api/rpc`) unless the operator names another, so the command the
+  app prints works as printed. `request_budget` now tells the agent which of the payees it
+  named the treasury does not pay yet — a budget approves none — and warns when the float's
+  own key or the service's pay-to address is missing from the request. `pay
+  --record-rejection` says plainly when a refusal cannot be recorded because the cap is
+  completely used.
+- **Fixed (app, from the first mainnet run)** — "New treasury" did nothing when pressed on
+  the Wallet or Activity view; the Wallet page could not send XLM to an account that does
+  not exist yet (a fresh agent key); the budget card now says why its button is off; and the
+  `init` command the app prints names the release it was tested with.
+
 - **Fixed (relay, fifth review F1)** — anyone could empty the relay's daily fee budget in
   about a minute, at no cost, and leave every passkey owner unable to revoke an agent, pause
   or withdraw until midnight UTC. A signed envelope was admitted on its first host function

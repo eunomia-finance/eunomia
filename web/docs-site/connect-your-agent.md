@@ -12,8 +12,11 @@ exactly one thing: a spending cap and a deadline for that key's public half.
 **1 · On the agent's machine — make its key.**
 
 ```bash
-EUNOMIA_RPC_URL=<a Stellar mainnet RPC> npx -y eunomia-mcp init --treasury <your treasury id>
+npx -y eunomia-mcp@0.3.2 init --treasury <your treasury id>
 ```
+
+The agent talks to Stellar through `https://eunomia.finance/api/rpc` unless `EUNOMIA_RPC_URL`
+names another mainnet RPC.
 
 You don't have to type the id: the app prints this command with it filled in — on the
 **Agent** page, and on the setup screen under *+ Connect an agent now*. (During setup the
@@ -35,12 +38,12 @@ with your treasury id (56 characters, starts with C).
 
 ```bash
 # Claude Code
-claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -e EUNOMIA_RPC_URL=<https://…> -- npx -y eunomia-mcp@0.3.1
+claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -- npx -y eunomia-mcp@0.3.2
 ```
 
 ```json
-{ "mcpServers": { "eunomia": { "command": "npx", "args": ["-y", "eunomia-mcp@0.3.1"],
-  "env": { "EUNOMIA_TREASURY": "<C…>", "EUNOMIA_RPC_URL": "<https://…>" } } } }
+{ "mcpServers": { "eunomia": { "command": "npx", "args": ["-y", "eunomia-mcp@0.3.2"],
+  "env": { "EUNOMIA_TREASURY": "<C…>" } } } }
 ```
 
 Check it: `npx -y eunomia-mcp status --treasury <C…>` — `canSpend: true` with

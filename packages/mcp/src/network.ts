@@ -9,15 +9,17 @@ export interface NetworkConfig {
 }
 
 export const NETWORKS: Record<NetworkName, NetworkConfig> = {
-  // No public mainnet RPC is assumed: the operator names one.
+  // The app's own RPC proxy is the default: it forwards reads, simulations and already-signed
+  // transactions, per-address rate-limited, and adds no authority. Requiring an RPC URL sent
+  // every first-time user into an error before their first command worked.
   pubnet: {
     name: "pubnet",
     passphrase: "Public Global Stellar Network ; September 2015",
-    rpcUrl: "",
+    rpcUrl: "https://eunomia.finance/api/rpc",
   },
 };
 
-/** Stellar mainnet, through the RPC in EUNOMIA_RPC_URL (required). EUNOMIA_NETWORK may be
+/** Stellar mainnet, through EUNOMIA_RPC_URL when the operator names one. EUNOMIA_NETWORK may be
  *  left out; set, it has to say pubnet — a config written for another network fails here
  *  rather than signing against the wrong one. */
 export function resolveNetwork(env: NodeJS.ProcessEnv): NetworkConfig {
@@ -25,7 +27,6 @@ export function resolveNetwork(env: NodeJS.ProcessEnv): NetworkConfig {
   const base = NETWORKS[name];
   if (!base) throw new Error(`Unknown EUNOMIA_NETWORK "${name}" — eunomia-mcp runs on pubnet only`);
   const rpcUrl = env.EUNOMIA_RPC_URL?.trim() || base.rpcUrl;
-  if (!rpcUrl) throw new Error("EUNOMIA_RPC_URL is required — the Stellar mainnet RPC this agent talks to");
   return { ...base, rpcUrl };
 }
 
