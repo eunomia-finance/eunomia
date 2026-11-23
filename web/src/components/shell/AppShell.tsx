@@ -58,7 +58,7 @@ export default function AppShell({
 
       <div className="shell__main">
         <header className="shell__top">
-          <TreasurySwitcher />
+          <TreasurySwitcher onNew={() => onGo("overview")} />
           <WalletChip onWalletView={() => onGo("wallet")} />
         </header>
         <main className="shell__content">{children}</main>

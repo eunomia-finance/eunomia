@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { shortAddr } from "../../config";
 import { useTreasury } from "../../state/useTreasury";
 
-export default function TreasurySwitcher() {
+// `onNew` moves the shell to a treasury-scoped view: the creation wizard only renders there,
+// so "New treasury" pressed on Wallet or Activity would otherwise change nothing on screen.
+export default function TreasurySwitcher({ onNew }: { onNew?: () => void }) {
   const { address, treasuryId, treasuries, switchTreasury, forgetTreasury, startNewTreasury } = useTreasury();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -66,6 +68,7 @@ export default function TreasurySwitcher() {
             onClick={() => {
               setOpen(false);
               startNewTreasury();
+              onNew?.();
             }}
             type="button"
           >

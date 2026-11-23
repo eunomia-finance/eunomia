@@ -104,13 +104,31 @@ export default function Wallet() {
     setBusy(true);
     setStatus({ kind: "info", msg: "Building transaction…" });
     try {
+      const to = dest.trim();
+      // A payment to an account that does not exist yet fails with op_no_destination; the
+      // first XLM sent to a fresh G… address (a new agent key, say) has to create it.
+      let exists = true;
+      if (to.startsWith("G")) {
+        try {
+          await server.loadAccount(to);
+        } catch (e) {
+          if ((e as { response?: { status?: number } }).response?.status === 404) exists = false;
+          else throw e;
+        }
+      }
+      if (!exists && Number(amount.trim()) < 1) {
+        setStatus({ kind: "error", msg: "This account does not exist yet — send at least 1 XLM to create it." });
+        return;
+      }
       const source = await server.loadAccount(address);
       const tx = new TransactionBuilder(source, {
         fee: BASE_FEE,
         networkPassphrase: NETWORK_PASSPHRASE,
       })
         .addOperation(
-          Operation.payment({ destination: dest.trim(), asset: Asset.native(), amount: amount.trim() }),
+          exists
+            ? Operation.payment({ destination: to, asset: Asset.native(), amount: amount.trim() })
+            : Operation.createAccount({ destination: to, startingBalance: amount.trim() }),
         )
         .setTimeout(180)
         .build();
