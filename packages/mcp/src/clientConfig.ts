@@ -3,7 +3,7 @@
 // character pasted along, a JSON comma lost. The file is merged, never replaced — other
 // servers in it stay as they were — and the previous version is kept beside it as .bak.
 import { execFileSync } from "node:child_process";
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { VERSION } from "./version.js";
@@ -112,19 +112,40 @@ export function writeClientConfig(client: ClientName, env: Record<string, string
     runClaude(args);
     return { client, where: `claude ${args.join(" ")}` };
   }
-  const path = configPath(client);
-  const existing = existsSync(path) ? readFileSync(path, "utf8") : null;
-  const next = mergeServer(existing, serverEntry(env));
-  mkdirSync(dirname(path), { recursive: true });
+  const paths = client === "claude-desktop" ? [configPath(client), ...storeConfigPaths()] : [configPath(client)];
   let backup: string | undefined;
-  if (existing !== null) {
-    backup = `${path}.bak`;
-    copyFileSync(path, backup);
-    chmodSync(backup, 0o600);
+  for (const path of paths) {
+    const existing = existsSync(path) ? readFileSync(path, "utf8") : null;
+    const next = mergeServer(existing, serverEntry(env));
+    mkdirSync(dirname(path), { recursive: true });
+    if (existing !== null) {
+      copyFileSync(path, `${path}.bak`);
+      chmodSync(`${path}.bak`, 0o600);
+      backup ??= `${path}.bak`;
+    }
+    writeFileSync(path, next, { mode: 0o600 });
+    // The entry carries EUNOMIA_RPC_URL, which for a keyed provider is a credential, and the
+    // .bak beside it may hold other servers' secrets: owner-only, both (review L7).
+    chmodSync(path, 0o600);
   }
-  writeFileSync(path, next, { mode: 0o600 });
-  // The entry carries EUNOMIA_RPC_URL, which for a keyed provider is a credential, and the
-  // .bak beside it may hold other servers' secrets: owner-only, both (review L7).
-  chmodSync(path, 0o600);
-  return { client, where: path, ...(backup ? { backup } : {}) };
+  return { client, where: paths.join(" and "), ...(backup ? { backup } : {}) };
+}
+
+/** Claude Desktop installed from the Microsoft Store (or the current Windows installer, which
+ *  is the same package) does not read %APPDATA%\Claude: Windows gives a packaged app its own
+ *  copy of Roaming under the package folder, and a file written to the real one by another
+ *  program is never seen. Both builders who chose Claude Desktop in the first beta session
+ *  had this install, ran `init` without an error, and got a Claude with no Eunomia tools. The
+ *  config goes to every such package folder as well as the classic path. */
+export function storeConfigPaths(
+  platform: NodeJS.Platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env,
+  home = homedir(),
+  list: (dir: string) => string[] = (dir) => (existsSync(dir) ? readdirSync(dir) : []),
+): string[] {
+  if (platform !== "win32") return [];
+  const packages = join(env.LOCALAPPDATA ?? join(home, "AppData", "Local"), "Packages");
+  return list(packages)
+    .filter((name) => /^(AnthropicPBC\.)?Claude(Desktop)?_[a-z0-9]+$/i.test(name))
+    .map((name) => join(packages, name, "LocalCache", "Roaming", "Claude", "claude_desktop_config.json"));
 }

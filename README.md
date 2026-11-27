@@ -91,12 +91,12 @@ An expired Leash is not an error code: its key simply stops being the spender, s
 
 ```bash
 # 1 · on the agent's machine — makes the key, prints it and the MCP client config
-npx -y eunomia-mcp@0.3.4 init --treasury <C… treasury id>
+npx -y eunomia-mcp@0.3.5 init --treasury <C… treasury id>
 
 # 2 · the owner pastes that key in the dashboard (Agent page) and signs once
 
 # 3 · add the server to the MCP client — for Claude Code:
-claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -- npx -y eunomia-mcp@0.3.4
+claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -- npx -y eunomia-mcp@0.3.5
 ```
 
 The agent's key pays its own fees, so its account needs a few XLM first (`eunomia-mcp init` says how much). The dashboard prints command 1 with the treasury's id already in it — on the Agent page, and during setup too: a treasury's address follows from its salt, so the form settles it before the treasury exists, and **one signature creates the treasury and puts the agent on its Leash**.

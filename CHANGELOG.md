@@ -7,6 +7,11 @@ deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## [Unreleased]
 
+- **Fixed (eunomia-mcp 0.3.5, from the second builder session)** — `init --client
+  claude-desktop` on Windows wrote only `%APPDATA%\Claude`, which a packaged Claude Desktop
+  (Microsoft Store, and the current installer) may never read: it has its own copy of Roaming
+  under its package folder. Two builders ran `init` without an error and got a Claude with no
+  Eunomia tools. The config is now written to every such package folder as well.
 - **Changed (connecting an agent, from the first builder session)** — a builder took two
   hours over a five-minute setup, most of it between pages. Connecting an agent is now one
   button on the Agent page: paste the key, press **Connect agent**, and the wallet signs in a

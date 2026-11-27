@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { claudeCodeAddArgs, configPath, mergeServer, PINNED_PACKAGE, runClaude, serverEntry } from "./clientConfig.js";
+import { claudeCodeAddArgs, configPath, mergeServer, PINNED_PACKAGE, runClaude, serverEntry, storeConfigPaths } from "./clientConfig.js";
 import { VERSION } from "./version.js";
 
 const ENV = { EUNOMIA_TREASURY: "CTREASURY", EUNOMIA_NETWORK: "pubnet" };
@@ -72,4 +72,16 @@ test("runClaude: the native binary first; a Windows .cmd shim through cmd.exe, n
   assert.deepEqual(calls[1], ["cmd.exe", "/d", "/s", "/c", "claude", "mcp", "list"]);
   assert.throws(() => runClaude(["-e", "X=a&calc"], "win32", shim), /reinterpret/);
   assert.throws(() => runClaude(["mcp", "list"], "linux", shim), /spawn/);
+});
+
+test("a packaged Claude Desktop on Windows gets the config in its own Roaming copy too", () => {
+  const env = { LOCALAPPDATA: "C:/Users/u/AppData/Local" };
+  const list = () => ["Claude_pzs8sxrjxfjjc", "Microsoft.WindowsStore_8wekyb3d8bbwe", "AnthropicPBC.Claude_abc123", "ClaudeNotes"];
+  const got = storeConfigPaths("win32", env, "C:/Users/u", list).map((p) => p.split("\\").join("/"));
+  assert.deepEqual(got, [
+    "C:/Users/u/AppData/Local/Packages/Claude_pzs8sxrjxfjjc/LocalCache/Roaming/Claude/claude_desktop_config.json",
+    "C:/Users/u/AppData/Local/Packages/AnthropicPBC.Claude_abc123/LocalCache/Roaming/Claude/claude_desktop_config.json",
+  ]);
+  assert.deepEqual(storeConfigPaths("darwin", env, "/Users/u", list), []);
+  assert.deepEqual(storeConfigPaths("win32", env, "C:/Users/u", () => []), []);
 });

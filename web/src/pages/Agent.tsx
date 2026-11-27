@@ -36,7 +36,7 @@ export default function Agent() {
   // A budget request link (eunomia-mcp request_budget) lands here with its fields in the query.
   const [hasRequest, setHasRequest] = useState(() => new URLSearchParams(window.location.search).has("sig"));
 
-  const initCommand = `npx -y eunomia-mcp@0.3.4 init --treasury ${t.treasuryId ?? "<treasury id>"} --client ${client}`;
+  const initCommand = `npx -y eunomia-mcp@0.3.5 init --treasury ${t.treasuryId ?? "<treasury id>"} --client ${client}`;
   const copyInit = () => {
     void navigator.clipboard?.writeText(initCommand);
     setCopied(true);
