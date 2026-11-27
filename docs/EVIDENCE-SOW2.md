@@ -80,6 +80,12 @@ sessions exposed are listed underneath.
 | Moving to a new `eunomia-mcp` release has no path that keeps the agent's key: `init --force` makes a new key, which then needs XLM, a trustline and a new Leash | Open |
 | A fresh agent account needs XLM and a USDC trustline before it can hold a float; these are two separate manual steps | Open |
 
+**Short interviews (asked right after the session)**
+
+| Builder | Approve each payment, or once per task? | Are the daily and per-payment limits enough? | What would you really use it for? |
+| --- | --- | --- | --- |
+| 1 | Each payment | Enough as they are | Buying international flight tickets |
+
 ## Security before real money
 
 Before the first real-money runs a fifth review covered the contracts and everything off-chain;
