@@ -24,7 +24,7 @@ The first SOW's evidence (testnet) stays in [`EVIDENCE.md`](EVIDENCE.md).
 | Tests in CI | [CI runs](https://github.com/eunomia-finance/eunomia/actions/workflows/ci.yml) — contracts, web app, `eunomia-mcp` |
 | **A payment refused above a per-payee cap, on mainnet** | [`4e222114…`](https://stellar.expert/explorer/public/tx/4e2221140ded4165694c0b5d38f71307d89ea85dfd752e0b4743cd058e2b5879) — a failed transaction (ledger 65631998, 23 November 2026): the agent asked the treasury for 0.2 USDC to an address the owner had capped at 0.35 USDC per month, with 0.3 already paid; the contract refused with `#14 ExceedsPayeeCap`. The cap itself was set in [`8a4d06ed…`](https://stellar.expert/explorer/public/tx/8a4d06ed587effa71fbbd7c16032f8bfd2d00a606844c706796f9273e95ed980). |
 | App + relay on Cloudflare | [eunomia.finance](https://eunomia.finance) — the app, docs, RPC proxy and fee-sponsoring relay run as one Cloudflare Worker with static assets, with a strict Content-Security-Policy ([`web/scripts/headers.mjs`](https://github.com/eunomia-finance/eunomia/blob/main/web/scripts/headers.mjs)). The SOW said "Pages + Functions"; Workers with static assets is the same role on Cloudflare's current platform, and lets the relay keep its daily fee budget in a Durable Object. |
-| npm releases with provenance | [`eunomia-mcp` 0.3.0, 0.3.1 and 0.3.2](https://www.npmjs.com/package/eunomia-mcp?activeTab=versions) — published from GitHub Actions with SLSA provenance ([workflow](https://github.com/eunomia-finance/eunomia/blob/main/.github/workflows/publish-mcp.yml)) |
+| npm releases with provenance | [`eunomia-mcp` 0.3.0 to 0.3.3](https://www.npmjs.com/package/eunomia-mcp?activeTab=versions) — published from GitHub Actions with SLSA provenance ([workflow](https://github.com/eunomia-finance/eunomia/blob/main/.github/workflows/publish-mcp.yml)) |
 | Usage indexer on mainnet | [`workers/chain-indexer`](https://github.com/eunomia-finance/eunomia/tree/main/workers/chain-indexer) — reads treasury events from mainnet every 15 minutes into `chain_weekly` (treasuries, agent payments, refusals, repeat treasuries). Weekly numbers: _pending_ |
 
 ## Deliverable 2 — Agents pay real services
@@ -54,11 +54,31 @@ The first SOW's evidence (testnet) stays in [`EVIDENCE.md`](EVIDENCE.md).
 | Evidence | Link |
 | --- | --- |
 | Agent asks for a task budget | `request_budget` MCP tool → a signed link the owner opens; one approval sets amount, duration and allowed payees on-chain (`set_task_budget`) |
-| npm release | [`eunomia-mcp`](https://www.npmjs.com/package/eunomia-mcp) 0.3.2 |
+| npm release | [`eunomia-mcp`](https://www.npmjs.com/package/eunomia-mcp) 0.3.3 |
 | Screen recording: ask → approve once in the redesigned app → task done without popups | _pending_ |
 | `eunomia-mcp init` writes the client config on a clean machine | _pending_ |
 
 ---
+
+## Builder beta — mainnet treasuries opened by builders
+
+Each row is a builder outside the team who opened a capped treasury on mainnet with their own
+wallet, funded it, and had their own agent buy from the service catalog. Setup blockers the
+sessions exposed are listed underneath.
+
+| Builder | Treasury | Funded | First paid task | Services paid | Leftover returned |
+| --- | --- | --- | --- | --- | --- |
+| 1 (27 November 2026) | [`CBIFWNBN…SPDJ`](https://stellar.expert/explorer/public/contract/CBIFWNBNEXMOTSDI3XCFW2TZ6F7MNVNLOKCWWD4CBNVZKBTLE5B5SPDJ) — created [`41235127…`](https://stellar.expert/explorer/public/tx/41235127585d4ae6c4958bd045d7b5deb6c98e1a413729c7108c67798ed2e7ff) | 2 USDC — [`d2825816…`](https://stellar.expert/explorer/public/tx/d2825816537031a97cabcaa707738380d0549f411f9f5a1787a88cb5ff925f51) | Float of 0.3 USDC to the agent's own account — [`2c7bf20f…`](https://stellar.expert/explorer/public/tx/2c7bf20f0197b80ee44a4bf561796977329449094a0f445a4bd4244e78bfca43) | Three services, 0.006 USDC: Soroban transaction history (`mercury_txs_by_contract`, 0.001 — [`846ae6e7…`](https://stellar.expert/explorer/public/tx/846ae6e709ebf25fe2cda99c3dc1acb34e94e5c800d2be190d28a8e52be0b846)), a page read (`firecrawl_scrape`, 0.002 — [`e90e1ee1…`](https://stellar.expert/explorer/public/tx/e90e1ee14bb5cef4c17f0101d56eeb90589005696c978e56d6f669b311da02ad)), an image (`fal_flux_schnell`, 0.003 — [`8f74a2a9…`](https://stellar.expert/explorer/public/tx/8f74a2a9a832a7e57a5cba16351aa094685dfe7114c04c61f6da0d2118955ee6)) | 0.294 USDC — [`4381fcc0…`](https://stellar.expert/explorer/public/tx/4381fcc09b70dfd88abf4794bd2333ca1b4173e346ba9d5a373c287fa196fa67) |
+
+**Setup blockers found in these sessions**
+
+| Blocker | Status |
+| --- | --- |
+| No service could be paid after mainnet moved to protocol 30: the pinned Stellar SDK could not read the new ledger header, so the agent stopped before signing | Fixed the same day in `eunomia-mcp` 0.3.3 (SDK 16.4.1); the first paid call after the fix is builder 1's `846ae6e7…` |
+| A request body the model sent as serialised JSON was refused by the service ("Request body must be a JSON object") | Fixed in 0.3.3 |
+| Approving a task budget does not approve its payees: the builder approved the budget link and the agent still could not pay, until the two service addresses were added on the Payments page | Open — goes into the redesign (one approval screen) |
+| Moving to a new `eunomia-mcp` release has no path that keeps the agent's key: `init --force` makes a new key, which then needs XLM, a trustline and a new Leash | Open |
+| A fresh agent account needs XLM and a USDC trustline before it can hold a float; these are two separate manual steps | Open |
 
 ## Security before real money
 
