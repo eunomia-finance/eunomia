@@ -13,14 +13,28 @@ creds.sort((a, b) => fs.statSync(path.join(credDir, b)).mtimeMs - fs.statSync(pa
 const treasury = creds[0].replace(".json", "");
 const entry = { command: "cmd", args: ["/c", "npx", "-y", "eunomia-mcp@0.3.4"], env: { EUNOMIA_TREASURY: treasury, EUNOMIA_NETWORK: "pubnet" } };
 
-const files = [path.join(APPDATA, "Claude", "claude_desktop_config.json")];
-const pk = path.join(LOCAL, "Packages");
-if (fs.existsSync(pk)) for (const d of fs.readdirSync(pk)) {
-  if (!/claude/i.test(d)) continue;
-  const r = path.join(pk, d, "LocalCache", "Roaming");
-  if (!fs.existsSync(r)) continue;
-  for (const s of fs.readdirSync(r)) files.push(path.join(r, s, "claude_desktop_config.json"));
+// Every claude_desktop_config.json under the user's AppData: the classic folder, a packaged
+// install's own copy of Roaming, and wherever else a build keeps it. Looked for, not assumed —
+// the first version of this script assumed two folders and the file Claude read was a third.
+const files = [];
+const seen = new Set();
+const SKIP = /^(Cache|Code Cache|GPUCache|node_modules|Temp|Microsoft|Google|Mozilla|npm-cache|pnpm|Programs)$/i;
+function walk(dir, depth) {
+  if (depth > 7) return;
+  let list;
+  try { list = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+  for (const e of list) {
+    const p = path.join(dir, e.name);
+    if (e.isFile() && e.name === "claude_desktop_config.json") {
+      const real = (() => { try { return fs.realpathSync(p); } catch { return p; } })();
+      if (!seen.has(real.toLowerCase())) { seen.add(real.toLowerCase()); files.push(p); }
+    } else if (e.isDirectory() && !SKIP.test(e.name)) walk(p, depth + 1);
+  }
 }
+walk(APPDATA, 0);
+walk(LOCAL, 0);
+walk(path.join(home, ".claude"), 0);
+console.log("Bulunan ayar dosyasi: " + files.length);
 
 // Elle yapistirilan "mcpServers" blogunu metinden cikarir (tirnak icindeki parantezleri saymaz).
 function stripPasted(text) {
