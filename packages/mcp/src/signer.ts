@@ -2,13 +2,20 @@
 // the transaction source for autonomous payments (pays its own fee, satisfies
 // `require_auth` as the invoker) and the owner of the account whose data entries carry
 // exception requests. Nothing here holds the owner's key.
-import { BASE_FEE, Keypair, TransactionBuilder, rpc, xdr } from "@stellar/stellar-sdk";
+import { Keypair, TransactionBuilder, rpc, xdr } from "@stellar/stellar-sdk";
 import { basicNodeSigner } from "@stellar/stellar-sdk/contract";
 import { Client } from "./bindings/treasury.js";
 import type { Credential } from "./credential.js";
 import type { NetworkConfig } from "./network.js";
 
 export const agentKeypair = (cred: Credential): Keypair => Keypair.fromSecret(cred.agentSecret);
+
+/** The most the agent offers for a place in a ledger, in stroops (0.001 XLM). It is a bid, not
+ *  a price: the network charges what the ledger's surge pricing cleared at, which is the
+ *  100-stroop minimum whenever there is room. The minimum itself is not enough to bid — in the
+ *  second builder session mainnet ran at 79% of capacity, contract calls were clearing at 200,
+ *  and a sweep sent at 100 was refused (txInsufficientFee), then dropped on the retry. */
+export const INCLUSION_FEE = "10000";
 
 /** A treasury client whose transactions are sourced and signed by the agent key. */
 export function makeSigningClient(net: NetworkConfig, contractId: string, cred: Credential): Client {
@@ -77,7 +84,7 @@ export async function submitClassic(
   const server = deps.server ?? new rpc.Server(net.rpcUrl);
   const poll = deps.poll ?? pollTransaction;
   const account = await server.getAccount(kp.publicKey());
-  const builder = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: net.passphrase });
+  const builder = new TransactionBuilder(account, { fee: INCLUSION_FEE, networkPassphrase: net.passphrase });
   for (const op of ops) builder.addOperation(op);
   const tx = builder.setTimeout(60).build();
   tx.sign(kp);

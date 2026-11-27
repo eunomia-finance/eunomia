@@ -11,7 +11,10 @@ deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
   claude-desktop` on Windows wrote only `%APPDATA%\Claude`, which a packaged Claude Desktop
   (Microsoft Store, and the current installer) may never read: it has its own copy of Roaming
   under its package folder. Two builders ran `init` without an error and got a Claude with no
-  Eunomia tools. The config is now written to every such package folder as well.
+  Eunomia tools. The config is now written to every such package folder as well. The agent
+  also bid only the 100-stroop minimum for a place in a ledger, so with mainnet near capacity
+  a sweep was refused (`txInsufficientFee`) and then dropped; it now bids up to 0.001 XLM and
+  pays what the ledger clears at.
 - **Changed (connecting an agent, from the first builder session)** — a builder took two
   hours over a five-minute setup, most of it between pages. Connecting an agent is now one
   button on the Agent page: paste the key, press **Connect agent**, and the wallet signs in a

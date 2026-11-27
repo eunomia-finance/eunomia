@@ -4,13 +4,13 @@
 // refused arguments go in with the invoker auth entry the host expects, and the
 // transaction lands as FAILED with the contract's error in its diagnostics. Costs the
 // agent one fee. CLI-only (`pay --record-rejection`); never exposed as an MCP tool.
-import { Address, BASE_FEE, Contract, Operation, TransactionBuilder, nativeToScVal, rpc, xdr } from "@stellar/stellar-sdk";
+import { Address, Contract, Operation, TransactionBuilder, nativeToScVal, rpc, xdr } from "@stellar/stellar-sdk";
 import type { Client } from "./bindings/treasury.js";
 import type { Reason } from "./budget.js";
 import { reasonsFromDiagnostics } from "./errors.js";
 import { requireTreasury, type PayArgs } from "./pay.js";
 import type { ServerContext } from "./server.js";
-import { agentKeypair, diagnosticsOf, makeSigningClient, pollTransaction } from "./signer.js";
+import { agentKeypair, diagnosticsOf, INCLUSION_FEE, makeSigningClient, pollTransaction } from "./signer.js";
 
 export const payArgs = (a: PayArgs): xdr.ScVal[] => [
   nativeToScVal(a.taskId, { type: "u64" }),
@@ -67,7 +67,7 @@ export async function recordRejectionOnChain(
     throw new Error(`probe simulation failed — the refusal cannot be recorded for this payee: ${why}`);
   }
   const txData = probe.simulationData.transactionData;
-  const fee = (BigInt(sim.minResourceFee) + BigInt(BASE_FEE)).toString();
+  const fee = (BigInt(sim.minResourceFee) + BigInt(INCLUSION_FEE)).toString();
 
   // 2. The refused call, with the invoker auth entry bound to its real arguments.
   const fnArgs = payArgs(args);

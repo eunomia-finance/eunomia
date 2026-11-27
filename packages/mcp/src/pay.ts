@@ -8,7 +8,7 @@ import { computeBudget, type Budget, type Reason } from "./budget.js";
 import { contractCodeFromMessage, errText, reasonFromCode, reasonFromErrorName, reasonsFromDiagnostics } from "./errors.js";
 import type { ServerContext } from "./server.js";
 import { lacksTrustline } from "./receiver.js";
-import { diagnosticsOf, makeSigningClient } from "./signer.js";
+import { diagnosticsOf, INCLUSION_FEE, makeSigningClient } from "./signer.js";
 import { isPayee, makeClient, payeeCapRemaining, readTreasury } from "./treasury.js";
 
 export interface PayArgs {
@@ -119,7 +119,7 @@ export async function payFromTreasury(ctx: ServerContext, args: PayArgs, deps: P
   }
 
   const client = deps.signingClient ?? makeSigningClient(ctx.net, treasuryId, ctx.credential);
-  const tx = await client.pay({ task_id: args.taskId, to: args.to, amount: args.amount });
+  const tx = await client.pay({ task_id: args.taskId, to: args.to, amount: args.amount }, { fee: INCLUSION_FEE });
 
   // The contract ran inside the RPC's host. A refusal arrives as a simulation error whose
   // text carries `Error(Contract, #N)` — read the code from there. (The binding also wraps

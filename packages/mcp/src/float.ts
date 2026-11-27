@@ -13,7 +13,7 @@ import type { NetworkConfig } from "./network.js";
 import { payFromTreasury, requireTreasury, type PayDeps, type PayOutcome } from "./pay.js";
 import type { ServerContext } from "./server.js";
 import { lacksTrustline, readTokenAsset } from "./receiver.js";
-import { agentKeypair, pollTransaction, submitClassic } from "./signer.js";
+import { agentKeypair, INCLUSION_FEE, pollTransaction, submitClassic } from "./signer.js";
 import { makeClient } from "./treasury.js";
 
 /** A holder's balance of a token contract (SEP-41 `balance`), by simulation — no key, no fee. */
@@ -80,7 +80,7 @@ export async function sweepFloat(
   if (swept > held) throw new Error(`the float holds ${held} stroops, less than the ${swept} asked to sweep`);
 
   const account = await server.getAccount(kp.publicKey());
-  const built = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: ctx.net.passphrase })
+  const built = new TransactionBuilder(account, { fee: INCLUSION_FEE, networkPassphrase: ctx.net.passphrase })
     .addOperation(
       new Contract(token).call(
         "transfer",
