@@ -24,7 +24,7 @@ The first SOW's evidence (testnet) stays in [`EVIDENCE.md`](EVIDENCE.md).
 | Tests in CI | [CI runs](https://github.com/eunomia-finance/eunomia/actions/workflows/ci.yml) — contracts, web app, `eunomia-mcp` |
 | **A payment refused above a per-payee cap, on mainnet** | [`4e222114…`](https://stellar.expert/explorer/public/tx/4e2221140ded4165694c0b5d38f71307d89ea85dfd752e0b4743cd058e2b5879) — a failed transaction (ledger 65631998, 23 November 2026): the agent asked the treasury for 0.2 USDC to an address the owner had capped at 0.35 USDC per month, with 0.3 already paid; the contract refused with `#14 ExceedsPayeeCap`. The cap itself was set in [`8a4d06ed…`](https://stellar.expert/explorer/public/tx/8a4d06ed587effa71fbbd7c16032f8bfd2d00a606844c706796f9273e95ed980). |
 | App + relay on Cloudflare | [eunomia.finance](https://eunomia.finance) — the app, docs, RPC proxy and fee-sponsoring relay run as one Cloudflare Worker with static assets, with a strict Content-Security-Policy ([`web/scripts/headers.mjs`](https://github.com/eunomia-finance/eunomia/blob/main/web/scripts/headers.mjs)). The SOW said "Pages + Functions"; Workers with static assets is the same role on Cloudflare's current platform, and lets the relay keep its daily fee budget in a Durable Object. |
-| npm releases with provenance | [`eunomia-mcp` 0.3.0 to 0.3.3](https://www.npmjs.com/package/eunomia-mcp?activeTab=versions) — published from GitHub Actions with SLSA provenance ([workflow](https://github.com/eunomia-finance/eunomia/blob/main/.github/workflows/publish-mcp.yml)) |
+| npm releases with provenance | [`eunomia-mcp` 0.3.0 to 0.3.5](https://www.npmjs.com/package/eunomia-mcp?activeTab=versions) — published from GitHub Actions with SLSA provenance ([workflow](https://github.com/eunomia-finance/eunomia/blob/main/.github/workflows/publish-mcp.yml)) |
 | Usage indexer on mainnet | [`workers/chain-indexer`](https://github.com/eunomia-finance/eunomia/tree/main/workers/chain-indexer) — reads treasury events from mainnet every 15 minutes into `chain_weekly` (treasuries, agent payments, refusals, repeat treasuries). Weekly numbers: _pending_ |
 
 ## Deliverable 2 — Agents pay real services
@@ -54,7 +54,7 @@ The first SOW's evidence (testnet) stays in [`EVIDENCE.md`](EVIDENCE.md).
 | Evidence | Link |
 | --- | --- |
 | Agent asks for a task budget | `request_budget` MCP tool → a signed link the owner opens; one approval sets amount, duration and allowed payees on-chain (`set_task_budget`) |
-| npm release | [`eunomia-mcp`](https://www.npmjs.com/package/eunomia-mcp) 0.3.3 |
+| npm release | [`eunomia-mcp`](https://www.npmjs.com/package/eunomia-mcp) 0.3.5 |
 | Screen recording: ask → approve once in the redesigned app → task done without popups | _pending_ |
 | `eunomia-mcp init` writes the client config on a clean machine | _pending_ |
 
@@ -81,7 +81,7 @@ seconds (builder 2: [`b60ef852…`](https://stellar.expert/explorer/public/tx/b6
 | Blocker | Status |
 | --- | --- |
 | Claude Desktop on Windows showed no Eunomia tools after `init --client claude-desktop` ran without an error: the app keeps its config in a folder `init` did not write to, and rewrites the file when it closes. Two builders lost about two hours here | A repair script found and fixed the file on both machines ([`scripts/fix-claude-desktop.js`](../scripts/fix-claude-desktop.js)); `init` writes the packaged install's folder too from 0.3.5. Still open: `init` should refuse to write while Claude Desktop is running |
-| A sweep was refused with `txInsufficientFee` and then dropped: the agent bid the 100-stroop minimum while mainnet was at 79% of capacity and contract calls cleared at 200 | Fixed in 0.3.5 — the agent bids up to 0.001 XLM and is charged what the ledger clears at |
+| A sweep was refused with `txInsufficientFee` and then dropped: the agent bid the 100-stroop minimum while mainnet was at 79% of capacity and contract calls cleared at 200 | Fixed in 0.3.5 — the agent bids up to 0.001 XLM and is charged what the ledger clears at. Checked on mainnet at the same 79% load: a sweep went through on the first try ([`f9f61dbe…`](https://stellar.expert/explorer/public/tx/f9f61dbeeeea622ea926e4b7f40d040686a25c83819c2b8895d7e0aaa11f01bd)) |
 | The command was pasted into the Claude chat instead of a terminal; Node.js was not installed on one machine | Open — the Agent page should say "open PowerShell / Terminal" and check for Node |
 | A builder connected an agent to a treasury that was still empty, and read the payee count as the balance | Open — the Agent page should say when the treasury holds nothing |
 | Claude Code in auto mode blocks `fund_float` as a risky action until the user says they allow it | Not ours to remove; the agent says what to type |
@@ -97,6 +97,12 @@ seconds (builder 2: [`b60ef852…`](https://stellar.expert/explorer/public/tx/b6
 | Builder | Approve each payment, or once per task? | Are the daily and per-payment limits enough? | What would you really use it for? |
 | --- | --- | --- | --- |
 | 1 | Each payment | Enough as they are | Buying international flight tickets |
+| 2 | Once per task — "the agent asks once and then carries on for a while without asking again" | Enough; may fall short for expensive items | Watching a product's price and buying when it drops to the right level |
+| 3 | Neither: small amounts without asking, approval above a set amount or for a first payment to a new payee | A single cap is not enough — wants layers: per-transaction, time-based, frequency, and payee restrictions | Team agents with a monthly-capped treasury that top up API quota or server credit by themselves when it runs low |
+
+Three builders, three different answers on approval. The hypothesis that one approval per task
+is what owners want (H2) is not confirmed as stated; what the answers share is approval that
+depends on the amount and on whether the payee is new.
 
 ## Security before real money
 
