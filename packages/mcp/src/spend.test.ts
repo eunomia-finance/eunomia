@@ -6,6 +6,7 @@ import { decodeBudgetRequest, encodeBudgetRequest, type BudgetRequest } from "./
 import { callService, requestBody } from "./call.js";
 import { searchServices, tidy, toRoute } from "./catalog.js";
 import { memoryCache } from "./cache.js";
+import { ensureFloatTrustline } from "./float.js";
 import { NETWORKS } from "./network.js";
 import type { ServerContext } from "./server.js";
 import { memoryExceptionStore, memoryPurchaseLog } from "./store.js";
@@ -557,4 +558,23 @@ test("requestBody: a body the model already serialised is not serialised twice",
   assert.equal(requestBody(' [1,2] '), "[1,2]");
   assert.equal(requestBody("plain text"), '"plain text"');
   assert.equal(requestBody("{not json"), '"{not json"');
+});
+
+test("ensureFloatTrustline: adds what is missing, and says what an unfunded account needs", async () => {
+  const c = ctx();
+  assert.deepEqual(await ensureFloatTrustline(c, async () => ({ asset: "USDC:G", txHash: null, status: "NOT_NEEDED" })), { added: false, txHash: null });
+  assert.deepEqual(await ensureFloatTrustline(c, async () => ({ asset: "USDC:G", txHash: "TX", status: "SUCCESS" })), { added: true, txHash: "TX" });
+  await assert.rejects(
+    ensureFloatTrustline(c, async () => {
+      throw Object.assign(new Error("Account not found: G…"), { code: 404 });
+    }),
+    /does not exist on Stellar yet — it needs about 3 XLM/,
+  );
+  await assert.rejects(ensureFloatTrustline(c, async () => ({ asset: "USDC:G", txHash: "TX", status: "FAILED" })), /could not add the USDC:G trustline/);
+  await assert.rejects(
+    ensureFloatTrustline(c, async () => {
+      throw new Error("rpc is down");
+    }),
+    /rpc is down/,
+  );
 });

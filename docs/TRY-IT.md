@@ -49,9 +49,10 @@ fees, and the USDC or XLM you want the treasury to hold.
    ![Overview: the latest decision blocked, the ledger of allowed and blocked payments, the budget meter, the Leash](screenshots/overview.png)
 
 7. **Hand it to an agent (no more popups)** — on **Agent**, copy the command the page prints —
-   `npx -y eunomia-mcp@0.3.3 init --treasury <your id>` — and run it on the agent's machine. Paste the public key it prints, set a cap
-   and a duration, **Authorise agent**. The agent's secret never leaves its machine. The
-   command also prints the config to add to your MCP client; from then on the agent has
+   `npx -y eunomia-mcp@0.3.4 init --treasury <your id> --client claude-code` — and run it on the agent's machine. Paste the public key it prints, set a cap
+   and a duration, **Connect agent**: your wallet signs a few times in a row (the agent's
+   account, its payee approvals, the Leash). The agent's secret never leaves its machine. The
+   command adds the server to your MCP client by itself; from then on the agent has
    `check_budget`, `pay`, `request_exception` and friends — and refusals come back to it with
    the contract's own error codes. *Revoke Leash* takes control back instantly.
 

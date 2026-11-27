@@ -50,9 +50,10 @@ ve kasanın tutmasını istediğin USDC ya da XLM'e ihtiyacı var.
    ![Overview: son karar reddedilmiş, izin verilen ve reddedilen ödemelerin defteri, bütçe sayacı, Leash](screenshots/overview.png)
 
 7. **Ajana devret (artık onay penceresi yok)** — **Agent** sayfasının yazdığı komutu kopyala —
-   `npx -y eunomia-mcp@0.3.3 init --treasury <kasa kimliğin>` — ve ajanın çalıştığı makinede çalıştır. Yazdırdığı açık
-   anahtarı yapıştır, bir üst sınır ve süre gir, **Authorise agent**. Ajanın gizli anahtarı
-   kendi makinesinden hiç çıkmaz. Komut, MCP istemcine ekleyeceğin ayarı da yazdırır; ondan
+   `npx -y eunomia-mcp@0.3.4 init --treasury <kasa kimliğin> --client claude-code` — ve ajanın çalıştığı makinede çalıştır. Yazdırdığı açık
+   anahtarı yapıştır, bir üst sınır ve süre gir, **Connect agent**: cüzdanın art arda birkaç
+   imza ister (ajanın hesabı, alıcı onayları, Leash). Ajanın gizli anahtarı
+   kendi makinesinden hiç çıkmaz. Komut sunucuyu MCP istemcine kendisi ekler; ondan
    sonra ajanın elinde `check_budget`, `pay`, `request_exception` ve diğerleri olur — retler
    ona kontratın kendi hata kodlarıyla döner. *Revoke Leash* kontrolü anında geri alır.
 

@@ -7,6 +7,17 @@ deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## [Unreleased]
 
+- **Changed (connecting an agent, from the first builder session)** — a builder took two
+  hours over a five-minute setup, most of it between pages. Connecting an agent is now one
+  button on the Agent page: paste the key, press **Connect agent**, and the wallet signs in a
+  row whatever the key still needs — its account (3 XLM), the treasury's approval to pay the
+  agent and the service catalog, the Leash — skipping what is already true and resuming where
+  a refused signature stopped. The command the page prints names the AI client, so `init`
+  sets it up itself; the Leash defaults to 30 days. In `eunomia-mcp` 0.3.4 the agent adds its
+  own token trustline when it first funds a float (no second command), `init` run again keeps
+  the agent's key instead of refusing or, with `--force`, silently stranding the old one, and
+  `init --client claude-code` works on Windows (it failed with EINVAL and started the server
+  with a bare `npx`).
 - **Fixed (eunomia-mcp 0.3.3, from the first builder session)** — `call_service` could not
   pay any service once mainnet moved to protocol 30: the pinned Stellar SDK (16.3.1) could
   not read the new ledger header, so signing stopped with "unknown StellarValueType member"

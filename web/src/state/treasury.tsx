@@ -19,6 +19,7 @@ import {
   fundTreasury,
   isValidContractId,
   isOwnedBy,
+  isPayee,
   makeTreasury,
   pay,
   readLifecycle,
@@ -36,6 +37,15 @@ import {
 } from "../lib/userTreasury";
 import { NETWORK_LABEL, shortAddr } from "../config";
 import { getContractXlmBalance, getXlmBalance } from "../lib/funding";
+import {
+  agentAccountExists,
+  CATALOG_PAYEES,
+  createAgentAccount,
+  OWNER_MIN_XLM,
+  planAgentSetup,
+  type SetupStep,
+} from "../lib/agentSetup";
+import { rememberPayee } from "../lib/payees";
 import { connectErr, errText, sendErr } from "../lib/wallet-errors";
 import { checkLimits, isValidPaymentDest, parseOptionalXlmAmount, parseXlmAmount } from "../lib/validate";
 import { trackError, trackViolation } from "../lib/analytics";
@@ -501,6 +511,99 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
     [address, treasuryId, loadState, toast],
   );
 
+  // Everything an agent's key needs, from one button: its account, the two kinds of payee
+  // approval and the Leash. Each missing piece is its own signature, taken in order; what is
+  // already true is skipped, so a second press after a refused signature picks up where the
+  // first stopped. `onSteps` receives the list every time a step changes state.
+  const connectAgent = useCallback(
+    async (
+      cap: string,
+      hours: string,
+      agentPublicKey: string,
+      opts: { catalog: boolean },
+      onSteps: (steps: SetupStep[]) => void,
+    ): Promise<ActionOutcome> => {
+      if (!address || !treasuryId) return fail("No treasury open.");
+      const capV = parseXlmAmount(cap, "session cap");
+      if (!capV.ok) return invalid(capV.msg);
+      const hoursV = parseXlmAmount(hours, "duration");
+      if (!hoursV.ok) return invalid(hoursV.msg);
+      const agent = agentPublicKey.trim();
+      if (!agent) return invalid("Paste your agent's public key — the command on this page prints it.");
+      if (!isValidAgentKey(agent)) {
+        return invalid("That is not a Stellar public key (G…, 56 characters) — copy it from what the command printed.");
+      }
+      if (agent === address) return invalid("That is your own wallet's address — paste the key the command printed for the agent.");
+      setBusy("session");
+      let steps: SetupStep[] = [];
+      const mark = (id: string, status: SetupStep["status"]) => {
+        steps = steps.map((s) => (s.id === id ? { ...s, status } : s));
+        onSteps(steps);
+      };
+      let current = "";
+      try {
+        const t = makeTreasury(treasuryId, await executorFor(address));
+        const ownerIsWallet = !isValidContractId(address);
+        const [accountExists, agentIsPayee, catalog] = await Promise.all([
+          agentAccountExists(agent),
+          isPayee(t, agent),
+          opts.catalog
+            ? Promise.all(CATALOG_PAYEES.map(async (c) => ({ ...c, approved: await isPayee(t, c.address) })))
+            : Promise.resolve([]),
+        ]);
+        steps = planAgentSetup({ agent, accountExists, ownerIsWallet, agentIsPayee, catalog });
+        onSteps(steps);
+        if (!accountExists && ownerIsWallet) {
+          const xlm = await getXlmBalance(address);
+          if (xlm === null || xlm < OWNER_MIN_XLM) {
+            const msg = `Your wallet needs about ${OWNER_MIN_XLM} XLM to open the agent's account — it holds ${(xlm ?? 0).toFixed(2)}.`;
+            toast("error", msg);
+            return fail(msg);
+          }
+        }
+        let leashHash: string | undefined;
+        for (const step of steps) {
+          if (step.status !== "todo") continue;
+          current = step.id;
+          mark(step.id, "signing");
+          toast("info", `${step.label} — confirm in your wallet…`);
+          if (step.kind === "account") {
+            await createAgentAccount(address, agent);
+          } else if (step.kind === "payee" && step.address) {
+            await addPayee(t, step.address);
+            rememberPayee(treasuryId, step.address);
+            void logActivity({ walletAddress: address, treasuryId, action: "whitelist" });
+          } else {
+            const res = await registerAgentKey(t, agent, capV.value, hoursV.value);
+            if (!res.ok) throw new Error(`Blocked: ${res.errorMessage}`);
+            leashHash = res.hash;
+            void logActivity({ walletAddress: address, treasuryId, action: "session_start", txHash: res.hash });
+          }
+          mark(step.id, "done");
+        }
+        bump();
+        void refreshWalletXlm(address);
+        await loadState(treasuryId, address);
+        const waiting = steps.some((s) => s.status === "manual");
+        const msg = waiting
+          ? "Leash on ✓ — the agent can pay as soon as its account holds some XLM."
+          : "Agent connected ✓ — restart your AI client and ask it for something.";
+        toast("success", msg, leashHash ? { hash: leashHash } : undefined);
+        return { ok: true, msg, hash: leashHash };
+      } catch (e) {
+        if (current) mark(current, "failed");
+        const raw = e instanceof Error && e.message.startsWith("Blocked:") ? e.message : sendErr(e);
+        const msg = `${/[.!?…]$/.test(raw.trim()) ? raw.trim() : `${raw.trim()}.`} Press Connect agent again to continue from this step.`;
+        toast("error", msg);
+        bump();
+        return fail(msg);
+      } finally {
+        setBusy(null);
+      }
+    },
+    [address, treasuryId, bump, loadState, refreshWalletXlm, toast],
+  );
+
   // An agent's budget request (eunomia-mcp request_budget), approved with one signature. The
   // card that calls this has already checked the agent's signature and the treasury it names.
   const approveBudget = useCallback(
@@ -798,6 +901,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
     removePayeeAddr,
     spend,
     startLeash,
+    connectAgent,
     revokeLeash,
     approveBudget,
     togglePause,

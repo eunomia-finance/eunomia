@@ -5,7 +5,7 @@ import { parseArgs } from "node:util";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { computeBudget } from "./budget.js";
 import { CLIENTS, PINNED_PACKAGE, writeClientConfig, type ClientName } from "./clientConfig.js";
-import { createCredential, isValidContractId, saveCredential } from "./credential.js";
+import { createCredential, credentialPath, isValidContractId, loadCredential, saveCredential } from "./credential.js";
 import { addTrustline } from "./float.js";
 import { toStroops, txUrl } from "./format.js";
 import { homeDir, resolveNetwork } from "./network.js";
@@ -22,9 +22,10 @@ usage:
   eunomia-mcp [serve]                       run the MCP server on stdio (what Claude spawns)
   eunomia-mcp init --treasury <C…> [--client claude-desktop|cursor|claude-code] [--force]
                                             create this agent's credential, print the key the owner authorises,
-                                            and with --client add the server to that client's config
-  eunomia-mcp trustline [--treasury <C…>]   let the agent's account hold the treasury's token (USDC;
-                                            once, before the first fund_float)
+                                            and with --client add the server to that client's config;
+                                            run again it keeps the key (--force makes a new one)
+  eunomia-mcp trustline [--treasury <C…>]   let the agent's account hold the treasury's token (USDC);
+                                            fund_float does this by itself when it is missing
   eunomia-mcp status [--treasury <C…>]      what this agent may spend right now (JSON)
   eunomia-mcp pay --to <G…|C…> --amount <decimal> [--task <n>] [--treasury <C…>] [--record-rejection]
                                             pay from the treasury with this agent's Leash key (JSON);
@@ -121,15 +122,32 @@ async function init(): Promise<void> {
   const treasury = requireTreasury(env);
   const net = resolveNetwork(env);
   const home = homeDir(env);
-  const cred = createCredential(net.name, treasury);
+  // A key this machine already holds for the treasury is kept: running `init` again — to move
+  // to a new release, or to add another client — must not strand the Leash, the XLM and the
+  // float that belong to the old key. Only --force makes a new one.
+  const held = opts.force ? null : loadCredential(home, net.name, treasury);
+  const cred = held ?? createCredential(net.name, treasury);
+  if (held) {
+    console.log(`Existing key kept: ${credentialPath(home, net.name, treasury)}`);
+    console.log(`Agent public key: ${cred.agentPublicKey}`);
+    console.log(`
+The owner's authorisation for this key still stands; nothing has to be signed again.
+(--force makes a new key instead — the old one's Leash, XLM and float do not move to it.)
+
+${clientStep(env)}
+
+Check it: eunomia-mcp status --treasury ${treasury}
+`);
+    return;
+  }
   const path = saveCredential(home, cred, { force: opts.force });
   console.log(`Credential saved: ${path}`);
-  console.log(`Agent public key: ${cred.agentPublicKey}   (not funded yet — see below)`);
+  console.log(`Agent public key: ${cred.agentPublicKey}`);
   console.log(`
-Next, the treasury OWNER authorises this key (the secret stays on this machine):
-  Eunomia dashboard → your treasury → Agent → paste the public key above, set a cap
-  and a duration → Authorise agent (signed with the owner's passkey or wallet).
-  Revoke it from the same page at any time.
+Next, the treasury OWNER connects this key (the secret stays on this machine):
+  Eunomia dashboard → your treasury → Agent → paste the public key above → Connect agent.
+  That one button opens the agent's account with a little XLM, approves it and the service
+  catalog as payees, and starts its Leash. Revoke it from the same page at any time.
 
 ${FUNDING}${clientStep(env)}
 
@@ -137,8 +155,9 @@ Check it: eunomia-mcp status --treasury ${treasury}
 `);
 }
 
-const FUNDING = `The agent's account needs XLM before it can do anything: send it ~3 XLM (account
-reserve, the token trustline and fees), then run: eunomia-mcp trustline
+const FUNDING = `The agent's account needs ~3 XLM (account reserve, the token trustline and fees). The
+Agent page sends it for a wallet owner; a passkey owner sends it from any wallet. The
+trustline is added by the agent itself the first time it funds a float.
 
 `;
 

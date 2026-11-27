@@ -5,6 +5,7 @@ import type { Lifecycle, EunomiaState } from "../lib/userTreasury";
 import type { TreasuryRef } from "../lib/treasuryList";
 import type { TokenCode } from "../lib/token";
 import type { BudgetRequest } from "../lib/budgetRequestCodec";
+import type { SetupStep } from "../lib/agentSetup";
 
 // One in-flight wallet action at a time (a wallet signs one tx at a time) — the key
 // names WHICH action runs, so its button can show progress while the rest stay locked.
@@ -73,6 +74,15 @@ export interface TreasuryContextValue {
   /** Authorise the agent's own key (printed by `eunomia-mcp init`) — the eunomia-mcp
    *  handshake. Refused without one: nothing is generated in the browser. */
   startLeash: (cap: string, hours: string, agentPublicKey?: string) => Promise<ActionOutcome>;
+  /** Connect an agent from one button: open its account, approve it (and, when asked, the
+   *  service catalog) as payees, start its Leash — each a signature, only the missing ones. */
+  connectAgent: (
+    cap: string,
+    hours: string,
+    agentPublicKey: string,
+    opts: { catalog: boolean },
+    onSteps: (steps: SetupStep[]) => void,
+  ) => Promise<ActionOutcome>;
   revokeLeash: () => Promise<ActionOutcome>;
   /** Start a task budget an agent asked for (a verified budget request link). */
   approveBudget: (r: BudgetRequest) => Promise<ActionOutcome>;

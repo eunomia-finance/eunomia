@@ -26,6 +26,8 @@ export interface ServerContext {
   appUrl?: string;
   /** unix seconds; injectable for tests */
   now?: () => number;
+  /** fund_float's trustline step; injectable for tests, the real one otherwise */
+  ensureTrustline?: (ctx: ServerContext) => Promise<{ added: boolean; txHash: string | null }>;
   /** The most one call_service may pay, in stroops. The operator's, from EUNOMIA_MAX_PRICE:
    *  the model sets `maxPrice` per call and cannot go above this. Left out, call.ts applies
    *  its default. */

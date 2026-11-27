@@ -12,8 +12,12 @@ exactly one thing: a spending cap and a deadline for that key's public half.
 **1 · On the agent's machine — make its key.**
 
 ```bash
-npx -y eunomia-mcp@0.3.3 init --treasury <your treasury id>
+npx -y eunomia-mcp@0.3.4 init --treasury <your treasury id> --client claude-code
 ```
+
+`--client` is `claude-code`, `claude-desktop` or `cursor`: the command then adds the server
+to that client by itself. Run again later — for a new release, or another client — it keeps
+the agent's key, so nothing has to be signed again.
 
 The agent talks to Stellar through `https://eunomia.finance/api/rpc` unless `EUNOMIA_RPC_URL`
 names another mainnet RPC.
@@ -22,15 +26,24 @@ You don't have to type the id: the app prints this command with it filled in —
 **Agent** page, and on the setup screen under *+ Connect an agent now*. (During setup the
 treasury doesn't exist yet. Its address follows from a salt the form draws when it opens, so
 the app can name it in advance — and one signature then creates the treasury *and* puts the
-agent on its Leash.) `EUNOMIA_RPC_URL` is required: there is no public mainnet default, so
-name a provider you trust ([the list](https://developers.stellar.org/docs/data/apis/rpc/providers)).
+agent on its Leash.)
 
-The command prints the **agent public key** and the config for your MCP client. The key pays
-its own transaction fees, so send its account ~3 XLM, then run `npx -y eunomia-mcp
-trustline` so it can hold USDC.
+The command prints the **agent public key**.
 
-**2 · In the app — authorise it.** Paste the public key, set a cap and a duration,
-**Authorise agent**. One signature. *Revoke Leash* on the same page ends it instantly.
+**2 · In the app — connect it.** On the **Agent** page paste the public key, set a cap and a
+duration, press **Connect agent**. Your wallet then asks for a few signatures in a row, one
+for each thing the key still needs — the page lists them as it goes, and skips what is
+already true:
+
+- open the agent's account with 3 XLM from your wallet (a passkey owner sends the XLM from
+  any wallet instead — a smart wallet cannot open an account);
+- let the treasury pay the agent's own address, which is how task money reaches it;
+- approve the service catalog's settlement addresses as payees, if the box is ticked;
+- start the Leash.
+
+If a signature is refused, press the button again: it continues from that step. The agent
+adds its own USDC trustline the first time it funds a float. *Revoke Leash* on the same page
+ends it instantly.
 
 **3 · Add the server to your MCP client.** Easiest: copy the block `eunomia-mcp init`
 printed in step 1 — your treasury id is already in it. Writing it by hand, replace `<C…>`
@@ -38,11 +51,11 @@ with your treasury id (56 characters, starts with C).
 
 ```bash
 # Claude Code
-claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -- npx -y eunomia-mcp@0.3.3
+claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -- npx -y eunomia-mcp@0.3.4
 ```
 
 ```json
-{ "mcpServers": { "eunomia": { "command": "npx", "args": ["-y", "eunomia-mcp@0.3.3"],
+{ "mcpServers": { "eunomia": { "command": "npx", "args": ["-y", "eunomia-mcp@0.3.4"],
   "env": { "EUNOMIA_TREASURY": "<C…>" } } } }
 ```
 

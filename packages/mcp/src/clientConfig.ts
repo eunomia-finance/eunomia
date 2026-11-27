@@ -35,6 +35,34 @@ export function serverEntry(env: Record<string, string>, platform: NodeJS.Platfo
     : { command: "npx", args: ["-y", PINNED_PACKAGE], env };
 }
 
+/** The `claude mcp add` arguments for this server — started the same way as in the other
+ *  clients, so through cmd on Windows, where a bare `npx` does not start. */
+export function claudeCodeAddArgs(env: Record<string, string>, platform: NodeJS.Platform = process.platform): string[] {
+  const entry = serverEntry(env, platform);
+  const args = ["mcp", "add", "--scope", "user", "eunomia"];
+  for (const [k, v] of Object.entries(env)) args.push("-e", `${k}=${v}`);
+  args.push("--", entry.command, ...entry.args);
+  return args;
+}
+
+/** Characters cmd.exe gives a meaning to. An argument carrying one is never handed to it. */
+const CMD_META = /[&|<>^%"!\r\n]/;
+
+/** Run the `claude` CLI. The native executable is started directly. On Windows an npm
+ *  install is a .cmd shim, which Node refuses to start without a shell (EINVAL), so that one
+ *  goes through cmd.exe — and only with arguments cmd.exe will not reinterpret. */
+export function runClaude(args: string[], platform: NodeJS.Platform = process.platform, exec: typeof execFileSync = execFileSync): void {
+  try {
+    exec("claude", args, { stdio: "ignore" });
+    return;
+  } catch (e) {
+    const code = (e as NodeJS.ErrnoException).code;
+    if (platform !== "win32" || (code !== "ENOENT" && code !== "EINVAL")) throw e;
+  }
+  if (args.some((a) => CMD_META.test(a))) throw new Error("an argument holds a character cmd.exe would reinterpret");
+  exec("cmd.exe", ["/d", "/s", "/c", "claude", ...args], { stdio: "ignore" });
+}
+
 /** Where each client keeps its MCP servers. */
 export function configPath(
   client: Exclude<ClientName, "claude-code">,
@@ -73,10 +101,15 @@ export interface WriteResult {
 export function writeClientConfig(client: ClientName, env: Record<string, string>): WriteResult {
   if (client === "claude-code") {
     // Claude Code owns its config; `claude mcp add` is the supported way in.
-    const args = ["mcp", "add", "--scope", "user", "eunomia"];
-    for (const [k, v] of Object.entries(env)) args.push("-e", `${k}=${v}`);
-    args.push("--", "npx", "-y", PINNED_PACKAGE);
-    execFileSync(process.platform === "win32" ? "claude.cmd" : "claude", args, { stdio: "ignore" });
+    const args = claudeCodeAddArgs(env);
+    // `claude mcp add` refuses a name that is taken, and the name is taken whenever `init`
+    // runs again for a new release. The old entry goes first; none to remove is fine.
+    try {
+      runClaude(["mcp", "remove", "--scope", "user", "eunomia"]);
+    } catch {
+      // nothing was registered under that name
+    }
+    runClaude(args);
     return { client, where: `claude ${args.join(" ")}` };
   }
   const path = configPath(client);

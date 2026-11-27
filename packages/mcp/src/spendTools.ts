@@ -8,7 +8,7 @@ import { callService } from "./call.js";
 import { searchServices } from "./catalog.js";
 import { isValidContractId } from "./credential.js";
 import { errText } from "./errors.js";
-import { fundFloat, sweepFloat, tokenBalance } from "./float.js";
+import { ensureFloatTrustline, fundFloat, sweepFloat, tokenBalance } from "./float.js";
 import { fromStroops, toStroops, txUrl } from "./format.js";
 import { TRUSTLINE_MISSING } from "./pay.js";
 import type { ServerContext } from "./server.js";
@@ -110,9 +110,11 @@ export function registerSpendTools(server: McpServer, ctx: ServerContext): void 
       const notReady = ready(ctx);
       if (notReady) return fail(notReady);
       try {
+        const trust = await (ctx.ensureTrustline ?? ensureFloatTrustline)(ctx);
         const outcome = await fundFloat(ctx, toStroops(amount), BigInt(taskId ?? 0), { now });
         const unit = await treasuryUnit(ctx.net, ctx.treasuryId!);
         const out: Record<string, unknown> = serializeOutcome(outcome, ctx.net.name, unit);
+        if (trust.added) out.trustlineAdded = { txHash: trust.txHash, note: "The agent's account could not hold the treasury's token yet; it added the trustline itself." };
         if (!outcome.paid && outcome.reasons.some((r) => r.code === TRUSTLINE_MISSING)) {
           out.nextStep = `The agent account cannot hold ${unit ?? "the treasury's token"} yet — run \`eunomia-mcp trustline\` once, then fund again.`;
         }

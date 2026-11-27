@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { configPath, mergeServer, PINNED_PACKAGE, serverEntry } from "./clientConfig.js";
+import { claudeCodeAddArgs, configPath, mergeServer, PINNED_PACKAGE, runClaude, serverEntry } from "./clientConfig.js";
 import { VERSION } from "./version.js";
 
 const ENV = { EUNOMIA_TREASURY: "CTREASURY", EUNOMIA_NETWORK: "pubnet" };
@@ -53,4 +53,23 @@ test("each client's config lives where the client reads it", () => {
 test("the agent's secret never goes into a client config", () => {
   const entry = serverEntry(ENV, "linux");
   assert.ok(!JSON.stringify(entry).includes("SECRET"));
+});
+
+test("Claude Code starts the server the way the other clients do — through cmd on Windows", () => {
+  assert.deepEqual(claudeCodeAddArgs(ENV, "linux").slice(-4), ["--", "npx", "-y", PINNED_PACKAGE]);
+  assert.deepEqual(claudeCodeAddArgs(ENV, "win32").slice(-6), ["--", "cmd", "/c", "npx", "-y", PINNED_PACKAGE]);
+  assert.deepEqual(claudeCodeAddArgs(ENV, "linux").slice(0, 9), ["mcp", "add", "--scope", "user", "eunomia", "-e", "EUNOMIA_TREASURY=CTREASURY", "-e", "EUNOMIA_NETWORK=pubnet"]);
+});
+
+test("runClaude: the native binary first; a Windows .cmd shim through cmd.exe, never with shell characters", () => {
+  const calls: string[][] = [];
+  const shim = ((file: string, args: string[]) => {
+    calls.push([file, ...args]);
+    if (file === "claude") throw Object.assign(new Error("spawn"), { code: "ENOENT" });
+    return Buffer.from("");
+  }) as unknown as typeof import("node:child_process").execFileSync;
+  runClaude(["mcp", "list"], "win32", shim);
+  assert.deepEqual(calls[1], ["cmd.exe", "/d", "/s", "/c", "claude", "mcp", "list"]);
+  assert.throws(() => runClaude(["-e", "X=a&calc"], "win32", shim), /reinterpret/);
+  assert.throws(() => runClaude(["mcp", "list"], "linux", shim), /spawn/);
 });

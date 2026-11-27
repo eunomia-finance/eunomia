@@ -1,25 +1,42 @@
 // The Leash: hand the treasury to an autonomous agent on a time-bound, spend-capped session
 // key the agent holds itself. An active Leash is the one dark panel on this page — live cap,
-// countdown, revoke. Inactive, the page explains the model and authorises one. The
-// single-spender rule lives in the provider.
+// countdown, revoke. Inactive, the page connects one: a command for the agent's machine, the
+// key it prints, and one button that does everything the key needs. The single-spender rule
+// lives in the provider.
 import { useEffect, useRef, useState } from "react";
 import BudgetRequestCard from "../components/BudgetRequestCard";
 import ExceptionRequests from "../components/ExceptionRequests";
 import { EXPLORER, fmtXlm, shortAddr } from "../config";
+import { CATALOG_PAYEES, type SetupStep } from "../lib/agentSetup";
 import { useNow } from "../lib/useNow";
 import { useTreasury } from "../state/useTreasury";
+
+/** The AI clients `eunomia-mcp init --client` can set up by itself. */
+const CLIENTS = [
+  { id: "claude-code", label: "Claude Code" },
+  { id: "claude-desktop", label: "Claude Desktop" },
+  { id: "cursor", label: "Cursor" },
+] as const;
+type ClientId = (typeof CLIENTS)[number]["id"];
+
+const STEP_MARK: Record<SetupStep["status"], string> = { todo: "○", signing: "…", done: "✓", failed: "✕", manual: "!" };
 
 export default function Agent() {
   const t = useTreasury();
   const [cap, setCap] = useState("25");
-  const [hours, setHours] = useState("24");
+  // A month, not a day: an agent that worked today should still work tomorrow without the
+  // owner signing again. The cap and the treasury's own limits are what bound it.
+  const [hours, setHours] = useState("720");
   const [agentKey, setAgentKey] = useState("");
   const [err, setErr] = useState("");
   const [copied, setCopied] = useState(false);
+  const [client, setClient] = useState<ClientId>("claude-code");
+  const [catalog, setCatalog] = useState(true);
+  const [steps, setSteps] = useState<SetupStep[]>([]);
   // A budget request link (eunomia-mcp request_budget) lands here with its fields in the query.
   const [hasRequest, setHasRequest] = useState(() => new URLSearchParams(window.location.search).has("sig"));
 
-  const initCommand = `npx -y eunomia-mcp@0.3.3 init --treasury ${t.treasuryId ?? "<treasury id>"}`;
+  const initCommand = `npx -y eunomia-mcp@0.3.4 init --treasury ${t.treasuryId ?? "<treasury id>"} --client ${client}`;
   const copyInit = () => {
     void navigator.clipboard?.writeText(initCommand);
     setCopied(true);
@@ -43,10 +60,10 @@ export default function Agent() {
     }
   }, [active, session, now, refresh]);
 
-  const doStart = async () => {
+  const doConnect = async () => {
     setErr("");
-    const res = await t.startLeash(cap, hours, agentKey);
-    if (!res.ok && res.validation) setErr(res.msg);
+    const res = await t.connectAgent(cap, hours, agentKey, { catalog }, setSteps);
+    if (!res.ok) setErr(res.msg);
   };
 
   if (t.legacy) {
@@ -68,6 +85,26 @@ export default function Agent() {
   const left = session ? (session.limit > session.spent ? session.limit - session.spent : 0n) : 0n;
   const taskPayees = t.lifecycle?.v4?.sessionPayees ?? [];
   const pct = session && session.limit > 0n ? Math.min(100, Number((session.spent * 10000n) / session.limit) / 100) : 0;
+
+  const command = (
+    <>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} role="group" aria-label="Your AI client">
+        {CLIENTS.map((c) => (
+          <button key={c.id} className={`chip${client === c.id ? " is-on" : ""}`} onClick={() => setClient(c.id)} aria-pressed={client === c.id} type="button">
+            {c.label}
+          </button>
+        ))}
+      </div>
+      {/* The whole command, with this treasury's id and the client in it: `init` refuses to
+          run without an id, and it sets the client up by itself only when told which one. */}
+      <span className="code" style={{ marginTop: 6 }}>{initCommand}</span>
+      <div>
+        <button className="linkbtn" onClick={copyInit} type="button" aria-live="polite">
+          {copied ? "copied" : "copy command"}
+        </button>
+      </div>
+    </>
+  );
 
   return (
     <div className="page">
@@ -106,42 +143,91 @@ export default function Agent() {
         ) : (
           <section className="panel panel--pad">
             <div className="eyebrow">Leash</div>
-            <div className="panel__title">Put your agent on a Leash.</div>
+            <div className="panel__title">Connect your agent.</div>
             <div className="panel__note">
-              A spending cap and a time limit, signed once. The agent pays on its own — no popups — and every
-              payment is still checked against your rules. Revoke any time.
+              Three things: run one command, paste what it prints, press one button. After that the agent pays on
+              its own — no popups — and every payment is still checked against your rules. Revoke any time.
             </div>
-            <div className="two" style={{ marginTop: 6 }}>
-              <label className="lab">
-                <span className="eyebrow">Cap ({t.tokenCode})</span>
-                <input className="field field--mono" inputMode="decimal" aria-label={`Session spending cap in ${t.tokenCode}`} value={cap} onChange={(e) => setCap(e.target.value)} />
-              </label>
-              <label className="lab">
-                <span className="eyebrow">Hours</span>
-                <input className="field field--mono" inputMode="decimal" aria-label="Session duration in hours" value={hours} onChange={(e) => setHours(e.target.value)} />
-              </label>
+
+            <div className="steps" style={{ marginTop: 6 }}>
+              <div className="step">
+                <span className="step__n">1</span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, marginBottom: 6 }}>Pick your AI client and run this in a terminal on the machine it runs on.</div>
+                  {command}
+                </div>
+              </div>
+              <div className="step">
+                <span className="step__n">2</span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <label className="lab">
+                    <span style={{ fontSize: 13.5 }}>Paste the agent public key the command printed.</span>
+                    <input
+                      className="field field--mono"
+                      aria-label="Agent public key"
+                      placeholder="G… — the line that starts with “Agent public key”"
+                      spellCheck={false}
+                      value={agentKey}
+                      onChange={(e) => setAgentKey(e.target.value)}
+                    />
+                  </label>
+                </div>
+              </div>
+              <div className="step">
+                <span className="step__n">3</span>
+                <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ fontSize: 13.5 }}>Set how much it may spend and for how long, then connect it.</div>
+                  <div className="two">
+                    <label className="lab">
+                      <span className="eyebrow">Cap ({t.tokenCode})</span>
+                      <input className="field field--mono" inputMode="decimal" aria-label={`Session spending cap in ${t.tokenCode}`} value={cap} onChange={(e) => setCap(e.target.value)} />
+                    </label>
+                    <label className="lab">
+                      <span className="eyebrow">Hours</span>
+                      <input className="field field--mono" inputMode="decimal" aria-label="Session duration in hours" value={hours} onChange={(e) => setHours(e.target.value)} />
+                    </label>
+                  </div>
+                  <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13.5, cursor: "pointer" }}>
+                    <input type="checkbox" checked={catalog} onChange={(e) => setCatalog(e.target.checked)} style={{ marginTop: 3 }} />
+                    <span>
+                      Let it buy from the service catalog (web reading, search, images, Stellar data).
+                      <span className="panel__note" style={{ display: "block" }}>
+                        Approves the catalog's {CATALOG_PAYEES.length} settlement addresses as payees:{" "}
+                        {CATALOG_PAYEES.map((c) => shortAddr(c.address)).join(", ")}. Remove them on Payments any time.
+                      </span>
+                    </span>
+                  </label>
+                  <div>
+                    <button className="btn btn--lg" onClick={() => void doConnect()} disabled={!!t.busy} type="button">
+                      {t.busy === "session" ? "Connecting…" : "Connect agent"}
+                    </button>
+                  </div>
+                  <div className="panel__note">
+                    Your wallet asks you to sign a few times in a row — once for each line that appears below. The
+                    agent's secret never leaves its machine.
+                  </div>
+                  {steps.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }} aria-live="polite">
+                      {steps.map((s) => (
+                        <div
+                          key={s.id}
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            fontSize: 13.5,
+                            color: s.status === "failed" ? "var(--red)" : s.status === "todo" ? "var(--ink-2)" : "var(--ink)",
+                          }}
+                        >
+                          <span className="num" style={{ width: 14, flex: "none", textAlign: "center" }}>{STEP_MARK[s.status]}</span>
+                          <span>{s.label}{s.status === "signing" ? " — waiting for your signature" : ""}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {err && <div className="err">{err}</div>}
+                </div>
+              </div>
             </div>
-            <label className="lab">
-              <span className="eyebrow">Agent public key</span>
-              <input
-                className="field field--mono"
-                aria-label="External agent public key"
-                placeholder="G… — printed by `eunomia-mcp init`"
-                spellCheck={false}
-                value={agentKey}
-                onChange={(e) => setAgentKey(e.target.value)}
-              />
-            </label>
-            <div className="panel__note">
-              Paste your agent's key (Claude via eunomia-mcp) —
-              its secret never leaves the agent's machine; you only sign the cap and the deadline.
-            </div>
-            <div>
-              <button className="btn btn--lg" onClick={() => void doStart()} disabled={!!t.busy} type="button">
-                {t.busy === "session" ? "Starting…" : "Authorise agent"}
-              </button>
-            </div>
-            {err && <div className="err">{err}</div>}
           </section>
         )}
 
@@ -171,33 +257,25 @@ export default function Agent() {
           )}
         </section>
 
-        <section className="panel panel--pad">
-          <div className="eyebrow">Connect an external agent</div>
-          <div className="steps">
-            <div className="step">
-              <span className="step__n">1</span>
-              <div>
-                <div style={{ fontSize: 13.5 }}>On the agent's machine, make its key. It prints the key and the MCP client config.</div>
-                {/* The whole command, with this treasury's id in it: `init` refuses to run without
-                    one, and an id typed by hand from another screen is how a first try fails. */}
-                <span className="code" style={{ marginTop: 6 }}>{initCommand}</span>
-                <div>
-                  <button className="linkbtn" onClick={copyInit} type="button" aria-live="polite">
-                    {copied ? "copied" : "copy command"}
-                  </button>
-                </div>
-              </div>
+        {active ? (
+          <section className="panel panel--pad">
+            <div className="eyebrow">Same agent, another client or a new release</div>
+            <div className="panel__note" style={{ marginBottom: 6 }}>
+              Run the command again on the agent's machine. It keeps the agent's key, so nothing here has to be
+              signed again.
             </div>
-            <div className="step">
-              <span className="step__n">2</span>
-              <div style={{ fontSize: 13.5 }}>Paste the key here, set a cap and a deadline, sign once.</div>
+            {command}
+          </section>
+        ) : (
+          <section className="panel panel--pad">
+            <div className="eyebrow">Then</div>
+            <div className="panel__note">
+              Restart your AI client and ask it for something — “read this page and summarise it”, “make an image
+              of…”. It finds a service in the catalog, pays for it from the treasury inside your rules, and tells
+              you what it paid. A refusal comes back with the reason.
             </div>
-            <div className="step">
-              <span className="step__n">3</span>
-              <div style={{ fontSize: 13.5 }}>The agent pays from its own machine — inside these rules. Refusals come back with the reason.</div>
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
       </div>
     </div>
   );

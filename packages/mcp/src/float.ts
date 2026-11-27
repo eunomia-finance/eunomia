@@ -108,6 +108,40 @@ export async function sweepFloat(
   };
 }
 
+/** What a missing agent account looks like to the RPC, whichever way it words it. */
+export const isMissingAccount = (e: unknown): boolean => {
+  const o = e as { code?: number; message?: string; response?: { status?: number } };
+  return o?.code === 404 || o?.response?.status === 404 || /not found/i.test(o?.message ?? "");
+};
+
+/** Make sure the agent's account can hold the treasury's token before a float is funded, so
+ *  the owner never has to run a second command for it. The trustline is the agent's own to
+ *  add: it costs the account 0.5 XLM of reserve and trusts only the treasury token's issuer.
+ *  An account that does not exist yet cannot add one — that is said in the owner's terms. */
+export async function ensureFloatTrustline(
+  ctx: ServerContext,
+  add: typeof addTrustline = addTrustline,
+): Promise<{ added: boolean; txHash: string | null }> {
+  if (!ctx.credential) throw new Error("No agent credential — run `eunomia-mcp init` first.");
+  let r: Awaited<ReturnType<typeof addTrustline>>;
+  try {
+    r = await add(ctx);
+  } catch (e) {
+    if (isMissingAccount(e)) {
+      throw new Error(
+        `the agent's account ${ctx.credential.agentPublicKey} does not exist on Stellar yet — it needs about 3 XLM. The owner sends it from the Agent page (Connect agent) or from any wallet; nothing else is needed after that`,
+      );
+    }
+    throw e;
+  }
+  if (r.status === "FAILED") {
+    throw new Error(
+      `the agent's account could not add the ${r.asset} trustline — it needs about 1 XLM more than it holds (0.5 XLM of reserve plus fees)`,
+    );
+  }
+  return { added: r.status === "SUCCESS", txHash: r.txHash };
+}
+
 /** Let the agent's account hold the treasury's token: a classic trustline, needed once on
  *  mainnet before a USDC float can be funded (a G… account holds an issued asset only once
  *  it trusts the issuer). Signed by the agent; the account must already hold XLM for the

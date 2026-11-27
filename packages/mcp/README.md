@@ -11,14 +11,14 @@ The agent gets a **scoped, revocable credential**. The treasury contract enforce
 **1. Create the agent's credential** (on the machine that runs the agent):
 
 ```bash
-npx -y eunomia-mcp@0.3.3 init --treasury <C…treasury id>
+npx -y eunomia-mcp@0.3.4 init --treasury <C…treasury id>
 ```
 
 The agent reads and submits through `https://eunomia.finance/api/rpc` unless `EUNOMIA_RPC_URL` names another Stellar mainnet RPC ([providers](https://developers.stellar.org/docs/data/apis/rpc/providers)) — set it if you would rather not depend on ours; the endpoint is rate-limited per address. `init` generates an Ed25519 key, stores it at `~/.eunomia/pubnet/<treasury>.json` (mode 0600) and prints the **agent public key**. The secret never leaves this machine.
 
-The key pays its own transaction fees, so its account needs XLM before it can do anything: send it ~3 XLM (account reserve, the USDC trustline and fees), then run `eunomia-mcp trustline`.
+The key pays its own transaction fees, so its account needs XLM before it can do anything: about 3 XLM (account reserve, the USDC trustline and fees). The dashboard's **Connect agent** button sends it from the owner's wallet; a passkey owner sends it from any wallet. Run `init` again later — a new release, another client — and it keeps the key (`--force` makes a new one).
 
-**2. The treasury owner authorises that key** — Eunomia dashboard → your treasury → **Agent** → paste the public key, choose a spending cap and a duration → **Authorise agent**. That signs one `set_session` transaction with the owner's passkey or wallet. The owner revokes it from the same page at any time (`revoke_session`), instantly.
+**2. The treasury owner authorises that key** — Eunomia dashboard → your treasury → **Agent** → paste the public key, choose a spending cap and a duration → **Connect agent**. The owner's wallet signs, in a row, whatever the key still needs: its account, `add_payee` for the agent's own address and for the service catalog's settlement addresses, and one `set_session` for the Leash. The owner revokes it from the same page at any time (`revoke_session`), instantly.
 
 **3. Add the server to your MCP client** — let `init` write it: add `--client claude-desktop`, `--client cursor` or `--client claude-code` to the command in step 1. The client's config file is merged (other servers stay), the old one is kept as `.bak`, and on Windows the server is started through `cmd` so the desktop app finds `npx`. Then restart the client. Without `--client`, `init` prints the snippet and `eunomia-mcp config` prints it again; the manual steps below are for that case. Needs Node 20 or newer.
 
@@ -31,7 +31,7 @@ The key pays its own transaction fees, so its account needs XLM before it can do
    "mcpServers": {
      "eunomia": {
        "command": "npx",
-       "args": ["-y", "eunomia-mcp@0.3.3"],
+       "args": ["-y", "eunomia-mcp@0.3.4"],
        "env": { "EUNOMIA_TREASURY": "<C…>" }
      }
    }
@@ -47,7 +47,7 @@ If Claude Desktop cannot find `npx` (common when Node came from nvm), set `"comm
 **Claude Code:**
 
 ```bash
-claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -- npx -y eunomia-mcp@0.3.3
+claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -- npx -y eunomia-mcp@0.3.4
 ```
 
 **Any other MCP client** (Cursor, Antigravity, …) takes the same `mcpServers` JSON shown above in its own config file.
@@ -85,7 +85,7 @@ Stellar's x402 has one scheme, `exact`. Hand `pay` an `accepts[]` entry from a `
 
 Stellar's x402 and MPP facilitators settle from a regular `G…` account only (stellar/stellar-mpp-sdk#90, x402-foundation/x402#3158), so a contract treasury cannot be the payer of a 402 itself. The agent pays from a **float** on its own account instead, and the float is bounded on every side: it is funded by the treasury's own `pay()` (all limits, plus a monthly payee cap on the agent's address), `call_service` signs only within the rules above, and `sweep_float` returns what the task did not use. Almost every ROZO route settles to one router address — approving it opens the catalog, and a cap on it is one bucket for all of it; narrower limits are per call (`maxPrice`) and per task (`request_budget`).
 
-The agent's account needs ~3 XLM and a USDC trustline before the first `fund_float`: send the XLM, then `eunomia-mcp trustline`.
+The agent's account needs ~3 XLM before the first `fund_float`. The USDC trustline it adds itself, the first time it funds a float (`eunomia-mcp trustline` does the same by hand).
 
 ### Task budgets
 
