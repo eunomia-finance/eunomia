@@ -1,16 +1,16 @@
 {
   "name": "eunomia-mcp",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
       "name": "eunomia-mcp",
-      "version": "0.3.2",
+      "version": "0.3.3",
       "license": "Apache-2.0",
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.30.0",
-        "@stellar/stellar-sdk": "^16.3.1",
+        "@stellar/stellar-sdk": "^16.4.1",
         "@x402/core": "~2.28.0",
         "@x402/fetch": "~2.28.0",
         "@x402/stellar": "~2.28.0",
@@ -555,15 +555,15 @@
       }
     },
     "node_modules/@stellar/stellar-sdk": {
-      "version": "16.3.1",
-      "resolved": "https://registry.npmjs.org/@stellar/stellar-sdk/-/stellar-sdk-16.3.1.tgz",
-      "integrity": "sha512-PPM1JA51NChSPyMkh+T9sHxJtP/v9e9Gcyc2BMNvnGvbZwqoKJclRSdPgmalLDAmTnTewGs7VMM9nRxDeCzzgQ==",
+      "version": "16.4.1",
+      "resolved": "https://registry.npmjs.org/@stellar/stellar-sdk/-/stellar-sdk-16.4.1.tgz",
+      "integrity": "sha512-0kT+ShOUE6dc0smLEsajuizss1hvlGDsCooM88FqgxNOCKpY8IuQPzCs75RNKMSMITz+dX7KZ5qGhQ2EWGMTTg==",
       "license": "Apache-2.0",
       "dependencies": {
         "@noble/ed25519": "^3.1.0",
         "@noble/hashes": "^2.2.0",
         "@stellar/js-xdr": "4.0.0",
-        "axios": "1.18.0",
+        "axios": "1.20.0",
         "base32.js": "^0.1.0",
         "bignumber.js": "^11.1.4",
         "buffer": "^6.0.3",
@@ -1127,7 +1127,6 @@
       "resolved": "https://registry.npmjs.org/express/-/express-5.2.1.tgz",
       "integrity": "sha512-hIS4idWWai69NezIdRt2xFVofaF4j+6INOpJlVOLDO8zXGpUVEVzIYk12UUi2JzjEzWL3IOAxcTubgz9Po0yXw==",
       "license": "MIT",
-      "peer": true,
       "dependencies": {
         "accepts": "^2.0.0",
         "body-parser": "^2.2.1",
@@ -1429,7 +1428,6 @@
       "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.7.tgz",
       "integrity": "sha512-c8/gF9ac8Y78/agExVocyLevgR+JlpNB444Py0FSX8pJoPdYUfUzRcXtYEYGwt6l19qIlVZPN5Mfsw9jFShmQQ==",
       "license": "MIT",
-      "peer": true,
       "engines": {
         "node": ">=16.9.0"
       }
@@ -2147,7 +2145,6 @@
       "resolved": "https://registry.npmjs.org/zod/-/zod-3.25.76.tgz",
       "integrity": "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==",
       "license": "MIT",
-      "peer": true,
       "funding": {
         "url": "https://github.com/sponsors/colinhacks"
       }

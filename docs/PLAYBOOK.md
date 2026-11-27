@@ -180,7 +180,7 @@ Eunomia runs on **Stellar mainnet**, in beta, with a deposit cap on every treasu
 | You want to… | Do this |
 | --- | --- |
 | See it work in 5 minutes | [Try it](https://eunomia.finance/docs/try-it) · [Türkçe](https://eunomia.finance/docs/try-it-tr) |
-| Put an MCP agent (Claude, …) on a Leash | `npx -y eunomia-mcp@0.3.2 init --treasury <C…>` → owner authorises the printed key → `claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -- npx -y eunomia-mcp@0.3.2` — [Connect your agent](https://eunomia.finance/docs/connect-your-agent) |
+| Put an MCP agent (Claude, …) on a Leash | `npx -y eunomia-mcp@0.3.3 init --treasury <C…>` → owner authorises the printed key → `claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -- npx -y eunomia-mcp@0.3.3` — [Connect your agent](https://eunomia.finance/docs/connect-your-agent) |
 | Call it from your own TypeScript agent | `import { contextFromEnv, payFromTreasury, readTreasury, computeBudget } from "eunomia-mcp"` — [SDK](https://github.com/eunomia-finance/eunomia/blob/main/packages/mcp/README.md#sdk) |
 | Gate a confidential token's transfers by the same payee rule | Eunomia Policy — an OpenZeppelin Confidential Token `Policy` (`is_authorized(account, token)`) — [`contracts/policy`](https://github.com/eunomia-finance/eunomia/tree/main/contracts/policy) |
 

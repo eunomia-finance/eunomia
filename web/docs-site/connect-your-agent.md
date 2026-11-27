@@ -12,7 +12,7 @@ exactly one thing: a spending cap and a deadline for that key's public half.
 **1 · On the agent's machine — make its key.**
 
 ```bash
-npx -y eunomia-mcp@0.3.2 init --treasury <your treasury id>
+npx -y eunomia-mcp@0.3.3 init --treasury <your treasury id>
 ```
 
 The agent talks to Stellar through `https://eunomia.finance/api/rpc` unless `EUNOMIA_RPC_URL`
@@ -38,11 +38,11 @@ with your treasury id (56 characters, starts with C).
 
 ```bash
 # Claude Code
-claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -- npx -y eunomia-mcp@0.3.2
+claude mcp add eunomia -e EUNOMIA_TREASURY=<C…> -- npx -y eunomia-mcp@0.3.3
 ```
 
 ```json
-{ "mcpServers": { "eunomia": { "command": "npx", "args": ["-y", "eunomia-mcp@0.3.2"],
+{ "mcpServers": { "eunomia": { "command": "npx", "args": ["-y", "eunomia-mcp@0.3.3"],
   "env": { "EUNOMIA_TREASURY": "<C…>" } } } }
 ```
 

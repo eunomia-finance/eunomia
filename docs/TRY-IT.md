@@ -49,7 +49,7 @@ fees, and the USDC or XLM you want the treasury to hold.
    ![Overview: the latest decision blocked, the ledger of allowed and blocked payments, the budget meter, the Leash](screenshots/overview.png)
 
 7. **Hand it to an agent (no more popups)** — on **Agent**, copy the command the page prints —
-   `npx -y eunomia-mcp@0.3.2 init --treasury <your id>` — and run it on the agent's machine. Paste the public key it prints, set a cap
+   `npx -y eunomia-mcp@0.3.3 init --treasury <your id>` — and run it on the agent's machine. Paste the public key it prints, set a cap
    and a duration, **Authorise agent**. The agent's secret never leaves its machine. The
    command also prints the config to add to your MCP client; from then on the agent has
    `check_budget`, `pay`, `request_exception` and friends — and refusals come back to it with

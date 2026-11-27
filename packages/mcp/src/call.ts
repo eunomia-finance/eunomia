@@ -242,6 +242,25 @@ export function floatStop(snap: TreasurySnapshot, budget: Budget, agentPublicKey
   return null;
 }
 
+/** The request body as the service must receive it. A model handed an untyped `body`
+ *  field often sends its JSON already serialised; stringifying that again would post a JSON
+ *  string where the service expects an object, and every such call would be refused. Text
+ *  that is itself a JSON object or array is therefore sent as it stands. */
+export function requestBody(body: unknown): string {
+  if (typeof body === "string") {
+    const text = body.trim();
+    if (text.startsWith("{") || text.startsWith("[")) {
+      try {
+        JSON.parse(text);
+        return text;
+      } catch {
+        // not JSON after all — send it as the JSON string it is
+      }
+    }
+  }
+  return JSON.stringify(body);
+}
+
 /** The key a handed-over payment is remembered under. */
 const unsettledKey = (url: string, payTo: string) => `${url}|${payTo}`;
 
@@ -264,7 +283,7 @@ export async function callService(ctx: ServerContext, args: CallArgs, deps: Call
     // payment header — to a host nobody checked.
     redirect: "manual",
     headers: { accept: "application/json", ...(args.body !== undefined ? { "content-type": "application/json" } : {}) },
-    ...(args.body !== undefined && method !== "GET" ? { body: JSON.stringify(args.body) } : {}),
+    ...(args.body !== undefined && method !== "GET" ? { body: requestBody(args.body) } : {}),
   };
 
   const first = await fetchImpl(args.url, init);

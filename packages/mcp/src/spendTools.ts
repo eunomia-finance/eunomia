@@ -132,7 +132,7 @@ export function registerSpendTools(server: McpServer, ctx: ServerContext): void 
       inputSchema: {
         url: z.string().url(),
         method: z.string().optional().describe("Use the method find_services gives; default POST"),
-        body: z.unknown().optional().describe("JSON request body, as the service documents it"),
+        body: z.unknown().optional().describe("JSON request body as an object, as the service documents it"),
         maxPrice: z.string().describe('Most you will pay for this call, in the treasury\'s token, e.g. "0.02"'),
         service: z.string().optional().describe("The find_services id, recorded with the purchase"),
       },

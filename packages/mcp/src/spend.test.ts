@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { Keypair } from "@stellar/stellar-sdk";
 import { encodePaymentRequiredHeader, encodePaymentResponseHeader } from "@x402/core/http";
 import { decodeBudgetRequest, encodeBudgetRequest, type BudgetRequest } from "./budgetRequestCodec.js";
-import { callService } from "./call.js";
+import { callService, requestBody } from "./call.js";
 import { searchServices, tidy, toRoute } from "./catalog.js";
 import { memoryCache } from "./cache.js";
 import { NETWORKS } from "./network.js";
@@ -549,4 +549,12 @@ test("budgetRequestNotes: warns when the float key or the service payTo is missi
   // Both named and approved, or approval unreadable: nothing to say.
   assert.deepEqual(budgetRequestNotes([me, ROZO_PAY_TO], me, { [me]: true, [ROZO_PAY_TO]: true }).warnings, []);
   assert.deepEqual(budgetRequestNotes([me, ROZO_PAY_TO], me, {}).ownerMustApproveFirst, []);
+});
+
+test("requestBody: a body the model already serialised is not serialised twice", () => {
+  assert.equal(requestBody({ url: "https://a.example" }), '{"url":"https://a.example"}');
+  assert.equal(requestBody('{"url":"https://a.example"}'), '{"url":"https://a.example"}');
+  assert.equal(requestBody(' [1,2] '), "[1,2]");
+  assert.equal(requestBody("plain text"), '"plain text"');
+  assert.equal(requestBody("{not json"), '"{not json"');
 });

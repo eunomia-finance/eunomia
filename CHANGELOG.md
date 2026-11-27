@@ -7,6 +7,12 @@ deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## [Unreleased]
 
+- **Fixed (eunomia-mcp 0.3.3, from the first builder session)** — `call_service` could not
+  pay any service once mainnet moved to protocol 30: the pinned Stellar SDK (16.3.1) could
+  not read the new ledger header, so signing stopped with "unknown StellarValueType member"
+  before a payment was made. The SDK is now 16.4.1. A request body the model sent as
+  already-serialised JSON is no longer serialised a second time, which services refused with
+  "Request body must be a JSON object".
 - **Changed (eunomia-mcp 0.3.2, from the first mainnet run)** — `EUNOMIA_RPC_URL` is no
   longer required: the agent talks to Stellar through the app's own RPC proxy
   (`https://eunomia.finance/api/rpc`) unless the operator names another, so the command the
