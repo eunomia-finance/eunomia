@@ -350,10 +350,9 @@
   text-decoration: none;
   will-change: transform;
 }
-/* The brand lock: mark + word. The mark is sized to the word's cap band (cap height plus
- * ~1px of overshoot each side), not to the font size — a mark taller than the caps hangs
- * below the baseline and reads as unseated. At 20px Kalnia the cap band is ~15px, so the
- * mark is 17. The gap stays proportional so the pairing survives resizing. */
+/* The brand lock: mark + word. The mark is taller than the word on purpose — its axis (the
+ * epsilon's waist and the line) is what centres on the caps, and its bowls and the limit
+ * stand above and below them. At 20px Kalnia the mark is 24 high. */
 .lp__nav-brand {
   font-family: "Kalnia", Georgia, serif;
   font-weight: 500;
@@ -361,9 +360,9 @@
   letter-spacing: -0.014em;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 10px;
 }
-.lp__nav-brand svg { position: relative; top: 0; }
+.lp__nav-brand svg { position: relative; top: 0; flex: none; }
 .lp__nav-link:hover { color: var(--red); }
 .lp__nav-chip { display: inline-block; will-change: transform; }
 .lp__theme {
@@ -868,10 +867,9 @@
   color: var(--ink);
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
-/* Same cap-band rule as .lp__nav-brand: 21px Kalnia caps ≈ 16px, mark 18. */
-.lp__footer-brand svg { position: relative; top: -0.5px; }
+.lp__footer-brand svg { flex: none; }
 .lp__footer-line { margin-top: 10px; max-width: 34ch; line-height: 1.6; }
 .lp__footer-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 26px; }
 .lp__footer-cols a { display: block; margin-bottom: 8px; }
@@ -927,8 +925,8 @@
    * the headline straight under a transparent bar. Solid from the start, and a little shorter. */
   .lp__hero-top { background: var(--bg); padding: 14px 20px; }
   .lp__nav-brand { font-size: 18px; }
-  /* The cap band shrinks with the word: 18px caps ≈ 13.5px, mark 15. */
-  .lp__nav-brand svg { width: 15px; height: 15px; top: -0.5px; }
+  /* The mark shrinks with the word. */
+  .lp__nav-brand svg { width: auto; height: 21px; }
   .lp__nav-aux { display: none; }
 
   /* The counter is pinned to the bottom edge of a full-height hero on desktop. On a phone the

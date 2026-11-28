@@ -41,7 +41,6 @@
   --rail-raise: #2a4a3b;
   --rail-ink: #f4efe6;
   --rail-ink-2: #a9b7ac;
-  --mark-accent: #c9a86a;
 
   --display: "Questrial", system-ui, sans-serif;
   --body: "Geist", system-ui, -apple-system, sans-serif;
@@ -492,7 +491,9 @@
   display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:16px;
   padding:18px 32px; border-bottom:none; background:var(--bg);
 }
-.shell__brand{ margin:0; justify-self:start; color:var(--ink); }
+.shell__brand{ margin:0; justify-self:start; color:var(--ink); gap:11px; }
+.shell__mark{ flex:none; display:block; }
+.shell__mark--short{ display:none; }
 .shell__pill{ display:flex; gap:4px; padding:5px; border-radius:100px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); }
 .shell__pill .shell__item{
   width:auto; padding:9px 17px; border-radius:100px; font-size:14px; font-weight:500;
@@ -545,7 +546,9 @@
   .shell__foot{ padding:0 14px 96px; }
 }
 @media(max-width:560px){
-  .shell__brand{ font-size:0; gap:0; } /* the mark alone: the wallet chip needs the room */
+  .shell__brand{ font-size:0; gap:0; } /* the mark alone, in its short form: the wallet chip needs the room */
+  .shell__mark{ display:none; }
+  .shell__mark--short{ display:block; }
 }
 
 /* ---- outside the shell, inside the app --------------------------------------------

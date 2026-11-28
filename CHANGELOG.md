@@ -7,6 +7,13 @@ deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## [Unreleased]
 
+- **Changed (the mark)** — the E with a detached middle arm is replaced. The new mark is an
+  epsilon whose waist runs out into a line; a payment rides the line to a circle that an
+  upright limit cuts in two — the slice inside the limit is solid (the budget the agent was
+  given), beyond it only the outline is left (the wallet it cannot reach). It is drawn as
+  filled shapes from one set of numbers (`web/src/lib/mark.ts`), with a heavier hairline at
+  small sizes and a short form (epsilon and payment) for a phone's top bar and for squares.
+  Favicon, touch icon and share card follow; the share card is forest, ivory and gold.
 - **Added (what the agent bought, in the ledger)** — the ledger showed the treasury handing
   the agent its task money and nothing after that: the service the agent then paid, and what
   it sent back, are not treasury calls, so the treasury emits no event for them. They are read

@@ -1,37 +1,42 @@
-// The mark: an E whose middle arm is cut loose from the body.
+// The mark: an epsilon — the E of Εὐνομία, and in mathematics the name for a small allowed
+// amount — whose waist runs out into a line. A payment rides the line to a circle that an
+// upright limit cuts in two: the slice inside the limit is solid, the budget the agent was
+// given; beyond it only the outline is left, the wallet it cannot reach.
 //
-// Top and bottom arms stay attached — what remains in the treasury. The middle one is short,
-// detached and green: the share allotted to the agent, and the gap between them is the limit
-// itself. The reading comes from the name — *nomos* (law) grows from *nemein*, "to allot".
-//
-// The accent is a CSS variable rather than a fixed fill so the mark can collapse to a single
-// colour. On a green background the green arm would otherwise vanish; there, `mono` paints it
-// in the body colour instead.
+// Drawn in `currentColor`, so it takes the colour of the text beside it in either theme. The
+// shapes come from lib/mark.ts; this file only decides which drawing a size gets.
+import { MARK_RATIO, MARK_VIEWBOX, SHORT_RATIO, SHORT_VIEWBOX, hairlineFor, markShapes, shortShapes } from "../lib/mark";
 
 interface Props {
-  /** Rendered size in pixels. The mark is drawn on a 64-unit grid and scales cleanly. */
+  /** Rendered height in pixels. The full mark is 2.2 times as wide, the short one about square. */
   size?: number;
-  /** Single-colour rendering — for green backgrounds, favicons on colour, and print. */
-  mono?: boolean;
+  /** `short`: the epsilon and the payment alone — where the whole mark does not fit. */
+  variant?: "full" | "short";
   className?: string;
 }
 
-export default function EunomiaMark({ size = 20, mono = false, className }: Props) {
+export default function EunomiaMark({ size = 26, variant = "full", className }: Props) {
+  const hl = hairlineFor(size);
+  const full = variant === "full";
+  const whole = full ? markShapes(hl) : null;
+  const shapes = whole ?? shortShapes(hl);
+  const limit = whole?.limit;
   return (
     <svg
       className={className}
-      width={size}
+      width={Math.round(size * (full ? MARK_RATIO : SHORT_RATIO))}
       height={size}
-      viewBox="0 0 64 64"
-      fill="none"
+      viewBox={full ? MARK_VIEWBOX : SHORT_VIEWBOX}
+      fill="currentColor"
       aria-hidden="true"
-      style={mono ? { ["--mark-accent" as string]: "currentColor" } : undefined}
     >
-      {/* Body: spine, top arm, bottom arm — one path, so colour changes stay in sync. */}
-      <path d="M8 6h10v52H8zM18 6h38v10H18zM18 48h38v10H18z" fill="currentColor" />
-      {/* The allotted share. Held 10 units clear of the spine: at 8 the gap closed up around
-          16px and the mark read as a plain E. */}
-      <rect x="28" y="26" width="20" height="10" fill="var(--mark-accent, #A2CB28)" />
+      {shapes.paths.map((d) => (
+        <path key={d} d={d} />
+      ))}
+      {shapes.discs.map((c) => (
+        <circle key={`${c.cx}:${c.cy}`} cx={c.cx} cy={c.cy} r={c.r} />
+      ))}
+      {limit && <rect x={limit.x} y={limit.y} width={limit.width} height={limit.height} />}
     </svg>
   );
 }

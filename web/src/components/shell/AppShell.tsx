@@ -35,7 +35,9 @@ export default function AppShell({
     <div className="shell">
       <header className="shell__top">
         <button className="shell__brand" onClick={() => onGo("landing")} type="button">
-          <EunomiaMark size={17} />
+          <EunomiaMark size={26} className="shell__mark" />
+          {/* a phone's top bar has no room for the whole mark beside the wallet chip */}
+          <EunomiaMark size={26} variant="short" className="shell__mark shell__mark--short" />
           Eunomia
         </button>
         <nav className="shell__pill" aria-label={tx("Pages", "Sayfalar")}>

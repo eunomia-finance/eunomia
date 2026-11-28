@@ -60,12 +60,10 @@
       .boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
             background:#FCFFD5;color:#223E05;font-family:'Kalnia',Georgia,'Times New Roman',serif}
       .boot__m{display:flex;align-items:center;gap:11px;font-size:24px;opacity:0;animation:bootin .5s ease .15s forwards}
-      /* The mark itself, not a generic dot — the same shape the favicon and the nav carry.
-         Its middle arm is the part that pulses. */
-      /* Sized to the wordmark's cap band (24px Kalnia caps ≈ 18px + overshoot), so the mark
-         sits with the word instead of hanging below its baseline. */
-      .boot__mk{width:20px;height:20px;display:block}
-      .boot__arm{animation:bootpulse 1.6s ease-in-out .15s infinite;transform-origin:38px 31px}
+      /* The mark itself, not a generic dot — the same shape the nav carries (the small-size
+         drawing of lib/mark.ts, written out). The payment on its line is the part that pulses. */
+      .boot__mk{width:66px;height:30px;display:block;flex:none}
+      .boot__pay{animation:bootpulse 1.6s ease-in-out .15s infinite}
       @keyframes bootin{to{opacity:1}}
       @keyframes bootpulse{0%,100%{opacity:1}50%{opacity:.35}}
     </style>
@@ -73,9 +71,10 @@
   <body>
     <div id="root">
       <div class="boot"><div class="boot__m">
-        <svg class="boot__mk" viewBox="0 0 64 64" aria-hidden="true">
-          <path d="M8 6h10v52H8zM18 6h38v10H18zM18 48h38v10H18z" fill="#223E05"/>
-          <rect class="boot__arm" x="28" y="26" width="20" height="10" fill="#A2CB28"/>
+        <svg class="boot__mk" viewBox="4 0 220 100" fill="#223E05" aria-hidden="true">
+          <path d="M57.7 18A24 21 0 1 0 42.2 50.7L45.1 47.2A18 17.5 0 1 1 56.7 20ZM41.7 50.3A27 21 0 1 0 58.3 83.9L57.7 81.8A20.5 17.5 0 1 1 45.1 53.8ZM40.6 50.5L45.1 47.2Q58 47.9 78 48.2L78 52.8Q58 53.1 45.1 53.8ZM77.5 48.2H136.3V52.8H77.5ZM160 12.221A42.3 42.3 0 0 0 160 88.779ZM160 12.221A42.3 42.3 0 1 1 160 88.779L160 83.625A37.7 37.7 0 1 0 160 17.375ZM157.7 3h4.6v95h-4.6Z"/>
+          <circle cx="55.8" cy="21.9" r="4.8"/><circle cx="56.2" cy="80.2" r="4.8"/>
+          <circle class="boot__pay" cx="106" cy="50.5" r="9.5"/>
         </svg>Eunomia
       </div></div>
     </div>

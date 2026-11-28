@@ -19,7 +19,7 @@ export default function Footer() {
         <div className="lp__footer-top">
           <div>
             <strong className="lp__footer-brand">
-              <EunomiaMark size={18} />
+              <EunomiaMark size={24} />
               Eunomia
             </strong>
             <p className="lp__footer-line">
