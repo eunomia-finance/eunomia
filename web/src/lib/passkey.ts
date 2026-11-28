@@ -91,7 +91,7 @@ export interface PasskeyWallet {
 const CANCELLED = "Passkey prompt cancelled — try again.";
 const OWNERSHIP = "We couldn't open your wallet with that passkey. Try connecting a wallet instead.";
 const NOT_FOUND =
-  "No treasury wallet belongs to that passkey. Pick the passkey you created here, or use 'Lost your passkey? Restore access' with your recovery code.";
+  "No treasury wallet belongs to that passkey. Pick the passkey you created here, or use 'Lost your passkey? Restore access' with your recovery code. If you opened your treasury with a wallet app (Varial, LOBSTR…), choose 'I have a wallet' instead — a passkey cannot open that one.";
 const GENERIC = "Couldn't use your passkey. Try again or connect a wallet instead.";
 
 /** The browser reports a dismissed prompt and a timeout the same way (NotAllowedError), and

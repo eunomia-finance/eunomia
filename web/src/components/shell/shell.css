@@ -563,3 +563,8 @@ body:has(.shell) .toast[data-toast-kind="error"]::before{ border:1.5px solid #9c
 :root[data-theme="dark"] body:has(.shell) .toast[data-toast-kind="error"]::before{ border-color:#e2a394; }
 /* Room for the feedback pill, which floats over the bottom-right corner. */
 @media(min-width:641px){ .shell__foot{ padding-right:190px; } }
+
+/* The bar and the page share one column. On a wide screen the bar used to run edge to edge
+   while the cards sat in a 1320px column under it, so the brand and the wallet chip lined up
+   with nothing. */
+.shell__top{ width:100%; max-width:1320px; margin:0 auto; box-sizing:border-box; }

@@ -221,3 +221,9 @@
   .shell .trio{ grid-template-columns:minmax(0,1fr); }
   .shell .trio .figure__big{ font-size:44px; }
 }
+
+/* The three cards take the height the screen has, down to a floor: on a tall window they
+   stopped a third of the way down and left the rest of the page empty. */
+@media(min-width:1181px){
+  .shell .trio{ min-height:min(680px, calc(100vh - 250px)); }
+}
