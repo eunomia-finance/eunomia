@@ -110,3 +110,13 @@ export async function createAgentAccount(owner: string, agent: string): Promise<
 
 /** What a catalog address is, for a page that lists payees. */
 export const catalogLabel = (address: string): string | null => CATALOG_PAYEES.find((c) => c.address === address)?.label ?? null;
+
+/** What an agent can buy today, in words an owner reads: a few routes of the service catalog
+ *  with their per-call price in USDC (read from the catalog 2026-11-27). Shown so the owner
+ *  knows what the budget is for; the agent finds the live list itself. */
+export const CATALOG_EXAMPLES: { label: string; price: string }[] = [
+  { label: "Read a web page", price: "0.002" },
+  { label: "Search the web", price: "0.007" },
+  { label: "Generate an image", price: "0.003" },
+  { label: "Stellar contract data", price: "0.001" },
+];

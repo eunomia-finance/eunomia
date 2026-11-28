@@ -31,3 +31,38 @@ export function setupProgress(i: SetupInputs): SetupProgress {
   const next = ORDER.find((s) => !done[s]) ?? null;
   return { steps, next, complete: next === null };
 }
+
+// The owner's journey on the Overview page (2026-11-28): the four things that have to be true
+// before an agent has bought something, in the order an owner does them. The first builder
+// sessions stalled between these — a treasury left empty, an agent connected to nothing —
+// because no screen said which one came next.
+export type JourneyStep = "open" | "fund" | "agent" | "ask";
+
+export interface JourneyInputs {
+  /** null = not read yet: nothing is shown until it is, or the step under the cursor changes */
+  balance: bigint | null;
+  agentOn: boolean;
+  hasPaid: boolean;
+}
+
+export interface Journey {
+  steps: { step: JourneyStep; done: boolean }[];
+  now: JourneyStep | null;
+  complete: boolean;
+}
+
+const JOURNEY: readonly JourneyStep[] = ["open", "fund", "agent", "ask"];
+
+export function ownerJourney(i: JourneyInputs): Journey | null {
+  if (i.balance === null) return null;
+  const done: Record<JourneyStep, boolean> = {
+    open: true,
+    // A treasury that has paid was funded, even if the agent has since spent it all.
+    fund: i.balance > 0n || i.hasPaid,
+    agent: i.agentOn,
+    ask: i.hasPaid,
+  };
+  const steps = JOURNEY.map((step) => ({ step, done: done[step] }));
+  const now = JOURNEY.find((s) => !done[s]) ?? null;
+  return { steps, now, complete: now === null };
+}

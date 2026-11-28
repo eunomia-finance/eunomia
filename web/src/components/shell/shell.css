@@ -10,15 +10,27 @@
    of it is ink (6.31:1). --red works both ways (7.16:1 on cream).
    ========================================================================== */
 
+/* Palette, 2026-11-28: forest / ivory / champagne gold at roughly 60 / 30 / 10 across the
+   product. In the app the reading surfaces are ivory and the rail is forest; gold is the one
+   primary action on a screen and a few small marks. Measured: ivory on forest 10.8:1, gold on
+   forest 5.5:1, gold on ivory 2.0:1 — so --green (kept as the name of the accent fill) stays
+   FILL ONLY on ivory, exactly as before, and text on a gold fill is forest. The palette has
+   no red; --red is a brick chosen to sit with it (6.4:1 on ivory). */
 .shell{
-  --bg: #fcffd5;
-  --surface: #f4fadc;
-  --ink: #223e05;
-  --ink-2: #55693f;
-  --green: #a2cb28;
-  --red: #a62021;
-  --line: rgba(34, 62, 5, 0.16);
-  --raise: rgba(34, 62, 5, 0.05);
+  --bg: #f4efe6;
+  --surface: #fbf8f1;
+  --ink: #1f3a2e;
+  --ink-2: #5f6e64;
+  --green: #c9a86a;
+  --ok: #dce6d4;
+  --red: #9c3d2a;
+  --line: rgba(31, 58, 46, 0.16);
+  --raise: rgba(31, 58, 46, 0.05);
+  --rail: #1f3a2e;
+  --rail-raise: #2a4a3b;
+  --rail-ink: #f4efe6;
+  --rail-ink-2: #a9b7ac;
+  --mark-accent: #c9a86a;
 
   --display: "Questrial", system-ui, sans-serif;
   --body: "Geist", system-ui, -apple-system, sans-serif;
@@ -30,15 +42,19 @@
 }
 
 :root[data-theme="dark"] .shell{
-  --bg: #152a03;
-  --surface: #1e3a06;
-  --ink: #edf6d2;
-  --ink-2: #94a87a;
-  --line: rgba(162, 203, 40, 0.24);
-  --raise: rgba(162, 203, 40, 0.06);
+  --bg: #16291f;
+  --surface: #1f3a2e;
+  --ink: #f4efe6;
+  --ink-2: #a9b7ac;
+  --ok: #2f5140;
+  --red: #e2a394;
+  --line: rgba(244, 239, 230, 0.16);
+  --raise: rgba(244, 239, 230, 0.06);
+  --rail: #112018;
+  --rail-raise: #1f3a2e;
 }
 
-.shell ::selection{ background:var(--green); color:#223e05; }
+.shell ::selection{ background:var(--green); color:#16291f; }
 
 /* Form fields inherit nothing by default — not the body face, not a size. They were rendering
  * in the system font at the browser's own default, which on iOS is under the 16px threshold:
@@ -119,7 +135,7 @@
   position:absolute; left:0; top:calc(100% + 8px); min-width:280px; padding:6px;
   border-radius:12px; background:var(--surface);
   border:1px solid var(--line);
-  box-shadow:0 16px 40px -18px rgba(34,62,5,0.35); z-index:1200;
+  box-shadow:0 16px 40px -18px rgba(31,58,46,0.35); z-index:1200;
 }
 .tswitch__row{
   display:flex; align-items:center; gap:8px; width:100%;
@@ -366,7 +382,7 @@
 .shell .anav__cta--ghost:hover{ background:var(--raise); }
 .shell .anav__menu{
   background:var(--surface); border:1px solid var(--line);
-  box-shadow:0 16px 40px -18px rgba(34,62,5,0.35);
+  box-shadow:0 16px 40px -18px rgba(31,58,46,0.35);
 }
 /* the menu's items are plain <button>s (appnav.css paints them for the dark landing nav);
    inside the shell they have to write in ink or they vanish on the cream menu */
@@ -438,3 +454,15 @@
     content:"✎"; font-size:18px; line-height:1;
   }
 }
+
+/* ---- rail, 2026-11-28 -----------------------------------------------------------
+   The sidebar is the forest block of the palette: the one large dark surface in the app,
+   so the reading area can stay ivory. Same rail in both themes. */
+.shell__side{ background:var(--rail); border-right:none; }
+.shell__brand{ color:var(--rail-ink); }
+.shell__item{ color:var(--rail-ink-2); padding:11px 12px; font-size:14px; }
+.shell__item:hover{ color:var(--rail-ink); background:var(--rail-raise); }
+.shell__item.is-active{ color:var(--rail-ink); background:var(--rail-raise); }
+.shell__beta{ color:var(--rail-ink-2); background:none; border-color:rgba(244,239,230,.16); }
+.shell__docs{ color:var(--rail-ink-2); }
+.shell__docs:hover{ color:var(--rail-ink); }

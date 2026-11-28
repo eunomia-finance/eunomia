@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { setupProgress, type SetupInputs } from "./onboarding";
+import { ownerJourney, setupProgress, type SetupInputs } from "./onboarding";
 
 const base: SetupInputs = {
   connected: false,
@@ -59,5 +59,26 @@ describe("setupProgress", () => {
     // whitelisted before funding — next is still fund
     const p = setupProgress({ ...base, connected: true, hasTreasury: true, balance: 0n, payeeCount: 3 });
     expect(p.next).toBe("fund");
+  });
+});
+
+describe("ownerJourney", () => {
+  it("shows nothing until the balance is read", () => {
+    expect(ownerJourney({ balance: null, agentOn: false, hasPaid: false })).toBeNull();
+  });
+  it("an empty treasury is told to fund, even with an agent connected", () => {
+    const j = ownerJourney({ balance: 0n, agentOn: true, hasPaid: false });
+    expect(j?.now).toBe("fund");
+    expect(j?.steps.map((s) => s.done)).toEqual([true, false, true, false]);
+  });
+  it("funded without an agent → connect one; with one → ask it for something", () => {
+    expect(ownerJourney({ balance: 5n, agentOn: false, hasPaid: false })?.now).toBe("agent");
+    expect(ownerJourney({ balance: 5n, agentOn: true, hasPaid: false })?.now).toBe("ask");
+  });
+  it("complete once the agent has paid — and a spent-out treasury still counts as funded", () => {
+    expect(ownerJourney({ balance: 0n, agentOn: true, hasPaid: true })).toMatchObject({ now: null, complete: true });
+  });
+  it("a Leash that ran out sends the owner back to the agent step", () => {
+    expect(ownerJourney({ balance: 5n, agentOn: false, hasPaid: true })?.now).toBe("agent");
   });
 });

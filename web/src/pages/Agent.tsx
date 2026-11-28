@@ -109,6 +109,13 @@ export default function Agent() {
   return (
     <div className="page">
       <div className="page__main">
+        {/* A builder connected an agent to a treasury that held nothing and only found out when
+            the agent said so. The page that connects the agent is where to say it first. */}
+        {t.state && t.state.balance === 0n && (
+          <div className="notice">
+            <span>Your treasury is empty. Add funds on Overview first — the agent pays from that balance.</span>
+          </div>
+        )}
         {hasRequest && <BudgetRequestCard onDone={() => setHasRequest(false)} />}
         {active && session ? (
           <section className="verdict">

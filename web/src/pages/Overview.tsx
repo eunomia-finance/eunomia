@@ -1,7 +1,8 @@
-// The hero page. Its job is not to report a balance — it is to show what the rules did.
-// The latest decision sits in the one dark panel on the page; the ledger under it lists
-// every decision; the side column answers the questions those decisions raise (how much of
-// the day is left, what the Leash holds, what is waiting for the owner, what the rules are).
+// The hero page. It answers three questions at a glance: what is in the treasury, what the
+// agent spent of today's limit, and — until an agent has bought something — which step comes
+// next. Once there is a decision to show, the latest one sits in the dark panel and the
+// ledger under it lists them all; the side column holds the agent, the rules and what the
+// budget is for.
 //
 // There is no "send a payment" here on purpose: the agent pays, the rules decide, this
 // page reports. Paying by hand is the escape hatch on the Payments page.
@@ -15,7 +16,8 @@ import { mergeFeedEvents } from "../lib/activity";
 import { dedupeRefusals, useAgentRejections } from "../lib/agentRejections";
 import { computeAnomaly, mergeLedger } from "../lib/eventLedger";
 import { loadPayeeBook, mergePayees, payeesFromEvents } from "../lib/payees";
-import { setupProgress, type SetupStep } from "../lib/onboarding";
+import { ownerJourney, type JourneyStep } from "../lib/onboarding";
+import { CATALOG_EXAMPLES } from "../lib/agentSetup";
 import { getTokenBalance, needsFunding, MIN_XLM } from "../lib/funding";
 import { useNow } from "../lib/useNow";
 import type { View } from "../lib/routes";
@@ -26,16 +28,14 @@ import BottomSheet from "../components/shell/BottomSheet";
 import { decisionsByDay } from "../lib/insights";
 import { useIsMobile } from "../lib/useIsMobile";
 
-// What the user should do next, in their words — one line, not a five-step strip.
-const NEXT_LINE: Partial<Record<SetupStep, string>> = {
-  connect: "Connect a wallet to begin.",
-  deploy: "Create your treasury with its rules built in.",
-  fund: "Your treasury pays from its own balance — top it up to start.",
-  whitelist: "Payments can only go to payees you've approved. Approve one.",
-};
-const NEXT_CTA: Partial<Record<SetupStep, string>> = {
+// The four steps from an open treasury to an agent that has bought something. They used to
+// be one line of advice; three builders in a row needed to see all of them and where they
+// stood, so they are a strip again — one that goes away when the fourth is done.
+const JOURNEY_TITLE: Record<JourneyStep, string> = {
+  open: "Open the treasury",
   fund: "Add funds",
-  whitelist: "Approve a payee",
+  agent: "Connect your agent",
+  ask: "Ask it for something",
 };
 
 const EASE = [0.2, 0.7, 0.3, 1] as const;
@@ -96,7 +96,6 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
 
   // Durable truths from the activity log — chain events older than the RPC's retention
   // window can't be re-scanned, but the Supabase log remembers them.
-  const whitelistSeen = rows.some((e) => e.kind === "whitelist");
   const paidSeen = rows.some((e) => e.kind === "paid");
 
   // Anomaly runs on the MERGED, deduped ledger (chain scan + durable activity log) so a
@@ -106,13 +105,7 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
     [analytics.events, rows],
   );
 
-  const progress = setupProgress({
-    connected: !!t.address,
-    hasTreasury: true,
-    balance: t.state?.balance ?? null,
-    payeeCount: payeeCount || (whitelistSeen ? 1 : payeeCount),
-    hasPaid: analytics.score.payments > 0 || paidSeen || (t.state ? t.state.daySpent > 0n : false),
-  });
+  const hasPaid = analytics.score.payments > 0 || paidSeen || (t.state ? t.state.daySpent > 0n : false);
 
   const doFund = async () => {
     setFundErr("");
@@ -176,11 +169,6 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
     </div>
   );
 
-  const stepCta = () => {
-    if (progress.next === "fund") openFund();
-    else if (progress.next === "whitelist") onGo("payments");
-  };
-
   const s = t.state;
   const remaining = s ? (s.dailyLimit > s.daySpent ? s.dailyLimit - s.daySpent : 0n) : 0n;
   const dayPct = s && s.dailyLimit > 0n ? Math.min(100, Number((s.daySpent * 10000n) / s.dailyLimit) / 100) : 0;
@@ -193,7 +181,24 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
 
   // The latest decision the contract made — the only thing worth a dark panel.
   const latest = rows.find((e) => e.kind === "paid" || e.kind === "blocked") ?? null;
-  const nudge = progress.next && NEXT_LINE[progress.next];
+  // Not before the state is read: with the balance still unknown the step to do now would
+  // read as "fund", and once it loaded the button would change under the cursor.
+  const journey = ownerJourney({ balance: t.loading || !s ? null : s.balance, agentOn: !!leashOn, hasPaid });
+  const journeyDetail = (step: JourneyStep, done: boolean): string => {
+    if (!s) return "";
+    switch (step) {
+      case "open":
+        return `At most ${fmtXlm(s.dailyLimit)} ${t.tokenCode} a day, ${fmtXlm(s.perTaskLimit)} per payment.`;
+      case "fund":
+        return done ? `${fmtXlm(s.balance)} ${t.tokenCode} in the treasury.` : "It is empty. Your agent pays from this balance.";
+      case "agent":
+        return done && session
+          ? `It may spend for ${countdown(Number(session.valid_until) * 1000 - now)} more.`
+          : "One command and one button on the Agent page.";
+      case "ask":
+        return "Open your AI client and ask: “read this page and summarise it”. It pays by itself.";
+    }
+  };
   const closeFund = () => {
     setFundOpen(false);
     setFundErr("");
@@ -229,50 +234,100 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
         </div>
       )}
 
-      {/* Not before the state is read: with the balance still unknown the next step reads as
-          "fund", and once it loads the same button turns into "Approve a payee" under the
-          cursor — a click meant for one lands on the other and changes the page. */}
-      {s && !progress.complete && nudge && (
-        <div className="notice">
-          <span>{nudge}</span>
-          {progress.next && NEXT_CTA[progress.next] && (
-            <button className="btn btn--ghost" onClick={stepCta} type="button">{NEXT_CTA[progress.next]}</button>
-          )}
-        </div>
+      {/* WHERE YOU ARE — the four steps, until an agent has bought something */}
+      {journey && !journey.complete && (
+        <motion.section className="journey" aria-label="Getting started" {...fadeUp(0)}>
+          {journey.steps.map(({ step, done }, i) => {
+            const isNow = journey.now === step;
+            return (
+              <div key={step} className={`journey__step${isNow ? " is-now" : done ? " is-done" : " is-todo"}`}>
+                <span className="journey__n">
+                  {i + 1}
+                  {done ? <b> · done</b> : isNow ? " · now" : ""}
+                </span>
+                <span className="journey__t">{JOURNEY_TITLE[step]}</span>
+                <span className="journey__d">{journeyDetail(step, done)}</span>
+                {isNow && step === "fund" && (
+                  <div className="journey__cta">
+                    <button className="btn btn--gold" onClick={openFund} disabled={!!t.busy && t.busy !== "fund"} type="button">Add funds</button>
+                  </div>
+                )}
+                {isNow && step === "agent" && (
+                  <div className="journey__cta">
+                    <button className="btn btn--gold" onClick={() => onGo("agent")} type="button">Connect your agent</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </motion.section>
       )}
 
       <div className="page">
         <div className="page__main">
-          {/* VERDICT — the latest decision, in ink */}
-          <motion.section className={`verdict${latest ? "" : " verdict--quiet"}`} {...fadeUp(0)}>
-            {latest ? (
-              <>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
-                  <div className="eyebrow">Latest decision · {whenOf(latest.at)}</div>
-                  <div className="verdict__line">
-                    <span className="verdict__amount">{amountOf(latest) ? `${Number(amountOf(latest))} ${t.tokenCode}` : latest.kind === "blocked" ? "Refused" : "Paid"}</span>
-                  </div>
-                  <div className="verdict__why">{latest.label}</div>
+          {/* VERDICT — the latest decision, in ink. Only once there is one: before that the
+              steps above are the thing to read. */}
+          {latest && (
+            <motion.section className="verdict" {...fadeUp(0)}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+                <div className="eyebrow">Latest decision · {whenOf(latest.at)}</div>
+                <div className="verdict__line">
+                  <span className="verdict__amount">{amountOf(latest) ? `${Number(amountOf(latest))} ${t.tokenCode}` : latest.kind === "blocked" ? "Refused" : "Paid"}</span>
                 </div>
-                <div className="verdict__side">
-                  <span className={`pill pill--lg ${latest.kind === "blocked" ? "pill--no" : "pill--ok"}`} style={latest.kind === "blocked" ? { color: "#ff8a78" } : undefined}>
-                    {latest.kind === "blocked" ? "Blocked" : "Allowed"}
-                  </span>
-                  {latest.txHash && (
-                    <a className="verdict__tx" href={`${EXPLORER}/tx/${latest.txHash}`} target="_blank" rel="noreferrer">
-                      tx {shortAddr(latest.txHash)} ↗
-                    </a>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div className="eyebrow">Latest decision</div>
-                <div className="verdict__line"><span className="verdict__amount">Nothing yet</span></div>
-                <div className="verdict__why">The first payment your agent tries will show here — allowed or refused by the contract, with its proof.</div>
+                <div className="verdict__why">{latest.label}</div>
               </div>
-            )}
-          </motion.section>
+              <div className="verdict__side">
+                <span className={`pill pill--lg ${latest.kind === "blocked" ? "pill--no" : "pill--ok"}`} style={latest.kind === "blocked" ? { color: "#e2a394" } : undefined}>
+                  {latest.kind === "blocked" ? "Blocked" : "Allowed"}
+                </span>
+                {latest.txHash && (
+                  <a className="verdict__tx" href={`${EXPLORER}/tx/${latest.txHash}`} target="_blank" rel="noreferrer">
+                    tx {shortAddr(latest.txHash)} ↗
+                  </a>
+                )}
+              </div>
+            </motion.section>
+          )}
+
+          {/* THE TWO NUMBERS — what the treasury holds, what the agent spent of today's limit */}
+          <motion.div className="figures" {...fadeUp(0.04)}>
+            <section className="panel panel--pad">
+              <div className="eyebrow">In the treasury</div>
+              {t.loading || !s ? (
+                <div className="shell__skel" style={{ height: 46, width: "60%" }} />
+              ) : (
+                <>
+                  <div className="figure__big">
+                    <span data-testid="treasury-balance">{fmtXlm(s.balance)}</span>
+                    <small>{t.tokenCode}</small>
+                  </div>
+                  {s.balance === 0n && <div className="panel__note">Empty. Your agent pays from this balance — add funds before it can buy anything.</div>}
+                </>
+              )}
+              <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+                <button className="btn btn--gold" onClick={() => (fundOpen ? closeFund() : openFund())} disabled={!!t.busy && t.busy !== "fund"} type="button">Add funds</button>
+              </div>
+              {fundOpen && !isMobile && <div ref={fundPanel}>{fundForm(false)}</div>}
+            </section>
+            <section className="panel panel--pad">
+              <div className="eyebrow">Spent in the last 24 hours</div>
+              {t.loading || !s ? (
+                <div className="shell__skel" style={{ height: 40, width: "60%" }} />
+              ) : (
+                <>
+                  <div className="figure__big figure__big--sm">
+                    <span>{fmtXlm(s.daySpent)}</span>
+                    <small>/ {fmtXlm(s.dailyLimit)} {t.tokenCode}</small>
+                  </div>
+                  <div className="bar"><div className="bar__fill" style={{ width: `${dayPct}%` }} /></div>
+                  <div className="meter__line">
+                    <span>≤ {fmtXlm(s.perTaskLimit)} {t.tokenCode} per payment</span>
+                    <span className="num">{fmtXlm(remaining)} left today</span>
+                  </div>
+                </>
+              )}
+            </section>
+          </motion.div>
 
           {/* LEDGER */}
           <motion.div {...fadeUp(0.08)}>
@@ -281,51 +336,32 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
         </div>
 
         <div className="page__side">
-          {/* METER */}
+          {/* THE AGENT — whether one may spend, how much of its allowance is left, until when */}
           <motion.section className="panel panel--pad" {...fadeUp(0.06)}>
-            <div className="eyebrow">Rolling 24 hours</div>
-            {t.loading || !s ? (
-              <div className="shell__skel" style={{ height: 40, width: "60%" }} />
-            ) : (
-              <>
-                <div className="meter__big">
-                  <span className="num">{fmtXlm(s.daySpent)}</span>
-                  <small>/ {fmtXlm(s.dailyLimit)} {t.tokenCode}</small>
-                </div>
-                <div className="bar"><div className="bar__fill" style={{ width: `${dayPct}%` }} /></div>
-                <div className="meter__line">
-                  <span>≤ {fmtXlm(s.perTaskLimit)} {t.tokenCode} per payment</span>
-                  <span className="num">{fmtXlm(remaining)} left</span>
-                </div>
-              </>
-            )}
-          </motion.section>
-
-          {/* LEASH */}
-          <motion.section className="panel panel--pad" {...fadeUp(0.1)}>
             <div className="panel__head">
-              <div className="eyebrow">Leash</div>
+              <div className="eyebrow">Your agent</div>
               {leashOn ? (
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--ink-2)" }}>
-                  <i className="mark mark--ok" style={{ borderRadius: "50%", width: 7, height: 7 }} />active
+                  <i className="mark mark--ok" style={{ borderRadius: "50%", width: 7, height: 7 }} />may spend
                 </span>
               ) : (
-                <button className="linkbtn" onClick={() => onGo("agent")} type="button">start one</button>
+                <button className="linkbtn" onClick={() => onGo("agent")} type="button">connect one</button>
               )}
             </div>
             {leashOn && session ? (
               <>
-                <div className="num" style={{ fontSize: 14 }}>
-                  {shortAddr(session.agent)} <span style={{ color: "var(--ink-2)" }}>· your agent</span>
-                </div>
-                <div className="bar bar--thin"><div className="bar__fill bar__fill--ink" style={{ width: `${leashPct}%` }} /></div>
+                <div className="panel__title" style={{ fontSize: 22 }}>{countdown(Number(session.valid_until) * 1000 - now)} left</div>
+                <div className="bar bar--thin"><div className="bar__fill" style={{ width: `${leashPct}%` }} /></div>
                 <div className="meter__line">
-                  <span className="num">{fmtXlm(session.spent)} / {fmtXlm(session.limit)} {t.tokenCode}</span>
-                  <span className="num">expires in {countdown(Number(session.valid_until) * 1000 - now)}</span>
+                  <span className="num">{fmtXlm(session.spent)} / {fmtXlm(session.limit)} {t.tokenCode} used</span>
+                  <span className="num">{shortAddr(session.agent)}</span>
+                </div>
+                <div>
+                  <button className="danger-link" onClick={() => onGo("agent")} type="button">Revoke on the Agent page</button>
                 </div>
               </>
             ) : (
-              <div className="panel__note">No agent is on a Leash. Authorise one and it pays on its own, inside these rules, with no prompts.</div>
+              <div className="panel__note">No agent may spend right now. Connect one and it pays on its own, inside your rules, with no prompts.</div>
             )}
           </motion.section>
 
@@ -333,28 +369,37 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
           {session && <ExceptionRequests agent={session.agent} />}
 
           {/* RULES */}
-          <motion.section className="panel panel--pad" {...fadeUp(0.14)}>
+          <motion.section className="panel panel--pad" {...fadeUp(0.1)}>
             <div className="panel__head">
               <div className="eyebrow">Rules on Stellar</div>
               <a className="linkbtn" href={`${EXPLORER}/contract/${treasuryId}`} target="_blank" rel="noreferrer">{shortAddr(treasuryId)} ↗</a>
             </div>
             {s ? (
               <>
-                <div className="panel__kv"><span>Per day</span><span className="num">{fmtXlm(s.dailyLimit)} {t.tokenCode}</span></div>
-                <div className="panel__kv"><span>Per payment</span><span className="num">{fmtXlm(s.perTaskLimit)} {t.tokenCode}</span></div>
-                <div className="panel__kv"><span>Approved payees</span><span className="num">{payeeCount ?? "—"}</span></div>
-                <div className="panel__kv"><span>Balance</span><span className="num" data-testid="treasury-balance">{fmtXlm(s.balance)} {t.tokenCode}</span></div>
+                <div className="panel__kv"><span>Per day, at most</span><span className="num">{fmtXlm(s.dailyLimit)} {t.tokenCode}</span></div>
+                <div className="panel__kv"><span>Per payment, at most</span><span className="num">{fmtXlm(s.perTaskLimit)} {t.tokenCode}</span></div>
+                <div className="panel__kv"><span>Places it may pay</span><span className="num">{payeeCount ?? "—"}</span></div>
                 {t.lifecycle?.paused && <div className="err">Spending is paused — every payment is refused until you resume.</div>}
               </>
             ) : (
               <div className="shell__skel" style={{ height: 80 }} />
             )}
             <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-              <button className="btn btn--ghost" onClick={() => (fundOpen ? closeFund() : openFund())} disabled={!!t.busy && t.busy !== "fund"} type="button">Add funds</button>
+              <button className="btn btn--ghost" onClick={() => onGo("settings")} type="button">Change rules</button>
               <button className="btn btn--ghost" onClick={() => onGo("payments")} type="button">Payees</button>
             </div>
-            {fundOpen && !isMobile && <div ref={fundPanel}>{fundForm(false)}</div>}
           </motion.section>
+
+          {/* WHAT THE BUDGET IS FOR — a few things the agent can buy, with what each costs */}
+          {t.tokenCode === "USDC" && (
+            <motion.section className="panel panel--pad" {...fadeUp(0.14)}>
+              <div className="eyebrow">What your agent can buy</div>
+              {CATALOG_EXAMPLES.map((c) => (
+                <div className="panel__kv" key={c.label}><span>{c.label}</span><span className="num">{c.price}</span></div>
+              ))}
+              <div className="panel__note">USDC per call, from the service catalog. Your agent finds the full list itself.</div>
+            </motion.section>
+          )}
         </div>
       </div>
 
