@@ -7,13 +7,15 @@ import { useEffect, useState } from "react";
 import { useTreasury } from "../state/useTreasury";
 import { freshSalt, predictTreasuryId } from "../lib/createTreasury";
 import { needsFunding, MIN_XLM } from "../lib/funding";
+import { tx, useLang } from "../lib/i18n";
 import { passkeyCapability } from "../lib/passkeySupport";
 import type { TokenCode } from "../lib/token";
 import { errText } from "../lib/wallet-errors";
 import { connectPasskey } from "../lib/walletKit";
-import { NETWORK_LABEL, shortAddr } from "../config";
+import { shortAddr } from "../config";
 
 export default function Setup() {
+  useLang();
   const t = useTreasury();
   const [daily, setDaily] = useState("50");
   const [perTask, setPerTask] = useState("10");
@@ -59,7 +61,7 @@ export default function Setup() {
       // The provider follows the shared address store, so the treasury opens by itself.
       await connectPasskey("connect");
     } catch (e) {
-      setSignInErr(errText(e) || "Couldn't open your wallet with that passkey.");
+      setSignInErr(errText(e) || tx("Couldn't open your wallet with that passkey.", "Bu passkey ile cüzdan açılamadı."));
     } finally {
       setSigningIn(false);
     }
@@ -94,25 +96,28 @@ export default function Setup() {
   if (!t.address) {
     return (
       <div style={{ minHeight: "70vh", display: "grid", placeItems: "center" }}>
-        <div style={{ maxWidth: 440, textAlign: "center", padding: "24px 16px", display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
-          <div style={{ fontSize: 40, color: "var(--ink)" }}>◭</div>
-          <h1 className="panel__title" style={{ margin: 0, fontSize: 30, fontWeight: 500 }}>Give your agent a budget — not your wallet.</h1>
+        <div style={{ maxWidth: 460, textAlign: "center", padding: "24px 16px", display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
+          <h1 className="panel__title" style={{ margin: 0, fontSize: 34, fontWeight: 400 }}>
+            {tx("Give your agent a budget — not your wallet.", "Ajanına cüzdanını değil, bütçe ver.")}
+          </h1>
           <p className="panel__note" style={{ margin: 0, fontSize: 14.5 }}>
-            Set the rules once. Every payment is checked and enforced on Stellar — anything outside the rules is
-            blocked, automatically.
+            {tx(
+              "Set the rules once. Every payment is checked and enforced on Stellar — anything outside the rules is blocked, automatically.",
+              "Kuralları bir kez koy. Her ödeme Stellar'da denetlenir — kuralların dışındaki her şey kendiliğinden reddedilir.",
+            )}
           </p>
           {passkeys && (
             <button className="btn btn--lg" onClick={() => void signInPasskey()} disabled={signingIn || t.busy === "connect"} type="button">
-              {signingIn ? "Opening…" : "Sign in with your passkey"}
+              {signingIn ? tx("Opening…", "Açılıyor…") : tx("Sign in with your passkey", "Passkey ile gir")}
             </button>
           )}
           <button
-            className={passkeys ? "btn btn--ghost" : "btn btn--lg"}
+            className={passkeys ? "btn btn--ghost" : "btn btn--gold"}
             onClick={() => void t.connect()}
             disabled={t.busy === "connect" || signingIn}
             type="button"
           >
-            {t.busy === "connect" ? "Connecting…" : "Connect wallet"}
+            {t.busy === "connect" ? tx("Connecting…", "Bağlanıyor…") : tx("Connect wallet", "Cüzdanı bağla")}
           </button>
           {signInErr && <div className="err">{signInErr}</div>}
         </div>
@@ -133,7 +138,9 @@ export default function Setup() {
       <div className="page__main">
         {t.creatingNew && t.treasuryId && (
           <div>
-            <button className="linkbtn" onClick={t.cancelNewTreasury} type="button">← Back to your current treasury</button>
+            <button className="linkbtn" onClick={t.cancelNewTreasury} type="button">
+              ← {tx("Back to your current treasury", "Mevcut kasana dön")}
+            </button>
           </div>
         )}
 
@@ -141,74 +148,91 @@ export default function Setup() {
           <div className="notice">
             <span>
               {t.walletXlm === null
-                ? `Your wallet doesn't exist on Stellar ${NETWORK_LABEL.toLowerCase()} yet (0 XLM). `
-                : `Your wallet holds ${t.walletXlm.toFixed(2)} XLM. `}
-              You need ~{MIN_XLM} XLM to create and fund a treasury.
+                ? tx("Your wallet doesn't exist on Stellar mainnet yet (0 XLM). ", "Cüzdanın Stellar mainnet'te henüz yok (0 XLM). ")
+                : tx(`Your wallet holds ${t.walletXlm.toFixed(2)} XLM. `, `Cüzdanında ${t.walletXlm.toFixed(2)} XLM var. `)}
+              {tx(`You need ~${MIN_XLM} XLM to create and fund a treasury.`, `Kasa açıp doldurmak için yaklaşık ${MIN_XLM} XLM gerekir.`)}
             </span>
           </div>
         )}
 
         <section className="panel panel--pad">
-          <div className="eyebrow">New treasury</div>
-          <div className="panel__title">Set the rules once.</div>
+          <div className="eyebrow">{tx("Step 1 of 4 · New treasury", "Adım 1 / 4 · Yeni kasa")}</div>
+          <div className="panel__title">{tx("Set the rules once.", "Kuralları bir kez koy.")}</div>
           <div className="panel__note">
-            Your agent can never spend past the daily cap in any rolling 24 hours, and never more than the
-            per-payment cap at once. Enforced on Stellar, not by promise.
+            {tx(
+              "Your agent can never spend past the daily cap in any rolling 24 hours, and never more than the per-payment cap at once. Enforced on Stellar, not by promise.",
+              "Ajanın 24 saat içinde günlük sınırı, tek seferde de ödeme başı sınırı asla aşamaz. Söz olarak değil, Stellar'da uygulanır.",
+            )}
           </div>
 
           <div className="lab" style={{ marginTop: 6 }}>
-            <span className="eyebrow">The treasury holds</span>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} role="group" aria-label="Treasury currency">
+            <span className="eyebrow">{tx("The treasury holds", "Kasa şunu tutar")}</span>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} role="group" aria-label={tx("Treasury currency", "Kasanın para birimi")}>
               <button className={`chip${token === "USDC" ? " is-on" : ""}`} onClick={() => setToken("USDC")} aria-pressed={token === "USDC"} type="button">
                 USDC
               </button>
               <button className={`chip${token === "XLM" ? " is-on" : ""}`} onClick={() => setToken("XLM")} aria-pressed={token === "XLM"} type="button">
-                XLM · funded from your wallet
+                {tx("XLM · funded from your wallet", "XLM · cüzdanından doldurulur")}
               </button>
             </div>
           </div>
 
           <div className="two">
             <label className="lab">
-              <span className="eyebrow">Daily limit ({token})</span>
-              <input className="field field--mono" inputMode="decimal" aria-label={`Daily limit in ${token}`} value={daily} onChange={(e) => setDaily(e.target.value)} />
+              <span className="eyebrow">{tx(`Daily limit (${token})`, `Günlük sınır (${token})`)}</span>
+              <input className="field field--mono" inputMode="decimal" aria-label={tx(`Daily limit in ${token}`, `Günlük sınır (${token})`)} value={daily} onChange={(e) => setDaily(e.target.value)} />
             </label>
             <label className="lab">
-              <span className="eyebrow">Per-payment limit ({token})</span>
-              <input className="field field--mono" inputMode="decimal" aria-label={`Per-payment limit in ${token}`} value={perTask} onChange={(e) => setPerTask(e.target.value)} />
+              <span className="eyebrow">{tx(`Per-payment limit (${token})`, `Ödeme başı sınır (${token})`)}</span>
+              <input className="field field--mono" inputMode="decimal" aria-label={tx(`Per-payment limit in ${token}`, `Ödeme başı sınır (${token})`)} value={perTask} onChange={(e) => setPerTask(e.target.value)} />
             </label>
           </div>
 
           {token === "XLM" ? (
             <label className="lab">
-              <span className="eyebrow">Starting funds (XLM)</span>
-              <input className="field field--mono" inputMode="decimal" aria-label="Starting funds in XLM" value={fundXlm} onChange={(e) => setFundXlm(e.target.value)} />
-              <span className="panel__note">Moved from your wallet into the treasury in the same signature. 0 opens it empty; you can add funds any time.</span>
+              <span className="eyebrow">{tx("Starting funds (XLM)", "Başlangıç parası (XLM)")}</span>
+              <input className="field field--mono" inputMode="decimal" aria-label={tx("Starting funds in XLM", "Başlangıç parası (XLM)")} value={fundXlm} onChange={(e) => setFundXlm(e.target.value)} />
+              <span className="panel__note">
+                {tx(
+                  "Moved from your wallet into the treasury in the same signature. 0 opens it empty; you can add funds any time.",
+                  "Aynı imzayla cüzdanından kasaya geçer. 0 yazarsan boş açılır; istediğin an para yatırırsın.",
+                )}
+              </span>
             </label>
           ) : (
-            <div className="panel__note">It opens empty. Right after, you deposit USDC into it from your wallet.</div>
+            <div className="panel__note">
+              {tx(
+                "It opens empty. Right after, you deposit USDC into it from your wallet — that is step 2.",
+                "Kasa boş açılır. Hemen ardından cüzdanından USDC yatırırsın — bu 2. adım.",
+              )}
+            </div>
           )}
 
           {/* the optional parts, folded */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
             <button className={`chip${withPayee ? " is-on" : ""}`} onClick={togglePayee} type="button" aria-expanded={withPayee}>
-              {withPayee ? "− " : "+ "}Approve a payee now
+              {withPayee ? "− " : "+ "}{tx("Approve a payee now", "Şimdi bir alıcı onayla")}
             </button>
             <button className={`chip${withAgent ? " is-on" : ""}`} onClick={toggleAgent} type="button" aria-expanded={withAgent}>
-              {withAgent ? "− " : "+ "}Connect an agent now
+              {withAgent ? "− " : "+ "}{tx("Connect an agent now", "Şimdi bir ajan bağla")}
             </button>
           </div>
           {!withPayee && !withAgent && (
-            <div className="panel__note">Both can wait: payees are approved on the Payments page, agents get their Leash on the Agent page.</div>
+            <div className="panel__note">
+              {tx(
+                "Both can wait: you connect the agent on the Agent page after the treasury is open.",
+                "İkisi de bekleyebilir: ajanı, kasa açıldıktan sonra Ajan sayfasından bağlarsın.",
+              )}
+            </div>
           )}
 
           {withPayee && (
             <label className="lab">
-              <span className="eyebrow">First approved payee</span>
+              <span className="eyebrow">{tx("First approved payee", "İlk onaylı alıcı")}</span>
               <input
                 className="field field--mono"
-                aria-label="First approved payee address"
-                placeholder="G… — the treasury can pay this address; anyone else is refused"
+                aria-label={tx("First approved payee address", "İlk onaylı alıcının adresi")}
+                placeholder={tx("G… — the treasury can pay this address; anyone else is refused", "G… — kasa bu adrese ödeyebilir; başkası reddedilir")}
                 spellCheck={false}
                 value={payee}
                 onChange={(e) => setPayee(e.target.value)}
@@ -222,46 +246,53 @@ export default function Setup() {
                   so its address is fixed here, from the salt, before it exists. The command
                   below already carries it. */}
               <div className="lab">
-                <span className="eyebrow">On the agent's machine</span>
+                <span className="eyebrow">{tx("In a terminal on the agent's machine", "Ajanın bilgisayarındaki terminalde")}</span>
                 <span className="code">{initCommand}</span>
                 <div>
                   <button className="linkbtn" onClick={copyInit} type="button" aria-live="polite">
-                    {copied ? "copied" : "copy command"}
+                    {copied ? tx("copied", "kopyalandı") : tx("copy command", "komutu kopyala")}
                   </button>
                 </div>
                 <span className="panel__note">
-                  It makes the agent's key for this treasury — whose address is already settled, though it is not created
-                  yet — and prints the public half. The secret stays on that machine.
+                  {tx(
+                    "It makes the agent's key for this treasury — whose address is already settled, though it is not created yet — and prints the public half. The secret stays on that machine.",
+                    "Bu kasa için ajanın anahtarını üretir — kasa henüz açılmadı ama adresi belli — ve açık yarısını yazar. Gizli anahtar o bilgisayarda kalır.",
+                  )}
                 </span>
               </div>
               <label className="lab">
-                <span className="eyebrow">Agent public key</span>
+                <span className="eyebrow">{tx("Agent public key", "Ajan adresi")}</span>
                 <input
                   className="field field--mono"
-                  aria-label="Agent public key for the Leash"
-                  placeholder="G… — the key that command prints"
+                  aria-label={tx("Agent public key for the Leash", "Yetki verilecek ajan adresi")}
+                  placeholder={tx("G… — the key that command prints", "G… — komutun yazdığı adres")}
                   spellCheck={false}
                   value={agentKey}
                   onChange={(e) => setAgentKey(e.target.value)}
                 />
-                <span className="panel__note">The agent gets a Leash with this signature: it pays on its own, up to the cap, until the deadline. Revoke any time.</span>
+                <span className="panel__note">
+                  {tx(
+                    "The agent may spend with this signature: it pays on its own, up to the cap, until the deadline. Revoke any time.",
+                    "Ajan bu imzayla harcama yetkisi alır: tavana kadar, süre dolana dek kendisi öder. İstediğin an iptal edersin.",
+                  )}
+                </span>
               </label>
               <div className="two">
                 <label className="lab">
-                  <span className="eyebrow">Leash cap ({token})</span>
-                  <input className="field field--mono" inputMode="decimal" aria-label={`Leash spending cap in ${token}`} value={cap} onChange={(e) => setCap(e.target.value)} />
+                  <span className="eyebrow">{tx(`At most (${token})`, `En fazla (${token})`)}</span>
+                  <input className="field field--mono" inputMode="decimal" aria-label={tx(`Leash spending cap in ${token}`, `Harcama tavanı (${token})`)} value={cap} onChange={(e) => setCap(e.target.value)} />
                 </label>
                 <label className="lab">
-                  <span className="eyebrow">Duration (hours)</span>
-                  <input className="field field--mono" inputMode="decimal" aria-label="Leash duration in hours" value={hours} onChange={(e) => setHours(e.target.value)} />
+                  <span className="eyebrow">{tx("Duration (hours)", "Süre (saat)")}</span>
+                  <input className="field field--mono" inputMode="decimal" aria-label={tx("Leash duration in hours", "Yetki süresi (saat)")} value={hours} onChange={(e) => setHours(e.target.value)} />
                 </label>
               </div>
             </>
           )}
 
           <div style={{ marginTop: 6 }}>
-            <button className="btn btn--lg" onClick={() => void doDeploy()} disabled={!!t.busy} type="button">
-              {t.busy === "deploy" ? "Creating…" : "Create treasury"}
+            <button className="btn btn--gold" onClick={() => void doDeploy()} disabled={!!t.busy} type="button">
+              {t.busy === "deploy" ? tx("Creating…", "Açılıyor…") : tx("Create treasury", "Kasayı aç")}
             </button>
           </div>
           {err && <div className="err">{err}</div>}
@@ -271,17 +302,17 @@ export default function Setup() {
         <div style={{ padding: "0 4px" }}>
           {!openExisting ? (
             <button className="linkbtn" onClick={() => setOpenExisting(true)} type="button">
-              Have a treasury from another device or wallet? Open it by its id
+              {tx("Have a treasury from another device or wallet? Open it by its id", "Başka cihazda ya da cüzdanda kasan mı var? Kimliğiyle aç")}
             </button>
           ) : (
             <section className="panel panel--pad">
-              <div className="eyebrow">Open an existing treasury</div>
+              <div className="eyebrow">{tx("Open an existing treasury", "Var olan bir kasayı aç")}</div>
               <div className="rowline">
                 <input
                   className="field field--mono"
                   style={{ flex: 1 }}
-                  placeholder="Treasury contract id (C…)"
-                  aria-label="Existing treasury contract id"
+                  placeholder={tx("Treasury contract id (C…)", "Kasa kimliği (C…)")}
+                  aria-label={tx("Existing treasury contract id", "Var olan kasanın kimliği")}
                   spellCheck={false}
                   autoFocus
                   value={existing}
@@ -292,32 +323,50 @@ export default function Setup() {
                     if (openErr) setOpenErr("");
                   }}
                 />
-                <button className="btn btn--ghost" onClick={doOpen} type="button">Open</button>
+                <button className="btn btn--ghost" onClick={doOpen} type="button">{tx("Open", "Aç")}</button>
               </div>
               {openErr && <div className="err">{openErr}</div>}
               <div className="panel__note">
-                The id is on the Settings page of the device that created it. Treasuries backed up on Stellar open by
-                themselves when you sign in with the same wallet or passkey.
+                {tx(
+                  "The id is on the Settings page of the device that created it. Treasuries backed up on Stellar open by themselves when you sign in with the same wallet or passkey.",
+                  "Kimlik, kasayı açan cihazın Ayarlar sayfasında yazar. Stellar'da yedeklenen kasalar aynı cüzdan ya da passkey ile girince kendiliğinden açılır.",
+                )}
               </div>
             </section>
           )}
         </div>
       </div>
 
-      {/* The one dark panel on this page: what that single signature does. */}
+      {/* What that single signature does. */}
       <div className="page__side">
-        <section className="verdict" style={{ gridTemplateColumns: "minmax(0,1fr)", alignItems: "start" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div className="eyebrow">One signature</div>
-            <div className="verdict__line"><span className="verdict__amount" style={{ fontSize: 34 }}>does all of this</span></div>
-            <ol style={{ margin: 0, padding: "0 0 0 18px", display: "flex", flexDirection: "column", gap: 8, fontSize: 13.5, lineHeight: 1.5 }}>
-              <li>Creates the treasury: at most <span className="num">{daily || "0"} {token}</span> a day, <span className="num">{perTask || "0"} {token}</span> per payment.</li>
-              <li>{fundOn ? <>Moves <span className="num">{fundXlm} XLM</span> in from your wallet.</> : "Opens it empty; you add funds later."}</li>
-              {payeeOn && <li>Approves <span className="num">{shortAddr(payee.trim())}</span> as a payee.</li>}
-              {agentOn && <li>Puts agent <span className="num">{shortAddr(agentKey.trim())}</span> on a <span className="num">{cap || "0"} {token}</span> / <span className="num">{hours || "0"} h</span> Leash.</li>}
-              <li>Backs the treasury up on Stellar, so you can open it from any device.</li>
-            </ol>
-            <div className="verdict__why">Nothing is created half-way: if any part is refused, nothing happens.</div>
+        <section className="panel panel--pad is-light" style={{ border: "none" }}>
+          <div className="eyebrow">{tx("One signature does all of this", "Tek imza bunların hepsini yapar")}</div>
+          <ol style={{ margin: 0, padding: "0 0 0 18px", display: "flex", flexDirection: "column", gap: 8, fontSize: 13.5, lineHeight: 1.5 }}>
+            <li>
+              {tx("Creates the treasury: at most ", "Kasayı açar: günde en fazla ")}
+              <span className="num">{daily || "0"} {token}</span>
+              {tx(" a day, ", ", ödeme başı ")}
+              <span className="num">{perTask || "0"} {token}</span>
+              {tx(" per payment.", ".")}
+            </li>
+            <li>
+              {fundOn
+                ? tx(`Moves ${fundXlm} XLM in from your wallet.`, `Cüzdanından ${fundXlm} XLM aktarır.`)
+                : tx("Opens it empty; you add funds next.", "Boş açar; parayı sonraki adımda yatırırsın.")}
+            </li>
+            {payeeOn && <li>{tx(`Approves ${shortAddr(payee.trim())} as a payee.`, `${shortAddr(payee.trim())} adresini alıcı olarak onaylar.`)}</li>}
+            {agentOn && (
+              <li>
+                {tx(
+                  `Lets agent ${shortAddr(agentKey.trim())} spend up to ${cap || "0"} ${token} for ${hours || "0"} h.`,
+                  `${shortAddr(agentKey.trim())} ajanına ${hours || "0"} saat boyunca ${cap || "0"} ${token}'ye kadar yetki verir.`,
+                )}
+              </li>
+            )}
+            <li>{tx("Backs the treasury up on Stellar, so you can open it from any device.", "Kasayı Stellar'da yedekler; her cihazdan açabilirsin.")}</li>
+          </ol>
+          <div className="panel__note">
+            {tx("Nothing is created half-way: if any part is refused, nothing happens.", "Yarım iş kalmaz: bir parçası reddedilirse hiçbiri olmaz.")}
           </div>
         </section>
       </div>

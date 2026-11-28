@@ -1,8 +1,7 @@
 // The hero page. It answers three questions at a glance: what is in the treasury, what the
 // agent spent of today's limit, and — until an agent has bought something — which step comes
-// next. Once there is a decision to show, the latest one sits in the dark panel and the
-// ledger under it lists them all; the side column holds the agent, the rules and what the
-// budget is for.
+// next. Under the steps sit three cards: the treasury with its rules, the agent with what it
+// can buy, and the one ivory card, the latest things the rules decided.
 //
 // There is no "send a payment" here on purpose: the agent pays, the rules decide, this
 // page reports. Paying by hand is the escape hatch on the Payments page.
@@ -19,24 +18,24 @@ import { loadPayeeBook, mergePayees, payeesFromEvents } from "../lib/payees";
 import { ownerJourney, type JourneyStep } from "../lib/onboarding";
 import { CATALOG_EXAMPLES } from "../lib/agentSetup";
 import { getTokenBalance, needsFunding, MIN_XLM } from "../lib/funding";
+import { tx, useLang } from "../lib/i18n";
 import { useNow } from "../lib/useNow";
 import type { View } from "../lib/routes";
-import RecentActivity from "../components/shell/RecentActivity";
 import { amountOf, inToken, whenOf } from "../components/shell/ledgerFormat";
 import ExceptionRequests from "../components/ExceptionRequests";
 import BottomSheet from "../components/shell/BottomSheet";
-import { decisionsByDay } from "../lib/insights";
 import { useIsMobile } from "../lib/useIsMobile";
 
 // The four steps from an open treasury to an agent that has bought something. They used to
 // be one line of advice; three builders in a row needed to see all of them and where they
 // stood, so they are a strip again — one that goes away when the fourth is done.
-const JOURNEY_TITLE: Record<JourneyStep, string> = {
-  open: "Open the treasury",
-  fund: "Add funds",
-  agent: "Connect your agent",
-  ask: "Ask it for something",
-};
+const journeyTitle = (step: JourneyStep): string =>
+  ({
+    open: tx("Open the treasury", "Kasayı aç"),
+    fund: tx("Add funds", "Para yatır"),
+    agent: tx("Connect your agent", "Ajanı bağla"),
+    ask: tx("Ask it for something", "Ajandan bir şey iste"),
+  })[step];
 
 const EASE = [0.2, 0.7, 0.3, 1] as const;
 const fadeUp = (delay: number) => ({
@@ -46,19 +45,25 @@ const fadeUp = (delay: number) => ({
 });
 
 function countdown(ms: number): string {
-  if (ms <= 0) return "expired";
+  if (ms <= 0) return tx("expired", "süresi doldu");
   const s = Math.floor(ms / 1000);
-  const h = Math.floor(s / 3600);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
   const m = Math.floor((s % 3600) / 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  if (d > 0) return tx(`${d} d ${h} h`, `${d} gün ${h} sa`);
+  return h > 0 ? tx(`${h} h ${m} m`, `${h} sa ${m} dk`) : tx(`${m} m`, `${m} dk`);
 }
 
+/** How many decisions the ivory card lists; the Activity page has them all. */
+const FEED_ROWS = 6;
+
 export default function Overview({ onGo }: { onGo: (v: View) => void }) {
+  useLang();
   const t = useTreasury();
   const treasuryId = t.treasuryId as string; // the shell only renders Overview with one open
   const analytics = useAnalyticsScore(treasuryId, t.refreshKey);
-  const { rows: written, freshId } = useTreasuryActivity(treasuryId, t.refreshKey);
-  // One list feeds the verdict, the ledger and the bars — set the unit once, here.
+  const { rows: written } = useTreasuryActivity(treasuryId, t.refreshKey);
+  // One list feeds the card — set the unit once, here.
   //
   // The activity log only knows what passed through this app. An agent paying from its own
   // machine (eunomia-mcp) never does — but the treasury emits `paid` for every payment, and
@@ -90,9 +95,6 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
   );
   const payeeCount =
     analytics.status === "loading" && analytics.events.length === 0 ? null : payees.length;
-
-  // The bars read the same feed the ledger renders, so a bar and a row can never disagree.
-  const week = useMemo(() => decisionsByDay(rows), [rows]);
 
   // Durable truths from the activity log — chain events older than the RPC's retention
   // window can't be re-scanned, but the Supabase log remembers them.
@@ -142,27 +144,27 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
   }, [fundOpen, t.tokenCode, t.address, t.refreshKey]);
 
   // A deposit always moves the treasury's own token, so the form speaks in it.
-  const walletFundForm = (inSheet: boolean) => (
+  const fundForm = (inSheet: boolean) => (
     <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
       <input
         className="field field--mono"
-        style={{ flex: 1, minWidth: 160 }}
+        style={{ flex: 1, minWidth: 140 }}
         ref={inSheet ? undefined : fundInput}
         autoFocus={inSheet}
         inputMode="decimal"
-        placeholder={`Amount in ${t.tokenCode}`}
-        aria-label={`Fund amount in ${t.tokenCode}`}
+        placeholder={tx(`Amount in ${t.tokenCode}`, `Tutar (${t.tokenCode})`)}
+        aria-label={tx(`Fund amount in ${t.tokenCode}`, `Yatırılacak tutar (${t.tokenCode})`)}
         value={fundAmt}
         onChange={(e) => setFundAmt(e.target.value)}
       />
       <button className="btn" onClick={() => void doFund()} disabled={!!t.busy} type="button">
-        {t.busy === "fund" ? "Funding…" : "Fund"}
+        {t.busy === "fund" ? tx("Sending…", "Gönderiliyor…") : tx("Deposit", "Yatır")}
       </button>
       {t.tokenCode === "USDC" && walletUsdc !== null && (
         <div className="panel__note" style={{ width: "100%" }}>
           {walletUsdc > 0
-            ? `Your wallet holds ${walletUsdc.toFixed(2)} USDC.`
-            : "Your wallet holds no USDC yet — send some to it first."}
+            ? tx(`Your wallet holds ${walletUsdc.toFixed(2)} USDC. Your wallet will ask you to sign.`, `Cüzdanında ${walletUsdc.toFixed(2)} USDC var. Cüzdanın imza isteyecek.`)
+            : tx("Your wallet holds no USDC yet — send some to it first.", "Cüzdanında henüz USDC yok — önce cüzdanına USDC gönder.")}
         </div>
       )}
       {fundErr && <div className="err" style={{ width: "100%" }}>{fundErr}</div>}
@@ -177,10 +179,7 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
   // sessionActive is computed when the treasury was last read; the clock keeps ticking past
   // valid_until, and an expired Leash must stop reading "active" the moment it expires.
   const leashOn = t.sessionActive && session && Number(session.valid_until) * 1000 > now;
-  const leashPct = session && session.limit > 0n ? Math.min(100, Number((session.spent * 10000n) / session.limit) / 100) : 0;
 
-  // The latest decision the contract made — the only thing worth a dark panel.
-  const latest = rows.find((e) => e.kind === "paid" || e.kind === "blocked") ?? null;
   // Not before the state is read: with the balance still unknown the step to do now would
   // read as "fund", and once it loaded the button would change under the cursor.
   const journey = ownerJourney({ balance: t.loading || !s ? null : s.balance, agentOn: !!leashOn, hasPaid });
@@ -188,38 +187,81 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
     if (!s) return "";
     switch (step) {
       case "open":
-        return `At most ${fmtXlm(s.dailyLimit)} ${t.tokenCode} a day, ${fmtXlm(s.perTaskLimit)} per payment.`;
+        return tx(
+          `At most ${fmtXlm(s.dailyLimit)} ${t.tokenCode} a day, ${fmtXlm(s.perTaskLimit)} per payment.`,
+          `Günde en fazla ${fmtXlm(s.dailyLimit)}, ödeme başı ${fmtXlm(s.perTaskLimit)} ${t.tokenCode}.`,
+        );
       case "fund":
-        return done ? `${fmtXlm(s.balance)} ${t.tokenCode} in the treasury.` : "It is empty. Your agent pays from this balance.";
+        return done
+          ? tx(`${fmtXlm(s.balance)} ${t.tokenCode} in the treasury.`, `Kasada ${fmtXlm(s.balance)} ${t.tokenCode} var.`)
+          : tx("It is empty. Your agent pays from this balance.", "Kasa boş. Ajan bu bakiyeden öder.");
       case "agent":
         return done && session
-          ? `It may spend for ${countdown(Number(session.valid_until) * 1000 - now)} more.`
-          : "One command and one button on the Agent page.";
+          ? tx(`It may spend for ${countdown(Number(session.valid_until) * 1000 - now)} more.`, `Yetkisi ${countdown(Number(session.valid_until) * 1000 - now)} daha açık.`)
+          : tx("One command and one button on the Agent page.", "Ajan sayfasında tek komut, tek düğme.");
       case "ask":
-        return "Open your AI client and ask: “read this page and summarise it”. It pays by itself.";
+        return tx(
+          "Open your AI client and ask: “read this page and summarise it”. It pays by itself.",
+          "Claude'u aç ve iste: “şu sayfayı oku ve özetle”. Ödemeyi kendisi yapar.",
+        );
     }
   };
   const closeFund = () => {
     setFundOpen(false);
     setFundErr("");
   };
-  // The deposit comes from the wallet, in the treasury's own token.
-  const fundForm = walletFundForm;
+
+  const feed = rows.slice(0, FEED_ROWS);
+  // A row in the owner's words. The feed's writers describe an event from the chain's side
+  // ("Agent paid 0,1 XLM to GACB…POJV · task 0"); the owner wants to know what it was.
+  const agentKey = session?.agent ?? "";
+  const feedTitle = (e: { kind: string; label: string }): string => {
+    switch (e.kind) {
+      case "paid": {
+        const to = /\bto (\S+)/.exec(e.label)?.[1] ?? "";
+        const isAgent = !!agentKey && to.startsWith(agentKey.slice(0, 4)) && to.endsWith(agentKey.slice(-4));
+        if (isAgent) return tx("Task money to your agent", "Ajana görev parası");
+        return to ? tx(`Paid to ${to}`, `${to} adresine ödendi`) : tx("Payment", "Ödeme");
+      }
+      case "blocked":
+        return tx("Payment refused by your rules", "Ödeme kurallarına takıldı");
+      case "fund":
+        return tx("Funds added", "Para yatırıldı");
+      case "deploy":
+        return tx("Treasury opened", "Kasa açıldı");
+      case "whitelist":
+        return tx("Payee approved", "Alıcı onaylandı");
+      case "leash":
+        return /revoked/i.test(e.label) ? tx("Agent revoked", "Ajanın yetkisi iptal edildi") : tx("Agent connected", "Ajan bağlandı");
+      default:
+        return e.label;
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {t.legacy && (
         <div className="notice">
           <span>
-            This is an early treasury — agent sessions, pause and withdraw arrived later. Your funds are safe;{" "}
-            <button className="linkbtn" onClick={() => onGo("settings")} type="button">see Settings for the exit path</button>
+            {tx(
+              "This is an early treasury — agent sessions, pause and withdraw arrived later. Your funds are safe;",
+              "Bu eski bir kasa — ajan yetkisi, durdurma ve çekme sonradan geldi. Paran güvende;",
+            )}{" "}
+            <button className="linkbtn" onClick={() => onGo("settings")} type="button">
+              {tx("see Settings for the exit path", "çıkış yolu için Ayarlar'a bak")}
+            </button>
           </span>
         </div>
       )}
 
       {anomaly && (
         <div className="notice notice--warn">
-          <span>Most recent payment attempts were refused. That is your rules working — but check whether the payee list or today's limit needs updating.</span>
+          <span>
+            {tx(
+              "Most recent payment attempts were refused. That is your rules working — but check whether the payee list or today's limit needs updating.",
+              "Son ödeme denemelerinin çoğu reddedildi. Kuralların çalışıyor — ama alıcı listesini ya da günlük sınırı güncellemen gerekebilir.",
+            )}
+          </span>
         </div>
       )}
 
@@ -228,33 +270,42 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
       {t.address && t.tokenCode === "XLM" && t.walletXlm !== undefined && needsFunding(t.walletXlm) && s && s.balance === 0n && (
         <div className="notice">
           <span>
-            {t.walletXlm === null ? "Your wallet holds no XLM yet." : `Your wallet holds ${t.walletXlm.toFixed(2)} XLM.`}{" "}
-            The treasury is empty and you need about {MIN_XLM} XLM in the wallet to fund it.
+            {t.walletXlm === null
+              ? tx("Your wallet holds no XLM yet.", "Cüzdanında henüz XLM yok.")
+              : tx(`Your wallet holds ${t.walletXlm.toFixed(2)} XLM.`, `Cüzdanında ${t.walletXlm.toFixed(2)} XLM var.`)}{" "}
+            {tx(
+              `The treasury is empty and you need about ${MIN_XLM} XLM in the wallet to fund it.`,
+              `Kasa boş; doldurmak için cüzdanında yaklaşık ${MIN_XLM} XLM olmalı.`,
+            )}
           </span>
         </div>
       )}
 
       {/* WHERE YOU ARE — the four steps, until an agent has bought something */}
       {journey && !journey.complete && (
-        <motion.section className="journey" aria-label="Getting started" {...fadeUp(0)}>
+        <motion.section className="journey" aria-label={tx("Getting started", "Başlangıç adımları")} {...fadeUp(0)}>
           {journey.steps.map(({ step, done }, i) => {
             const isNow = journey.now === step;
             return (
               <div key={step} className={`journey__step${isNow ? " is-now" : done ? " is-done" : " is-todo"}`}>
                 <span className="journey__n">
                   {i + 1}
-                  {done ? <b> · done</b> : isNow ? " · now" : ""}
+                  {done ? <b> · {tx("done", "tamam")}</b> : isNow ? ` · ${tx("now", "şimdi")}` : ""}
                 </span>
-                <span className="journey__t">{JOURNEY_TITLE[step]}</span>
+                <span className="journey__t">{journeyTitle(step)}</span>
                 <span className="journey__d">{journeyDetail(step, done)}</span>
                 {isNow && step === "fund" && (
                   <div className="journey__cta">
-                    <button className="btn btn--gold" onClick={openFund} disabled={!!t.busy && t.busy !== "fund"} type="button">Add funds</button>
+                    <button className="btn btn--gold" onClick={openFund} disabled={!!t.busy && t.busy !== "fund"} type="button">
+                      {tx("Add funds", "Para yatır")}
+                    </button>
                   </div>
                 )}
                 {isNow && step === "agent" && (
                   <div className="journey__cta">
-                    <button className="btn btn--gold" onClick={() => onGo("agent")} type="button">Connect your agent</button>
+                    <button className="btn btn--gold" onClick={() => onGo("agent")} type="button">
+                      {tx("Connect your agent", "Ajanı bağla")}
+                    </button>
                   </div>
                 )}
               </div>
@@ -263,147 +314,149 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
         </motion.section>
       )}
 
-      <div className="page">
-        <div className="page__main">
-          {/* VERDICT — the latest decision, in ink. Only once there is one: before that the
-              steps above are the thing to read. */}
-          {latest && (
-            <motion.section className="verdict" {...fadeUp(0)}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
-                <div className="eyebrow">Latest decision · {whenOf(latest.at)}</div>
-                <div className="verdict__line">
-                  <span className="verdict__amount">{amountOf(latest) ? `${Number(amountOf(latest))} ${t.tokenCode}` : latest.kind === "blocked" ? "Refused" : "Paid"}</span>
+      <div className="trio">
+        {/* THE TREASURY — what it holds, and the rules every payment is checked against */}
+        <motion.section className="panel" {...fadeUp(0.04)}>
+          <div className="eyebrow">{tx("In the treasury", "Kasada")}</div>
+          {t.loading || !s ? (
+            <div className="shell__skel" style={{ height: 56, width: "60%" }} />
+          ) : (
+            <>
+              <div className="figure__big">
+                <span data-testid="treasury-balance">{fmtXlm(s.balance)}</span>
+                <small>{t.tokenCode}</small>
+              </div>
+              {s.balance === 0n && (
+                <div className="panel__note">
+                  {tx("Empty. Your agent pays from this balance — add funds before it can buy anything.", "Boş. Ajan bu bakiyeden öder — bir şey alabilmesi için önce para yatır.")}
                 </div>
-                <div className="verdict__why">{latest.label}</div>
-              </div>
-              <div className="verdict__side">
-                <span className={`pill pill--lg ${latest.kind === "blocked" ? "pill--no" : "pill--ok"}`} style={latest.kind === "blocked" ? { color: "#e2a394" } : undefined}>
-                  {latest.kind === "blocked" ? "Blocked" : "Allowed"}
-                </span>
-                {latest.txHash && (
-                  <a className="verdict__tx" href={`${EXPLORER}/tx/${latest.txHash}`} target="_blank" rel="noreferrer">
-                    tx {shortAddr(latest.txHash)} ↗
-                  </a>
-                )}
-              </div>
-            </motion.section>
+              )}
+            </>
           )}
-
-          {/* THE TWO NUMBERS — what the treasury holds, what the agent spent of today's limit */}
-          <motion.div className="figures" {...fadeUp(0.04)}>
-            <section className="panel panel--pad">
-              <div className="eyebrow">In the treasury</div>
-              {t.loading || !s ? (
-                <div className="shell__skel" style={{ height: 46, width: "60%" }} />
-              ) : (
-                <>
-                  <div className="figure__big">
-                    <span data-testid="treasury-balance">{fmtXlm(s.balance)}</span>
-                    <small>{t.tokenCode}</small>
-                  </div>
-                  {s.balance === 0n && <div className="panel__note">Empty. Your agent pays from this balance — add funds before it can buy anything.</div>}
-                </>
-              )}
-              <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-                <button className="btn btn--gold" onClick={() => (fundOpen ? closeFund() : openFund())} disabled={!!t.busy && t.busy !== "fund"} type="button">Add funds</button>
-              </div>
-              {fundOpen && !isMobile && <div ref={fundPanel}>{fundForm(false)}</div>}
-            </section>
-            <section className="panel panel--pad">
-              <div className="eyebrow">Spent in the last 24 hours</div>
-              {t.loading || !s ? (
-                <div className="shell__skel" style={{ height: 40, width: "60%" }} />
-              ) : (
-                <>
-                  <div className="figure__big figure__big--sm">
-                    <span>{fmtXlm(s.daySpent)}</span>
-                    <small>/ {fmtXlm(s.dailyLimit)} {t.tokenCode}</small>
-                  </div>
-                  <div className="bar"><div className="bar__fill" style={{ width: `${dayPct}%` }} /></div>
-                  <div className="meter__line">
-                    <span>≤ {fmtXlm(s.perTaskLimit)} {t.tokenCode} per payment</span>
-                    <span className="num">{fmtXlm(remaining)} left today</span>
-                  </div>
-                </>
-              )}
-            </section>
-          </motion.div>
-
-          {/* LEDGER */}
-          <motion.div {...fadeUp(0.08)}>
-            <RecentActivity rows={rows} freshId={freshId} week={week} onViewAll={() => onGo("activity")} />
-          </motion.div>
-        </div>
-
-        <div className="page__side">
-          {/* THE AGENT — whether one may spend, how much of its allowance is left, until when */}
-          <motion.section className="panel panel--pad" {...fadeUp(0.06)}>
-            <div className="panel__head">
-              <div className="eyebrow">Your agent</div>
-              {leashOn ? (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--ink-2)" }}>
-                  <i className="mark mark--ok" style={{ borderRadius: "50%", width: 7, height: 7 }} />may spend
-                </span>
-              ) : (
-                <button className="linkbtn" onClick={() => onGo("agent")} type="button">connect one</button>
-              )}
-            </div>
-            {leashOn && session ? (
-              <>
-                <div className="panel__title" style={{ fontSize: 22 }}>{countdown(Number(session.valid_until) * 1000 - now)} left</div>
-                <div className="bar bar--thin"><div className="bar__fill" style={{ width: `${leashPct}%` }} /></div>
-                <div className="meter__line">
-                  <span className="num">{fmtXlm(session.spent)} / {fmtXlm(session.limit)} {t.tokenCode} used</span>
-                  <span className="num">{shortAddr(session.agent)}</span>
-                </div>
-                <div>
-                  <button className="danger-link" onClick={() => onGo("agent")} type="button">Revoke on the Agent page</button>
-                </div>
-              </>
-            ) : (
-              <div className="panel__note">No agent may spend right now. Connect one and it pays on its own, inside your rules, with no prompts.</div>
-            )}
-          </motion.section>
-
-          {/* WAITING — exception requests the agent filed */}
-          {session && <ExceptionRequests agent={session.agent} />}
-
-          {/* RULES */}
-          <motion.section className="panel panel--pad" {...fadeUp(0.1)}>
-            <div className="panel__head">
-              <div className="eyebrow">Rules on Stellar</div>
+          <div style={{ marginTop: 10 }}>
+            <div className="panel__head" style={{ marginBottom: 2 }}>
+              <div className="eyebrow">{tx("Rules on Stellar", "Stellar'daki kurallar")}</div>
               <a className="linkbtn" href={`${EXPLORER}/contract/${treasuryId}`} target="_blank" rel="noreferrer">{shortAddr(treasuryId)} ↗</a>
             </div>
             {s ? (
-              <>
-                <div className="panel__kv"><span>Per day, at most</span><span className="num">{fmtXlm(s.dailyLimit)} {t.tokenCode}</span></div>
-                <div className="panel__kv"><span>Per payment, at most</span><span className="num">{fmtXlm(s.perTaskLimit)} {t.tokenCode}</span></div>
-                <div className="panel__kv"><span>Places it may pay</span><span className="num">{payeeCount ?? "—"}</span></div>
-                {t.lifecycle?.paused && <div className="err">Spending is paused — every payment is refused until you resume.</div>}
-              </>
+              <div className="rows">
+                <div><span>{tx("Per day, at most", "Günde en fazla")}</span><span className="num">{fmtXlm(s.dailyLimit)} {t.tokenCode}</span></div>
+                <div><span>{tx("Per payment, at most", "Tek ödemede en fazla")}</span><span className="num">{fmtXlm(s.perTaskLimit)} {t.tokenCode}</span></div>
+                <div><span>{tx("Places it may pay", "Ödeyebileceği yerler")}</span><span className="num">{payeeCount ?? "—"}</span></div>
+              </div>
             ) : (
               <div className="shell__skel" style={{ height: 80 }} />
             )}
-            <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-              <button className="btn btn--ghost" onClick={() => onGo("settings")} type="button">Change rules</button>
-              <button className="btn btn--ghost" onClick={() => onGo("payments")} type="button">Payees</button>
-            </div>
-          </motion.section>
+            {t.lifecycle?.paused && (
+              <div className="err" style={{ marginTop: 8 }}>
+                {tx("Spending is paused — every payment is refused until you resume.", "Harcama durduruldu — sen devam ettirene kadar her ödeme reddedilir.")}
+              </div>
+            )}
+          </div>
+          {fundOpen && !isMobile && <div ref={fundPanel}>{fundForm(false)}</div>}
+          <div className="card__foot">
+            <button className="btn btn--gold" onClick={() => (fundOpen ? closeFund() : openFund())} disabled={!!t.busy && t.busy !== "fund"} type="button">
+              {tx("Add funds", "Para yatır")}
+            </button>
+            <button className="btn btn--ghost" onClick={() => onGo("settings")} type="button">{tx("Change rules", "Kuralları değiştir")}</button>
+            <button className="btn btn--ghost" onClick={() => onGo("payments")} type="button">{tx("Payees", "Alıcılar")}</button>
+          </div>
+        </motion.section>
 
-          {/* WHAT THE BUDGET IS FOR — a few things the agent can buy, with what each costs */}
-          {t.tokenCode === "USDC" && (
-            <motion.section className="panel panel--pad" {...fadeUp(0.14)}>
-              <div className="eyebrow">What your agent can buy</div>
-              {CATALOG_EXAMPLES.map((c) => (
-                <div className="panel__kv" key={c.label}><span>{c.label}</span><span className="num">{c.price}</span></div>
-              ))}
-              <div className="panel__note">USDC per call, from the service catalog. Your agent finds the full list itself.</div>
-            </motion.section>
+        {/* THE AGENT — what it spent of today's limit, whether it may spend, what it can buy */}
+        <motion.section className="panel" {...fadeUp(0.08)}>
+          <div className="panel__head">
+            <div className="eyebrow">{tx("Your agent · last 24 hours", "Ajan · son 24 saat")}</div>
+            {!leashOn && (
+              <button className="linkbtn" onClick={() => onGo("agent")} type="button">{tx("connect one", "ajan bağla")}</button>
+            )}
+          </div>
+          {t.loading || !s ? (
+            <div className="shell__skel" style={{ height: 128, width: 128, borderRadius: "50%" }} />
+          ) : (
+            <div style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
+              <div className="ring" style={{ ["--p" as string]: dayPct }}>
+                <div>
+                  {fmtXlm(s.daySpent)}
+                  <small>{tx(`of ${fmtXlm(s.dailyLimit)} ${t.tokenCode}`, `${fmtXlm(s.dailyLimit)} ${t.tokenCode}'den`)}</small>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, flex: 1 }}>
+                <div style={{ fontFamily: "var(--display)", fontSize: 20, lineHeight: 1.2 }}>
+                  {leashOn && session
+                    ? tx(`May spend for ${countdown(Number(session.valid_until) * 1000 - now)}`, `Yetkisi ${countdown(Number(session.valid_until) * 1000 - now)} daha açık`)
+                    : tx("No agent may spend", "Hiçbir ajan harcayamaz")}
+                </div>
+                <div className="panel__note">
+                  {leashOn && session
+                    ? tx(
+                        `${fmtXlm(remaining)} ${t.tokenCode} left today · ${fmtXlm(session.spent)} of ${fmtXlm(session.limit)} used in all`,
+                        `Bugün kalan ${fmtXlm(remaining)} ${t.tokenCode} · toplamda ${fmtXlm(session.limit)} içinden ${fmtXlm(session.spent)} kullanıldı`,
+                      )
+                    : tx("Connect one and it pays on its own, inside your rules, with no prompts.", "Bir ajan bağla; kuralların içinde, sana sormadan kendisi öder.")}
+                </div>
+              </div>
+            </div>
           )}
-        </div>
+          {t.tokenCode === "USDC" && (
+            <div style={{ marginTop: 6 }}>
+              <div className="eyebrow" style={{ marginBottom: 2 }}>{tx("What it can buy · USDC per call", "Satın alabildikleri · çağrı başı USDC")}</div>
+              <div className="rows">
+                {CATALOG_EXAMPLES.map((c) => (
+                  <div key={c.label}><span>{tx(c.label, c.labelTr)}</span><span className="num">{c.price}</span></div>
+                ))}
+              </div>
+            </div>
+          )}
+          {leashOn && (
+            <div className="card__foot">
+              <button className="danger-link" onClick={() => onGo("agent")} type="button">
+                {tx("Revoke the agent on the Agent page", "Ajanın yetkisini Ajan sayfasından iptal et")}
+              </button>
+            </div>
+          )}
+        </motion.section>
+
+        {/* WHAT HAPPENED — the one ivory card: the latest things the rules decided */}
+        <motion.section className="panel is-light" {...fadeUp(0.12)}>
+          <div className="panel__head">
+            <div className="eyebrow">{tx("What your rules did", "Kuralların ne yaptı")}</div>
+            <button className="linkbtn" onClick={() => onGo("activity")} type="button">{tx("All", "Tümü")}</button>
+          </div>
+          {feed.length === 0 ? (
+            <div className="panel__note" style={{ marginTop: 4 }}>
+              {tx(
+                "Nothing yet. The first payment your agent tries shows here — allowed or refused by the contract, with its proof.",
+                "Henüz bir şey yok. Ajanın ilk ödeme denemesi burada görünür — kontrat izin verdi mi, reddetti mi, kanıtıyla.",
+              )}
+            </div>
+          ) : (
+            <div>
+              {feed.map((e) => (
+                <div className="feedline" key={e.id}>
+                  <div>
+                    <b title={e.label}>{feedTitle(e)}</b>
+                    <small>{whenOf(e.at)}</small>
+                  </div>
+                  <div>
+                    {amountOf(e) && <span className="num">{Number(amountOf(e))} {t.tokenCode}</span>}
+                    {e.kind === "paid" && <span className="pill pill--ok">{tx("Allowed", "Ödendi")}</span>}
+                    {e.kind === "blocked" && <span className="pill pill--no">{tx("Blocked", "Reddedildi")}</span>}
+                    {e.txHash && e.kind !== "paid" && e.kind !== "blocked" && (
+                      <a className="linkbtn" href={`${EXPLORER}/tx/${e.txHash}`} target="_blank" rel="noreferrer">tx ↗</a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.section>
       </div>
 
-      <BottomSheet open={fundOpen && isMobile} onClose={closeFund} title="Fund treasury">
+      {/* WAITING — exception requests the agent filed */}
+      {session && <ExceptionRequests agent={session.agent} />}
+
+      <BottomSheet open={fundOpen && isMobile} onClose={closeFund} title={tx("Add funds", "Para yatır")}>
         {fundForm(true)}
       </BottomSheet>
     </div>

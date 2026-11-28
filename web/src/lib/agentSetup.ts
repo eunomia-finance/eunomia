@@ -10,6 +10,7 @@
 // the contract has no call that does them together.
 import { BASE_FEE, Horizon, Operation, TransactionBuilder } from "@stellar/stellar-sdk";
 import { HORIZON_URL, NETWORK_PASSPHRASE } from "../config";
+import { tx } from "./i18n";
 import { kit } from "./walletKit";
 
 /** What a new agent account is opened with: the 1 XLM base reserve, 0.5 XLM for the token
@@ -85,6 +86,24 @@ export function planAgentSetup(f: SetupFacts): SetupStep[] {
   return steps;
 }
 
+const CATALOG_TR: Record<string, string> = {
+  [CATALOG_PAYEES[0].address]: "Servis kataloğu (ROZO MPP Router)",
+  [CATALOG_PAYEES[1].address]: "Stellar verisi (Mercury)",
+};
+
+/** A step's sentence in the reader's language. `label` stays the English one — it is what the
+ *  plan is built and tested with — and this is what a page shows. */
+export function stepLabel(s: SetupStep): string {
+  if (s.kind === "leash") return tx(s.label, "Ajana harcama yetkisi ver");
+  if (s.kind === "account") {
+    if (s.status !== "manual") return tx(s.label, `Ajanın hesabını cüzdanından ${AGENT_START_XLM} XLM ile aç`);
+    const key = /key (\S+)/.exec(s.label)?.[1] ?? "";
+    return tx(s.label, `Ajanın adresine (${key}) herhangi bir cüzdandan yaklaşık ${AGENT_START_XLM} XLM gönder — passkey cüzdanı hesap açamaz`);
+  }
+  const name = s.address ? CATALOG_TR[s.address] : undefined;
+  return name ? tx(s.label, `${name} adresini alıcı olarak onayla`) : tx(s.label, "Kasanın ajana görev parası vermesine izin ver");
+}
+
 /** Whether a classic account exists. Unknown (Horizon down) is an error, not "no": opening an
  *  account that already exists fails, and the owner would be told the wrong thing. */
 export async function agentAccountExists(address: string, fetchFn: typeof fetch = fetch): Promise<boolean> {
@@ -114,9 +133,9 @@ export const catalogLabel = (address: string): string | null => CATALOG_PAYEES.f
 /** What an agent can buy today, in words an owner reads: a few routes of the service catalog
  *  with their per-call price in USDC (read from the catalog 2026-11-27). Shown so the owner
  *  knows what the budget is for; the agent finds the live list itself. */
-export const CATALOG_EXAMPLES: { label: string; price: string }[] = [
-  { label: "Read a web page", price: "0.002" },
-  { label: "Search the web", price: "0.007" },
-  { label: "Generate an image", price: "0.003" },
-  { label: "Stellar contract data", price: "0.001" },
+export const CATALOG_EXAMPLES: { label: string; labelTr: string; price: string }[] = [
+  { label: "Read a web page", labelTr: "Sayfa okuma", price: "0.002" },
+  { label: "Search the web", labelTr: "Web araması", price: "0.007" },
+  { label: "Generate an image", labelTr: "Görsel üretme", price: "0.003" },
+  { label: "Stellar contract data", labelTr: "Stellar verisi", price: "0.001" },
 ];

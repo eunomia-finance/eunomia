@@ -1,19 +1,23 @@
-// The product chrome: persistent sidebar (desktop) / bottom tabs (mobile) + a sticky
-// topbar carrying the treasury switcher and the shared wallet chip. Pages render inside.
+// The product chrome: one top bar — brand, the five pages as a pill, language, treasury and
+// wallet — and bottom tabs on phones. Pages render under it. The sidebar went with the
+// 2026-11-28 redesign: the page needs its full width for three cards side by side.
 import EunomiaMark from "../EunomiaMark";
 import WalletChip from "../WalletChip";
 import TreasurySwitcher from "./TreasurySwitcher";
 import { APP_PAGES, type AppPage, type View } from "../../lib/routes";
+import { setLang, tx, useLang } from "../../lib/i18n";
 import "./shell.css";
 import "./ledger.css";
 
-const NAV: Record<AppPage, { label: string; icon: string }> = {
-  overview: { label: "Overview", icon: "◈" },
-  payments: { label: "Payments", icon: "→" },
-  agent: { label: "Agent", icon: "⚡" },
-  activity: { label: "Activity", icon: "≡" },
-  settings: { label: "Settings", icon: "⚙" },
-};
+const ICON: Record<AppPage, string> = { overview: "◈", payments: "→", agent: "⚡", activity: "≡", settings: "⚙" };
+const label = (p: AppPage): string =>
+  ({
+    overview: tx("Overview", "Genel bakış"),
+    payments: tx("Payments", "Ödemeler"),
+    agent: tx("Agent", "Ajan"),
+    activity: tx("Activity", "Hareketler"),
+    settings: tx("Settings", "Ayarlar"),
+  })[p];
 
 export default function AppShell({
   page,
@@ -24,56 +28,45 @@ export default function AppShell({
   onGo: (v: View) => void;
   children: React.ReactNode;
 }) {
+  const lang = useLang();
   return (
     <div className="shell">
-      <aside className="shell__side">
+      <header className="shell__top">
         <button className="shell__brand" onClick={() => onGo("landing")} type="button">
           <EunomiaMark size={17} />
           Eunomia
         </button>
-        <nav className="shell__nav">
+        <nav className="shell__pill" aria-label={tx("Pages", "Sayfalar")}>
           {APP_PAGES.map((p) => (
-            <button
-              key={p}
-              className={`shell__item${page === p ? " is-active" : ""}`}
-              onClick={() => onGo(p)}
-              type="button"
-            >
-              <span className="shell__icon">{NAV[p].icon}</span> {NAV[p].label}
+            <button key={p} className={`shell__item${page === p ? " is-active" : ""}`} onClick={() => onGo(p)} type="button">
+              {label(p)}
             </button>
           ))}
         </nav>
-        <div className="shell__foot">
-          <div className="shell__beta">⚠ Mainnet beta — real funds, capped deposits.</div>
-          <a
-            className="shell__docs"
-            href="/docs/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Docs ↗
-          </a>
-        </div>
-      </aside>
-
-      <div className="shell__main">
-        <header className="shell__top">
+        <div className="shell__right">
+          <div className="shell__lang" role="group" aria-label={tx("Language", "Dil")}>
+            <button className={lang === "tr" ? "is-on" : ""} onClick={() => setLang("tr")} aria-pressed={lang === "tr"} type="button">TR</button>
+            <button className={lang === "en" ? "is-on" : ""} onClick={() => setLang("en")} aria-pressed={lang === "en"} type="button">EN</button>
+          </div>
           <TreasurySwitcher onNew={() => onGo("overview")} />
           <WalletChip onWalletView={() => onGo("wallet")} />
-        </header>
-        <main className="shell__content">{children}</main>
-      </div>
+        </div>
+      </header>
+
+      <main className="shell__content">{children}</main>
+
+      <footer className="shell__foot">
+        <span>{tx("Mainnet beta — real funds, capped deposits.", "Mainnet beta — gerçek para, sınırlı yatırım.")}</span>
+        <a className="shell__docs" href="/docs/" target="_blank" rel="noreferrer">
+          {tx("Docs", "Dokümanlar")} ↗
+        </a>
+      </footer>
 
       <nav className="shell__tabs">
         {APP_PAGES.map((p) => (
-          <button
-            key={p}
-            className={`shell__tab${page === p ? " is-active" : ""}`}
-            onClick={() => onGo(p)}
-            type="button"
-          >
-            <span className="shell__icon">{NAV[p].icon}</span>
-            {NAV[p].label}
+          <button key={p} className={`shell__tab${page === p ? " is-active" : ""}`} onClick={() => onGo(p)} type="button">
+            <span className="shell__icon">{ICON[p]}</span>
+            {label(p)}
           </button>
         ))}
       </nav>

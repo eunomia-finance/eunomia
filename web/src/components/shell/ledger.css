@@ -192,3 +192,63 @@
   .shell .figures{ grid-template-columns:minmax(0,1fr); }
   .shell .figure__big{ font-size:38px; }
 }
+
+/* ---- the forest app, 2026-11-28 --------------------------------------------------
+   The one panel a page wants read is ivory: the verdict, and any `.is-light` card. It flips
+   the variables, so what is inside follows. */
+.shell .verdict{
+  --bg:#f4efe6; --surface:#f4efe6; --ink:#16291f; --ink-2:#5f6e64; --ok:#dce6d4; --red:#9c3d2a;
+  --line:rgba(31,58,46,.16); --raise:rgba(31,58,46,.05);
+  background:#f4efe6; color:#16291f; box-shadow:none;
+}
+.shell .verdict .eyebrow,
+.shell .verdict__arrow,
+.shell .verdict__tx{ color:#5f6e64; }
+.shell .verdict__tx:hover{ color:#16291f; }
+.shell .verdict__why{ color:#16291f; }
+.shell .verdict .bar{ background:rgba(31,58,46,.12); }
+.shell .verdict .bar__fill{ background:#1f3a2e; }
+.shell .btn--inv, .shell .btn--inv:hover{ color:#16291f; border-color:rgba(31,58,46,.3); }
+.shell .btn--inv:hover{ background:rgba(31,58,46,.07); }
+.shell .verdict--quiet{ background:var(--surface); color:var(--ink); }
+
+/* Buttons on the dark ground: the default is an ivory fill, a ghost is an outline. */
+.shell .bar{ background:rgba(244,239,230,.12); }
+.shell .is-light .bar{ background:rgba(31,58,46,.12); }
+.shell .bar__fill{ background:var(--green); }
+.shell .is-light .bar__fill{ background:#1f3a2e; }
+.shell .field{ background:rgba(244,239,230,.06); }
+.shell .is-light .field{ background:#fbf8f1; }
+.shell .journey__step.is-now{ background:#f4efe6; color:#16291f; }
+.shell .journey{ background:var(--surface); }
+
+/* Overview: three cards under the steps — the treasury, the agent, and what happened. */
+.shell .trio{ display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.25fr); gap:16px; align-items:stretch; }
+.shell .trio > .panel{ padding:24px; display:flex; flex-direction:column; gap:12px; border:none; border-radius:18px; }
+.shell .trio .figure__big{ font-size:56px; margin-top:6px; }
+.shell .card__foot{ margin-top:auto; padding-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.shell .ring{
+  --p:0; width:128px; height:128px; border-radius:50%; flex:none; display:grid; place-items:center;
+  background:conic-gradient(var(--green) calc(var(--p) * 1%), rgba(244,239,230,.12) 0);
+}
+.shell .ring > div{ width:100px; height:100px; border-radius:50%; background:var(--surface); display:grid; place-items:center; align-content:center; text-align:center; font-family:var(--code); font-weight:500; font-size:20px; line-height:1.15; }
+.shell .ring small{ display:block; margin-top:4px; font-family:var(--body); font-weight:400; font-size:11px; color:var(--ink-2); }
+.shell .rows{ display:flex; flex-direction:column; }
+.shell .rows > div{ display:flex; justify-content:space-between; gap:12px; padding:9px 0; font-size:13.5px; }
+.shell .rows > div + div{ border-top:1px solid var(--line); }
+.shell .rows .num{ font-size:13.5px; }
+.shell .feedline{ display:flex; justify-content:space-between; gap:12px; align-items:center; padding:12px 0; border-top:1px solid var(--line); font-size:14px; min-width:0; }
+.shell .feedline > div:first-child{ min-width:0; }
+.shell .feedline b{ display:block; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.shell .feedline small{ display:block; margin-top:3px; font-size:12px; color:var(--ink-2); }
+.shell .feedline > div:last-child{ text-align:right; flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
+.shell .pill--no{ background:color-mix(in oklab, var(--red) 16%, transparent); padding-left:9px; }
+
+@media(max-width:1180px){
+  .shell .trio{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+  .shell .trio > .panel:last-child{ grid-column:1 / -1; }
+}
+@media(max-width:760px){
+  .shell .trio{ grid-template-columns:minmax(0,1fr); }
+  .shell .trio .figure__big{ font-size:44px; }
+}

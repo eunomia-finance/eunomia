@@ -10,22 +10,27 @@
    of it is ink (6.31:1). --red works both ways (7.16:1 on cream).
    ========================================================================== */
 
-/* Palette, 2026-11-28: forest / ivory / champagne gold at roughly 60 / 30 / 10 across the
-   product. In the app the reading surfaces are ivory and the rail is forest; gold is the one
-   primary action on a screen and a few small marks. Measured: ivory on forest 10.8:1, gold on
-   forest 5.5:1, gold on ivory 2.0:1 — so --green (kept as the name of the accent fill) stays
-   FILL ONLY on ivory, exactly as before, and text on a gold fill is forest. The palette has
-   no red; --red is a brick chosen to sit with it (6.4:1 on ivory). */
+/* Palette, 2026-11-28: forest / ivory / champagne gold at roughly 60 / 30 / 10. The app is
+   the forest part: a deep-forest ground, forest cards, ivory text, and one ivory card per page
+   for the thing that is read rather than glanced at. Gold is the one primary action on a
+   screen and a few small marks. Measured: ivory on forest 10.8:1, gold on forest 5.5:1, gold
+   on ivory 2.0:1 — so --green (kept as the name of the accent fill) is FILL ONLY on ivory and
+   what is written on a gold fill is forest. The palette has no red; --red is a brick chosen
+   to sit with it, light on the dark ground (6.0:1) and dark on ivory (6.4:1).
+
+   The app has one look: the old light/dark switch is gone with the cream theme it switched
+   from. `.is-light` flips the same variables for an ivory card, so everything inside it —
+   pills, bars, links — follows without a second set of rules. */
 .shell{
-  --bg: #f4efe6;
-  --surface: #fbf8f1;
-  --ink: #1f3a2e;
-  --ink-2: #5f6e64;
+  --bg: #16291f;
+  --surface: #1f3a2e;
+  --ink: #f4efe6;
+  --ink-2: #a9b7ac;
   --green: #c9a86a;
-  --ok: #dce6d4;
-  --red: #9c3d2a;
-  --line: rgba(31, 58, 46, 0.16);
-  --raise: rgba(31, 58, 46, 0.05);
+  --ok: #2f5140;
+  --red: #e2a394;
+  --line: rgba(244, 239, 230, 0.14);
+  --raise: rgba(244, 239, 230, 0.06);
   --rail: #1f3a2e;
   --rail-raise: #2a4a3b;
   --rail-ink: #f4efe6;
@@ -36,22 +41,21 @@
   --body: "Geist", system-ui, -apple-system, sans-serif;
   --code: ui-monospace, "SFMono-Regular", Consolas, monospace;
 
-  display:grid; grid-template-columns:236px 1fr; min-height:100vh;
+  display:flex; flex-direction:column; min-height:100vh;
   background:var(--bg); color:var(--ink);
   font-family:var(--body);
 }
 
-:root[data-theme="dark"] .shell{
-  --bg: #16291f;
-  --surface: #1f3a2e;
-  --ink: #f4efe6;
-  --ink-2: #a9b7ac;
-  --ok: #2f5140;
-  --red: #e2a394;
-  --line: rgba(244, 239, 230, 0.16);
-  --raise: rgba(244, 239, 230, 0.06);
-  --rail: #112018;
-  --rail-raise: #1f3a2e;
+.shell .is-light{
+  --bg: #f4efe6;
+  --surface: #f4efe6;
+  --ink: #16291f;
+  --ink-2: #5f6e64;
+  --ok: #dce6d4;
+  --red: #9c3d2a;
+  --line: rgba(31, 58, 46, 0.16);
+  --raise: rgba(31, 58, 46, 0.05);
+  color:var(--ink);
 }
 
 .shell ::selection{ background:var(--green); color:#16291f; }
@@ -455,14 +459,59 @@
   }
 }
 
-/* ---- rail, 2026-11-28 -----------------------------------------------------------
-   The sidebar is the forest block of the palette: the one large dark surface in the app,
-   so the reading area can stay ivory. Same rail in both themes. */
-.shell__side{ background:var(--rail); border-right:none; }
-.shell__brand{ color:var(--rail-ink); }
-.shell__item{ color:var(--rail-ink-2); padding:11px 12px; font-size:14px; }
-.shell__item:hover{ color:var(--rail-ink); background:var(--rail-raise); }
-.shell__item.is-active{ color:var(--rail-ink); background:var(--rail-raise); }
-.shell__beta{ color:var(--rail-ink-2); background:none; border-color:rgba(244,239,230,.16); }
-.shell__docs{ color:var(--rail-ink-2); }
-.shell__docs:hover{ color:var(--rail-ink); }
+/* ---- top bar, 2026-11-28 --------------------------------------------------------
+   Brand on the left, the five pages as one pill in the middle, language + treasury + wallet
+   on the right. The active page is the ivory cell of the pill. */
+.shell__top{
+  display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:16px;
+  padding:18px 32px; border-bottom:none; background:var(--bg);
+}
+.shell__brand{ margin:0; justify-self:start; color:var(--ink); }
+.shell__pill{ display:flex; gap:4px; padding:5px; border-radius:100px; background:var(--surface); }
+.shell__pill .shell__item{
+  width:auto; padding:9px 17px; border-radius:100px; font-size:14px; font-weight:500;
+  color:var(--ink-2); white-space:nowrap;
+}
+.shell__pill .shell__item:hover{ color:var(--ink); background:var(--raise); }
+.shell__pill .shell__item.is-active{ color:#16291f; background:#f4efe6; font-weight:500; }
+.shell__pill .shell__item.is-active::before{ content:none; }
+.shell__right{ display:flex; align-items:center; justify-content:flex-end; gap:10px; min-width:0; }
+.shell__lang{ display:flex; padding:3px; border-radius:100px; background:var(--surface); }
+.shell__lang button{
+  border:none; background:none; cursor:pointer; padding:6px 10px; border-radius:100px;
+  font:500 12px/1 var(--body); color:var(--ink-2);
+}
+.shell__lang button.is-on{ background:var(--green); color:#16291f; }
+.shell__content{ max-width:1320px; padding:8px 32px 28px; }
+.shell__foot{
+  margin:0 auto; width:100%; max-width:1320px; box-sizing:border-box; padding:0 32px 26px;
+  display:flex; flex-direction:row; justify-content:space-between; gap:16px;
+  font-size:12.5px; color:var(--ink-2);
+}
+.shell__docs{ color:var(--ink-2); }
+.shell__docs:hover{ color:var(--ink); }
+
+@media(max-width:1180px){
+  .shell__top{ grid-template-columns:auto minmax(0,1fr); }
+  .shell__pill{ display:none; }
+  .shell__tabs{
+    position:fixed; left:0; right:0; bottom:0; z-index:1000;
+    display:flex; justify-content:space-around; align-items:stretch;
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+    background:var(--surface);
+    border-top:1px solid var(--line);
+  }
+  .shell__tab{
+    display:flex; flex-direction:column; align-items:center; gap:3px; flex:1;
+    background:none; border:none; cursor:pointer; padding:6px 2px;
+    color:var(--ink-2); font-size:10.5px; font-weight:600; font-family:inherit;
+  }
+  .shell__tab .shell__icon{ font-size:16px; width:auto; }
+  .shell__tab.is-active{ color:var(--ink); }
+  .shell__content{ padding:8px 14px 20px; }
+  .shell__top{ padding:12px 14px; }
+  .shell__foot{ padding:0 14px 96px; }
+}
+@media(max-width:560px){
+  .shell__brand{ font-size:0; gap:0; } /* the mark alone: the wallet chip needs the room */
+}

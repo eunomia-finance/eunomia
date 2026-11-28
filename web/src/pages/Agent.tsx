@@ -1,5 +1,5 @@
 // The Leash: hand the treasury to an autonomous agent on a time-bound, spend-capped session
-// key the agent holds itself. An active Leash is the one dark panel on this page — live cap,
+// key the agent holds itself. An active Leash is the one ivory panel on this page — live cap,
 // countdown, revoke. Inactive, the page connects one: a command for the agent's machine, the
 // key it prints, and one button that does everything the key needs. The single-spender rule
 // lives in the provider.
@@ -7,7 +7,8 @@ import { useEffect, useRef, useState } from "react";
 import BudgetRequestCard from "../components/BudgetRequestCard";
 import ExceptionRequests from "../components/ExceptionRequests";
 import { EXPLORER, fmtXlm, shortAddr } from "../config";
-import { CATALOG_PAYEES, type SetupStep } from "../lib/agentSetup";
+import { CATALOG_PAYEES, stepLabel, type SetupStep } from "../lib/agentSetup";
+import { tx, useLang } from "../lib/i18n";
 import { useNow } from "../lib/useNow";
 import { useTreasury } from "../state/useTreasury";
 
@@ -22,6 +23,7 @@ type ClientId = (typeof CLIENTS)[number]["id"];
 const STEP_MARK: Record<SetupStep["status"], string> = { todo: "○", signing: "…", done: "✓", failed: "✕", manual: "!" };
 
 export default function Agent() {
+  useLang();
   const t = useTreasury();
   const [cap, setCap] = useState("25");
   // A month, not a day: an agent that worked today should still work tomorrow without the
@@ -73,8 +75,10 @@ export default function Agent() {
           <section className="panel panel--pad">
             <div className="eyebrow">Leash</div>
             <div className="panel__note">
-              This is an early treasury — Leash sessions arrived later. Create a fresh treasury from the
-              switcher to use the agent features; your funds are safe, and Settings shows the exit path.
+              {tx(
+                "This is an early treasury — Leash sessions arrived later. Create a fresh treasury from the switcher to use the agent features; your funds are safe, and Settings shows the exit path.",
+                "Bu eski bir kasa — ajan yetkisi sonradan geldi. Ajan özellikleri için üstteki menüden yeni bir kasa aç; paran güvende, çıkış yolu Ayarlar'da.",
+              )}
             </div>
           </section>
         </div>
@@ -88,7 +92,7 @@ export default function Agent() {
 
   const command = (
     <>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} role="group" aria-label="Your AI client">
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} role="group" aria-label={tx("Your AI client", "Kullandığın program")}>
         {CLIENTS.map((c) => (
           <button key={c.id} className={`chip${client === c.id ? " is-on" : ""}`} onClick={() => setClient(c.id)} aria-pressed={client === c.id} type="button">
             {c.label}
@@ -100,7 +104,7 @@ export default function Agent() {
       <span className="code" style={{ marginTop: 6 }}>{initCommand}</span>
       <div>
         <button className="linkbtn" onClick={copyInit} type="button" aria-live="polite">
-          {copied ? "copied" : "copy command"}
+          {copied ? tx("copied", "kopyalandı") : tx("copy command", "komutu kopyala")}
         </button>
       </div>
     </>
@@ -113,66 +117,91 @@ export default function Agent() {
             the agent said so. The page that connects the agent is where to say it first. */}
         {t.state && t.state.balance === 0n && (
           <div className="notice">
-            <span>Your treasury is empty. Add funds on Overview first — the agent pays from that balance.</span>
+            <span>
+              {tx(
+                "Your treasury is empty. Add funds on Overview first — the agent pays from that balance.",
+                "Kasan boş. Önce Genel bakış sayfasından para yatır — ajan o bakiyeden öder.",
+              )}
+            </span>
           </div>
         )}
         {hasRequest && <BudgetRequestCard onDone={() => setHasRequest(false)} />}
         {active && session ? (
           <section className="verdict">
             <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
-              <div className="eyebrow">Leash · active · expires in {countdown(Number(session.valid_until) * 1000 - now)}</div>
+              <div className="eyebrow">
+                {tx("Agent connected · may spend for", "Ajan bağlı · yetkisi")} {countdown(Number(session.valid_until) * 1000 - now)}
+                {tx("", " daha açık")}
+              </div>
               <div className="verdict__line">
                 <span className="verdict__amount">{fmtXlm(left)} {t.tokenCode}</span>
-                <span className="verdict__arrow">left of {fmtXlm(session.limit)}</span>
+                <span className="verdict__arrow">{tx(`left of ${fmtXlm(session.limit)}`, `kaldı · toplam ${fmtXlm(session.limit)}`)}</span>
               </div>
               <div className="bar bar--thin"><div className="bar__fill" style={{ width: `${pct}%` }} /></div>
               <div className="verdict__why">
                 <span className="num">{shortAddr(session.agent)}</span>
                 {" · "}
-                your agent (eunomia-mcp) · pays without asking; every payment
-                is still checked against your rules on Stellar.
+                {tx(
+                  "your agent pays without asking; every payment is still checked against your rules on Stellar.",
+                  "ajanın sana sormadan öder; her ödeme yine de Stellar'daki kurallarından geçer.",
+                )}
               </div>
               {taskPayees.length > 0 && (
                 <div className="verdict__why">
-                  Task budget · may pay only {taskPayees.map((p) => shortAddr(p)).join(", ")}
+                  {tx("Task budget · may pay only", "Görev bütçesi · yalnız şunlara ödeyebilir:")} {taskPayees.map((p) => shortAddr(p)).join(", ")}
                 </div>
               )}
             </div>
             <div className="verdict__side">
               <a className="verdict__tx" href={`${EXPLORER}/account/${session.agent}`} target="_blank" rel="noreferrer">
-                agent account ↗
+                {tx("agent account", "ajanın hesabı")} ↗
               </a>
               <button className="btn btn--inv" onClick={() => void t.revokeLeash()} disabled={!!t.busy} type="button">
-                {t.busy === "revoke" ? "Revoking…" : "Revoke Leash"}
+                {t.busy === "revoke" ? tx("Revoking…", "İptal ediliyor…") : tx("Revoke the agent", "Ajanın yetkisini iptal et")}
               </button>
             </div>
           </section>
         ) : (
           <section className="panel panel--pad">
-            <div className="eyebrow">Leash</div>
-            <div className="panel__title">Connect your agent.</div>
+            <div className="eyebrow">{tx("Agent", "Ajan")}</div>
+            <div className="panel__title">{tx("Connect your agent.", "Ajanını bağla.")}</div>
             <div className="panel__note">
-              Three things: run one command, paste what it prints, press one button. After that the agent pays on
-              its own — no popups — and every payment is still checked against your rules. Revoke any time.
+              {tx(
+                "Three things: run one command, paste what it prints, press one button. After that the agent pays on its own — no popups — and every payment is still checked against your rules. Revoke any time.",
+                "Üç iş: bir komut çalıştır, yazdığını yapıştır, bir düğmeye bas. Sonrasında ajan kendisi öder — onay penceresi yok — ve her ödeme yine kurallarından geçer. İstediğin an iptal edersin.",
+              )}
             </div>
 
             <div className="steps" style={{ marginTop: 6 }}>
               <div className="step">
                 <span className="step__n">1</span>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, marginBottom: 6 }}>Pick your AI client and run this in a terminal on the machine it runs on.</div>
+                  <div style={{ fontSize: 13.5, marginBottom: 6 }}>
+                    {tx(
+                      "Pick your AI client. Then open a terminal on that computer (on Windows: Start → PowerShell), paste this and press Enter. Not in the Claude chat — in the terminal.",
+                      "Kullandığın programı seç. Sonra o bilgisayarda terminali aç (Windows'ta: Başlat → PowerShell), bunu yapıştır ve Enter'a bas. Claude'un sohbetine değil — terminale.",
+                    )}
+                  </div>
                   {command}
+                  <div className="panel__note" style={{ marginTop: 6 }}>
+                    {tx(
+                      "It needs Node.js (nodejs.org). If you chose Claude Desktop, quit it completely first — it overwrites its settings when it closes.",
+                      "Node.js gerekir (nodejs.org). Claude Desktop'ı seçtiysen önce onu tamamen kapat — kapanırken ayarlarının üstüne yazıyor.",
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="step">
                 <span className="step__n">2</span>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <label className="lab">
-                    <span style={{ fontSize: 13.5 }}>Paste the agent public key the command printed.</span>
+                    <span style={{ fontSize: 13.5 }}>
+                      {tx("Paste the agent public key the command printed.", "Komutun yazdığı “Agent public key” adresini yapıştır.")}
+                    </span>
                     <input
                       className="field field--mono"
-                      aria-label="Agent public key"
-                      placeholder="G… — the line that starts with “Agent public key”"
+                      aria-label={tx("Agent public key", "Ajan adresi")}
+                      placeholder={tx("G… — the line that starts with “Agent public key”", "G… — “Agent public key” ile başlayan satır")}
                       spellCheck={false}
                       value={agentKey}
                       onChange={(e) => setAgentKey(e.target.value)}
@@ -183,35 +212,44 @@ export default function Agent() {
               <div className="step">
                 <span className="step__n">3</span>
                 <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ fontSize: 13.5 }}>Set how much it may spend and for how long, then connect it.</div>
+                  <div style={{ fontSize: 13.5 }}>
+                    {tx("Set how much it may spend and for how long, then connect it.", "Ne kadar ve ne süreyle harcayabileceğini belirle, sonra bağla.")}
+                  </div>
                   <div className="two">
                     <label className="lab">
-                      <span className="eyebrow">Cap ({t.tokenCode})</span>
-                      <input className="field field--mono" inputMode="decimal" aria-label={`Session spending cap in ${t.tokenCode}`} value={cap} onChange={(e) => setCap(e.target.value)} />
+                      <span className="eyebrow">{tx(`At most (${t.tokenCode})`, `En fazla (${t.tokenCode})`)}</span>
+                      <input className="field field--mono" inputMode="decimal" aria-label={tx(`Session spending cap in ${t.tokenCode}`, `Harcama tavanı (${t.tokenCode})`)} value={cap} onChange={(e) => setCap(e.target.value)} />
                     </label>
                     <label className="lab">
-                      <span className="eyebrow">Hours</span>
-                      <input className="field field--mono" inputMode="decimal" aria-label="Session duration in hours" value={hours} onChange={(e) => setHours(e.target.value)} />
+                      <span className="eyebrow">{tx("Hours (720 = 30 days)", "Saat (720 = 30 gün)")}</span>
+                      <input className="field field--mono" inputMode="decimal" aria-label={tx("Session duration in hours", "Yetki süresi (saat)")} value={hours} onChange={(e) => setHours(e.target.value)} />
                     </label>
                   </div>
                   <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13.5, cursor: "pointer" }}>
                     <input type="checkbox" checked={catalog} onChange={(e) => setCatalog(e.target.checked)} style={{ marginTop: 3 }} />
                     <span>
-                      Let it buy from the service catalog (web reading, search, images, Stellar data).
+                      {tx(
+                        "Let it buy from the service catalog (web reading, search, images, Stellar data).",
+                        "Servis kataloğundan alışveriş yapabilsin (sayfa okuma, arama, görsel, Stellar verisi).",
+                      )}
                       <span className="panel__note" style={{ display: "block" }}>
-                        Approves the catalog's {CATALOG_PAYEES.length} settlement addresses as payees:{" "}
-                        {CATALOG_PAYEES.map((c) => shortAddr(c.address)).join(", ")}. Remove them on Payments any time.
+                        {tx(
+                          `Approves the catalog's ${CATALOG_PAYEES.length} settlement addresses as payees: ${CATALOG_PAYEES.map((c) => shortAddr(c.address)).join(", ")}. Remove them on Payments any time.`,
+                          `Kataloğun ${CATALOG_PAYEES.length} ödeme adresini alıcı olarak onaylar: ${CATALOG_PAYEES.map((c) => shortAddr(c.address)).join(", ")}. Ödemeler sayfasından istediğin an çıkarırsın.`,
+                        )}
                       </span>
                     </span>
                   </label>
                   <div>
-                    <button className="btn btn--lg" onClick={() => void doConnect()} disabled={!!t.busy} type="button">
-                      {t.busy === "session" ? "Connecting…" : "Connect agent"}
+                    <button className="btn btn--gold" onClick={() => void doConnect()} disabled={!!t.busy} type="button">
+                      {t.busy === "session" ? tx("Connecting…", "Bağlanıyor…") : tx("Connect agent", "Ajanı bağla")}
                     </button>
                   </div>
                   <div className="panel__note">
-                    Your wallet asks you to sign a few times in a row — once for each line that appears below. The
-                    agent's secret never leaves its machine.
+                    {tx(
+                      "Your wallet asks you to sign a few times in a row — once for each line that appears below. The agent's secret never leaves its machine.",
+                      "Cüzdanın art arda birkaç imza ister — aşağıda çıkan her satır için bir tane. Ajanın gizli anahtarı kendi bilgisayarından çıkmaz.",
+                    )}
                   </div>
                   {steps.length > 0 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }} aria-live="polite">
@@ -226,7 +264,10 @@ export default function Agent() {
                           }}
                         >
                           <span className="num" style={{ width: 14, flex: "none", textAlign: "center" }}>{STEP_MARK[s.status]}</span>
-                          <span>{s.label}{s.status === "signing" ? " — waiting for your signature" : ""}</span>
+                          <span>
+                            {stepLabel(s)}
+                            {s.status === "signing" ? tx(" — waiting for your signature", " — imzan bekleniyor") : ""}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -247,17 +288,22 @@ export default function Agent() {
           bound it belong on the same screen as that decision, not one page away. */}
       <div className="page__side">
         <section className="panel panel--pad">
-          <div className="eyebrow">Your rules still apply</div>
+          <div className="eyebrow">{tx("Your rules still apply", "Kuralların geçerli kalır")}</div>
           {t.state ? (
             <>
-              <div className="panel__kv"><span>Per day, at most</span><span className="num">{fmtXlm(t.state.dailyLimit)} {t.tokenCode}</span></div>
-              <div className="panel__kv"><span>Per payment, at most</span><span className="num">{fmtXlm(t.state.perTaskLimit)} {t.tokenCode}</span></div>
+              <div className="panel__kv"><span>{tx("Per day, at most", "Günde en fazla")}</span><span className="num">{fmtXlm(t.state.dailyLimit)} {t.tokenCode}</span></div>
+              <div className="panel__kv"><span>{tx("Per payment, at most", "Tek ödemede en fazla")}</span><span className="num">{fmtXlm(t.state.perTaskLimit)} {t.tokenCode}</span></div>
               {t.lifecycle?.v4 && t.lifecycle.v4.monthlyLimit > 0n && (
-                <div className="panel__kv"><span>Per month, at most</span><span className="num">{fmtXlm(t.lifecycle.v4.monthlyLimit)} {t.tokenCode}</span></div>
+                <div className="panel__kv"><span>{tx("Per month, at most", "Ayda en fazla")}</span><span className="num">{fmtXlm(t.lifecycle.v4.monthlyLimit)} {t.tokenCode}</span></div>
               )}
-              <div className="panel__kv"><span>Payees</span><span>approved list only</span></div>
-              <div className="panel__kv"><span>Revoke</span><span>instant, from here</span></div>
-              <div className="panel__note">A Leash lets the agent sign without a popup. It lifts nothing — every payment is checked on Stellar.</div>
+              <div className="panel__kv"><span>{tx("Payees", "Alıcılar")}</span><span>{tx("approved list only", "yalnız onayladıkların")}</span></div>
+              <div className="panel__kv"><span>{tx("Revoke", "İptal")}</span><span>{tx("instant, from here", "anında, buradan")}</span></div>
+              <div className="panel__note">
+                {tx(
+                  "Connecting an agent lets it sign without a popup. It lifts nothing — every payment is checked on Stellar.",
+                  "Ajanı bağlamak ona onay penceresi olmadan imza attırır. Hiçbir kuralı kaldırmaz — her ödeme Stellar'da denetlenir.",
+                )}
+              </div>
             </>
           ) : (
             <div className="shell__skel" style={{ height: 80 }} />
@@ -266,20 +312,23 @@ export default function Agent() {
 
         {active ? (
           <section className="panel panel--pad">
-            <div className="eyebrow">Same agent, another client or a new release</div>
+            <div className="eyebrow">{tx("Same agent, another client or a new release", "Aynı ajan, başka program ya da yeni sürüm")}</div>
             <div className="panel__note" style={{ marginBottom: 6 }}>
-              Run the command again on the agent's machine. It keeps the agent's key, so nothing here has to be
-              signed again.
+              {tx(
+                "Run the command again in a terminal on the agent's machine. It keeps the agent's key, so nothing here has to be signed again.",
+                "Komutu ajanın bilgisayarındaki terminalde yeniden çalıştır. Ajanın anahtarını korur; burada yeniden imza gerekmez.",
+              )}
             </div>
             {command}
           </section>
         ) : (
           <section className="panel panel--pad">
-            <div className="eyebrow">Then</div>
+            <div className="eyebrow">{tx("Then", "Sonra")}</div>
             <div className="panel__note">
-              Restart your AI client and ask it for something — “read this page and summarise it”, “make an image
-              of…”. It finds a service in the catalog, pays for it from the treasury inside your rules, and tells
-              you what it paid. A refusal comes back with the reason.
+              {tx(
+                "Restart your AI client and ask it for something — “read this page and summarise it”, “make an image of…”. It finds a service in the catalog, pays for it from the treasury inside your rules, and tells you what it paid. A refusal comes back with the reason.",
+                "Programı kapatıp aç ve ajandan bir şey iste — “şu sayfayı oku ve özetle”, “şunun görselini üret”. Katalogdan bir servis bulur, kurallarının içinde kasadan öder ve ne ödediğini söyler. Reddedilirse sebebiyle döner.",
+              )}
             </div>
           </section>
         )}
@@ -289,10 +338,12 @@ export default function Agent() {
 }
 
 function countdown(ms: number): string {
-  if (ms <= 0) return "expired";
+  if (ms <= 0) return tx("expired", "süresi doldu");
   const s = Math.floor(ms / 1000);
-  const h = Math.floor(s / 3600);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
   const m = Math.floor((s % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m ${s % 60}s`;
+  if (d > 0) return tx(`${d} d ${h} h`, `${d} gün ${h} sa`);
+  if (h > 0) return tx(`${h} h ${m} m`, `${h} sa ${m} dk`);
+  return tx(`${m} m ${s % 60} s`, `${m} dk ${s % 60} sn`);
 }
