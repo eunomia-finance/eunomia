@@ -13,10 +13,11 @@ import { useAnalyticsScore } from "../lib/useAnalytics";
 import { useTreasuryActivity } from "../lib/useTreasuryActivity";
 import { mergeFeedEvents } from "../lib/activity";
 import { dedupeRefusals, useAgentRejections } from "../lib/agentRejections";
+import { useAgentSpending } from "../lib/agentSpending";
 import { computeAnomaly, mergeLedger } from "../lib/eventLedger";
 import { loadPayeeBook, mergePayees, payeesFromEvents } from "../lib/payees";
 import { ownerJourney, type JourneyStep } from "../lib/onboarding";
-import { CATALOG_EXAMPLES } from "../lib/agentSetup";
+import { CATALOG_EXAMPLES, catalogName } from "../lib/agentSetup";
 import { getTokenBalance, needsFunding, MIN_XLM } from "../lib/funding";
 import { tx, useLang } from "../lib/i18n";
 import { useNow } from "../lib/useNow";
@@ -75,12 +76,15 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
   // agent filed about it on its own account — the only way an agent running on someone
   // else's machine gets its refusals in front of the owner.
   const agentRefusals = useAgentRejections(t.lifecycle?.session?.agent ?? null, treasuryId, t.refreshKey);
+  // And a fourth: what the agent did with its task money. The treasury's `paid` stops at the
+  // hand-over; the service it then paid, and what it sent back, are on the agent's account.
+  const agentSpending = useAgentSpending(t.lifecycle?.session?.agent ?? null, treasuryId, t.tokenCode, t.refreshKey);
   const rows = useMemo(
     () =>
       dedupeRefusals(
-        mergeFeedEvents(written, [...analytics.events.filter((e) => e.kind === "paid"), ...agentRefusals]),
+        mergeFeedEvents(written, [...analytics.events.filter((e) => e.kind === "paid"), ...agentRefusals, ...agentSpending]),
       ).map((e) => inToken(e, t.tokenCode)),
-    [written, analytics.events, agentRefusals, t.tokenCode],
+    [written, analytics.events, agentRefusals, agentSpending, t.tokenCode],
   );
 
   const [fundOpen, setFundOpen] = useState(false);
@@ -215,8 +219,14 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
   // A row in the owner's words. The feed's writers describe an event from the chain's side
   // ("Agent paid 0,1 XLM to GACB…POJV · task 0"); the owner wants to know what it was.
   const agentKey = session?.agent ?? "";
-  const feedTitle = (e: { kind: string; label: string }): string => {
+  const feedTitle = (e: { kind: string; label: string; payee?: string }): string => {
     switch (e.kind) {
+      case "spent":
+        return e.payee && catalogName(e.payee)
+          ? tx("Agent paid a service", "Ajan servise ödedi")
+          : tx(`Agent paid ${shortAddr(e.payee ?? "")}`, `Ajan ${shortAddr(e.payee ?? "")} adresine ödedi`);
+      case "swept":
+        return tx("Unspent money came back", "Artan para kasaya döndü");
       case "paid": {
         const to = /\bto (\S+)/.exec(e.label)?.[1] ?? "";
         const isAgent = !!agentKey && to.startsWith(agentKey.slice(0, 4)) && to.endsWith(agentKey.slice(-4));
@@ -436,13 +446,17 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
                 <div className="feedline" key={e.id}>
                   <div>
                     <b title={e.label}>{feedTitle(e)}</b>
-                    <small>{whenOf(e.at)}</small>
+                    <small>
+                      {whenOf(e.at)}
+                      {/* which service: the catalog's name, where the title only says "a service" */}
+                      {e.kind === "spent" && e.payee && catalogName(e.payee) ? ` · ${catalogName(e.payee)}` : ""}
+                    </small>
                   </div>
                   <div>
                     {amountOf(e) && <span className="num">{Number(amountOf(e))} {t.tokenCode}</span>}
-                    {e.kind === "paid" && <span className="pill pill--ok">{tx("Allowed", "Ödendi")}</span>}
+                    {(e.kind === "paid" || e.kind === "spent") && <span className="pill pill--ok">{tx("Allowed", "Ödendi")}</span>}
                     {e.kind === "blocked" && <span className="pill pill--no">{tx("Blocked", "Reddedildi")}</span>}
-                    {e.txHash && e.kind !== "paid" && e.kind !== "blocked" && (
+                    {e.txHash && e.kind !== "paid" && e.kind !== "spent" && e.kind !== "blocked" && (
                       <a className="linkbtn" href={`${EXPLORER}/tx/${e.txHash}`} target="_blank" rel="noreferrer">tx ↗</a>
                     )}
                   </div>

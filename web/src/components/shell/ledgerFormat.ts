@@ -6,7 +6,8 @@ import { getLang, tx } from "../../lib/i18n";
 
 export function verdictOf(kind: string): { cls: string; text: string } {
   if (kind === "blocked") return { cls: "pill pill--no", text: tx("Blocked", "Reddedildi") };
-  if (kind === "paid") return { cls: "pill pill--ok", text: tx("Allowed", "Ödendi") };
+  if (kind === "paid" || kind === "spent") return { cls: "pill pill--ok", text: tx("Allowed", "Ödendi") };
+  if (kind === "swept") return { cls: "pill pill--rule", text: tx("Returned", "Geri döndü") };
   if (kind === "fund") return { cls: "pill pill--rule", text: tx("Funded", "Para yatırıldı") };
   if (kind === "deploy") return { cls: "pill pill--rule", text: tx("Created", "Oluşturuldu") };
   if (kind === "whitelist") return { cls: "pill pill--rule", text: tx("Payee", "Alıcı") };

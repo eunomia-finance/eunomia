@@ -16,8 +16,10 @@ const all: FeedFilter = { groups: null, treasuryId: null };
 describe("groupOfKind", () => {
   it("maps chain and activity kinds into chip groups", () => {
     expect(groupOfKind("paid")).toBe("payments");
+    expect(groupOfKind("spent")).toBe("payments");
     expect(groupOfKind("blocked")).toBe("blocked");
     expect(groupOfKind("fund")).toBe("fund");
+    expect(groupOfKind("swept")).toBe("fund");
     expect(groupOfKind("deploy")).toBe("deploy");
     expect(groupOfKind("whitelist")).toBe("whitelist");
     expect(groupOfKind("payee_add")).toBe("whitelist");

@@ -4,6 +4,7 @@
 import { useMemo, useState } from "react";
 import ActivityFeed from "../components/ActivityFeed";
 import { KIND_GROUPS, type FeedFilter, type KindGroup } from "../lib/feedFilter";
+import { useAgentSpending } from "../lib/agentSpending";
 import { tx, useLang } from "../lib/i18n";
 import { useTreasury } from "../state/useTreasury";
 
@@ -24,6 +25,9 @@ export default function ActivityPage() {
   const labels = groupLabel();
   const [active, setActive] = useState<Set<KindGroup>>(new Set());
   const [mineOnly, setMineOnly] = useState(false);
+  // What the open treasury's agent paid from its own account — on no treasury's event stream
+  // and in no activity row, so the feed cannot find it by itself.
+  const agentSpending = useAgentSpending(t.lifecycle?.session?.agent ?? null, t.treasuryId, t.tokenCode, t.refreshKey);
 
   const toggle = (g: KindGroup) => {
     setActive((prev) => {
@@ -43,7 +47,7 @@ export default function ActivityPage() {
   return (
     <div className="page">
       <div className="page__main">
-        <ActivityFeed filter={filter} />
+        <ActivityFeed filter={filter} extra={agentSpending} />
       </div>
 
       {/* Filters as a standing panel rather than a chip strip above the ledger: which slice

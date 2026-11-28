@@ -10,6 +10,7 @@ import { isPayee, makeTreasury } from "../lib/userTreasury";
 import { isValidPaymentDest } from "../lib/validate";
 import { payeeLacksTrustline } from "../lib/receivable";
 import { dedupeRefusals, useAgentRejections } from "../lib/agentRejections";
+import { useAgentSpending } from "../lib/agentSpending";
 import { loadLedger } from "../lib/eventLedger";
 import { loadPayeeBook, mergePayees, payeesFromEvents, rememberPayee, forgetPayee, type PayeeEntry } from "../lib/payees";
 import { fetchActivityHistory, mergeFeedEvents, subscribeActivity } from "../lib/activity";
@@ -20,6 +21,7 @@ import { tx, useLang } from "../lib/i18n";
 
 type Verify = Record<string, boolean | undefined>; // address -> on-chain whitelist truth
 type Slice = "all" | "paid" | "blocked";
+const isBlocked = (e: FeedEvent) => e.kind === "blocked";
 
 export default function Payments() {
   useLang();
@@ -159,20 +161,28 @@ export default function Payments() {
   // And the refusals it met: the contract leaves no event and no transaction behind when it
   // reverts, so the record is the request the agent filed on its own account.
   const agentRefusals = useAgentRejections(t.lifecycle?.session?.agent ?? null, treasuryId, t.refreshKey);
+  // And what it paid services out of its task money, from its own account (`spent`). What it
+  // sent back to the treasury is not a payment and stays on the Overview and Activity pages.
+  const agentSpending = useAgentSpending(t.lifecycle?.session?.agent ?? null, treasuryId, t.tokenCode, t.refreshKey);
+  const agentSpent = useMemo(() => agentSpending.filter((e) => e.kind === "spent"), [agentSpending]);
   const decisions = useMemo(
     () =>
       dedupeRefusals(
-        mergeFeedEvents(filterFeed(history, { groups: new Set(["payments", "blocked"]), treasuryId }), [...chainPaid, ...agentRefusals], 120),
+        mergeFeedEvents(
+          filterFeed(history, { groups: new Set(["payments", "blocked"]), treasuryId }),
+          [...chainPaid, ...agentRefusals, ...agentSpent],
+          120,
+        ),
       ).map((e) => inToken(e, t.tokenCode)),
-    [history, chainPaid, agentRefusals, treasuryId, t.tokenCode],
+    [history, chainPaid, agentRefusals, agentSpent, treasuryId, t.tokenCode],
   );
   const [slice, setSlice] = useState<Slice>("all");
   const shown = useMemo(
-    () => (slice === "all" ? decisions : decisions.filter((e) => e.kind === slice)).slice(0, 40),
+    () => (slice === "all" ? decisions : decisions.filter((e) => isBlocked(e) === (slice === "blocked"))).slice(0, 40),
     [decisions, slice],
   );
-  const allowed = decisions.filter((e) => e.kind === "paid").length;
-  const blocked = decisions.length - allowed;
+  const blocked = decisions.filter(isBlocked).length;
+  const allowed = decisions.length - blocked;
 
   return (
     <div className="page">

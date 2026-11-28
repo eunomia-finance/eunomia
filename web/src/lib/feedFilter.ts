@@ -14,9 +14,11 @@ export type KindGroup =
   | "zk";
 
 export const KIND_GROUPS: Record<KindGroup, readonly string[]> = {
-  payments: ["paid"],
+  // `spent` and `swept` are the agent's own account at work (agentSpending.ts): what it paid a
+  // service out of its task money, and what it sent back.
+  payments: ["paid", "spent"],
   blocked: ["blocked"],
-  fund: ["fund"],
+  fund: ["fund", "swept"],
   deploy: ["deploy"],
   whitelist: ["whitelist", "payee_add", "payee_rm"],
   leash: ["leash", "revoked"],
@@ -34,13 +36,12 @@ export function groupOfKind(kind: string): KindGroup | null {
   return GROUP_OF.get(kind) ?? null;
 }
 
-/** Feed dot/badge colour per kind — shared by RecentActivity and the Activity page. */
 /** The dot beside a feed row. Returns tokens, not literals: the surface carries the palette
  *  and only two of these colours mean anything — a rejection is red, everything the rules
  *  let through is green, and the rest is neutral. */
 export function kindColor(kind: string): string {
   if (kind === "blocked") return "var(--red)";
-  if (kind === "fund" || kind === "deploy" || kind === "paid") return "var(--green)";
+  if (kind === "fund" || kind === "deploy" || kind === "paid" || kind === "spent") return "var(--green)";
   return "var(--ink-2)";
 }
 

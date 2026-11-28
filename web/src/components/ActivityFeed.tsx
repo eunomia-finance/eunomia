@@ -21,7 +21,8 @@ const PAGE = 30; // rows revealed per "Load more"
 // rules let through gets the green mark — the rest are neutral words.
 function kindOf(kind: string): { cls: string; text: string; mark: string | null } {
   if (kind === "blocked") return { cls: "ledger__kind is-no", text: tx("Blocked", "Reddedildi"), mark: "mark--no" };
-  if (kind === "paid") return { cls: "ledger__kind", text: tx("Allowed", "Ödendi"), mark: "mark--ok" };
+  if (kind === "paid" || kind === "spent") return { cls: "ledger__kind", text: tx("Allowed", "Ödendi"), mark: "mark--ok" };
+  if (kind === "swept") return { cls: "ledger__kind", text: tx("Returned", "Geri döndü"), mark: null };
   if (kind === "fund") return { cls: "ledger__kind", text: tx("Funded", "Para yatırıldı"), mark: null };
   if (kind === "deploy") return { cls: "ledger__kind", text: tx("Created", "Oluşturuldu"), mark: null };
   if (kind === "whitelist" || kind === "payee_add") return { cls: "ledger__kind", text: tx("Payee +", "Alıcı +"), mark: null };
@@ -31,7 +32,11 @@ function kindOf(kind: string): { cls: string; text: string; mark: string | null 
   return { cls: "ledger__kind", text: kind.replace(/_/g, " "), mark: null };
 }
 
-export default function ActivityFeed({ filter }: { filter?: FeedFilter }) {
+const NO_EXTRA: FeedEvent[] = [];
+
+/** `extra`: rows the caller already holds and none of the three layers carries — what the
+ *  open treasury's agent paid from its own account. */
+export default function ActivityFeed({ filter, extra = NO_EXTRA }: { filter?: FeedFilter; extra?: FeedEvent[] }) {
   useLang();
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [state, setState] = useState<"connecting" | "live" | "error">("connecting");
@@ -113,9 +118,10 @@ export default function ActivityFeed({ filter }: { filter?: FeedFilter }) {
   // View-level filter + paging: merge/poll state above stays untouched, so switching
   // chips never refetches — it just re-slices what's already in memory.
   const shown = useMemo(() => {
-    const list = filter ? filterFeed(events, filter) : events;
-    return { list: list.slice(0, visible), total: list.length };
-  }, [events, filter, visible]);
+    const all = extra.length ? mergeFeedEvents(events, extra, MAX_ITEMS + extra.length) : events;
+    const list = filter ? filterFeed(all, filter) : all;
+    return { list: list.slice(0, visible), total: list.length, any: all.length > 0 };
+  }, [events, extra, filter, visible]);
 
   return (
     <section className="panel ledger">
@@ -143,14 +149,14 @@ export default function ActivityFeed({ filter }: { filter?: FeedFilter }) {
             ? tx("Couldn't reach the network — retrying…", "Ağa ulaşılamadı, tekrar deniyor…")
             : state === "connecting"
               ? tx("Loading platform activity…", "Hareketler yükleniyor…")
-              : filter && events.length > 0
+              : filter && shown.any
                 ? tx("Nothing matches these filters.", "Bu filtrelere uyan bir şey yok.")
                 : tx("No activity yet — the first treasury action lands here live.", "Henüz hareket yok. İlk kasa hareketi buraya canlı düşer.")}
         </div>
       ) : (
         shown.list.map((e) => {
           const k = kindOf(e.kind);
-          const decision = e.kind === "paid" || e.kind === "blocked";
+          const decision = e.kind === "paid" || e.kind === "spent" || e.kind === "blocked";
           return (
             <div key={e.id} className={`ledger__row ledger__row--feed${decision ? "" : " ledger__row--quiet"}`}>
               <span className="ledger__when">{whenOf(e.at)}</span>

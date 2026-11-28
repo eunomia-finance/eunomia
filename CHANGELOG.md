@@ -7,6 +7,15 @@ deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## [Unreleased]
 
+- **Added (what the agent bought, in the ledger)** — the ledger showed the treasury handing
+  the agent its task money and nothing after that: the service the agent then paid, and what
+  it sent back, are not treasury calls, so the treasury emits no event for them. They are read
+  from the agent's own account on Horizon now (token transfers it sent, in the treasury's
+  token, issuer checked) and listed on Overview, Payments and Activity — "Agent paid a
+  service" with the catalog's name and the transaction, "Unspent money came back" for a sweep.
+  Also fixed: the Activity feed listed rows without a transaction hash (a payee approval, a
+  backup) once per time it re-read the history; and the WalletConnect window can load its
+  own typeface (`fonts.reown.com` in `font-src`).
 - **Fixed (eunomia-mcp 0.3.5, from the second builder session)** — `init --client
   claude-desktop` on Windows wrote only `%APPDATA%\Claude`, which a packaged Claude Desktop
   (Microsoft Store, and the current installer) may never read: it has its own copy of Roaming
