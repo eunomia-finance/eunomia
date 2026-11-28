@@ -99,6 +99,14 @@ describe("mergeFeedEvents", () => {
     expect(out.map((e) => e.id)).toEqual(["chain", "sb"]);
   });
 
+  it("never lists the same row twice, hash or no hash", () => {
+    // The Activity feed merges the history again whenever the followed treasury changes; rows
+    // without a tx hash (a payee approval, a backup) were appended a second time.
+    const held = [fe("sb-7", "2026-07-02T10:00:00Z"), fe("sb-8", "2026-07-02T11:00:00Z", "tx8")];
+    const again = [fe("sb-7", "2026-07-02T10:00:00Z"), fe("sb-8", "2026-07-02T11:00:00Z", "tx8"), fe("sb-9", "2026-07-02T12:00:00Z")];
+    expect(mergeFeedEvents(held, again).map((e) => e.id)).toEqual(["sb-9", "sb-8", "sb-7"]);
+  });
+
   it("sorts newest first and caps the list", () => {
     const out = mergeFeedEvents(
       [fe("a", "2026-07-01T10:00:00Z", "t1"), fe("b", "2026-07-03T10:00:00Z", "t2")],

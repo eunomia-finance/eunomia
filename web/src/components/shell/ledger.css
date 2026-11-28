@@ -78,15 +78,9 @@
 .shell .ledger__kind{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-2); white-space:nowrap; }
 .shell .ledger__kind.is-no{ color:var(--red); }
 .shell .ledger__empty{ padding:18px 20px; color:var(--ink-2); font-size:13.5px; border-top:1px solid var(--line); }
-.shell .ledger__foot{
-  display:grid; grid-template-columns:120px minmax(0,1fr) auto; gap:20px; align-items:center;
-  padding:12px 20px; border-top:1px solid var(--line); background:rgba(31,58,46,.03);
-}
-.shell .ledger__foot .num{ font-size:12.5px; color:var(--ink-2); white-space:nowrap; }
 .shell .ledger__more{ display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 20px; border-top:1px solid var(--line); background:rgba(31,58,46,.03); font-family:var(--code); font-size:12.5px; color:var(--ink-2); }
 .shell .ledger__more button{ background:none; border:none; padding:0; cursor:pointer; font:inherit; color:var(--ink-2); }
 .shell .ledger__more button:hover{ color:var(--ink); }
-.shell .ledger__flash{ position:absolute; inset:0; pointer-events:none; }
 
 /* meters */
 .shell .meter__big{ display:flex; align-items:baseline; gap:8px; }
@@ -137,13 +131,12 @@
 @media(max-width:1023px){
   /* phones keep time · verdict · what; amount, treasury and proof are desktop columns */
   .shell .ledger__row, .shell .ledger__row--wide, .shell .ledger__row--feed{ grid-template-columns:92px 80px minmax(0,1fr); gap:8px; padding:0 14px; }
-  .shell .ledger__head, .shell .ledger__foot, .shell .ledger__more, .shell .ledger__empty{ padding-left:14px; padding-right:14px; }
+  .shell .ledger__head, .shell .ledger__more, .shell .ledger__empty{ padding-left:14px; padding-right:14px; }
   .shell .ledger__row > .sm-hide{ display:none; }
   .shell .verdict{ grid-template-columns:minmax(0,1fr); }
   .shell .verdict__side{ align-items:flex-start; }
   .shell .verdict__amount{ font-size:40px; }
   .shell .two{ grid-template-columns:minmax(0,1fr); }
-  .shell .ledger__foot{ grid-template-columns:minmax(0,1fr); }
 }
 
 /* ---- 2026-11-28: the forest palette, two themes ---------------------------------

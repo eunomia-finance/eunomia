@@ -105,10 +105,12 @@ export function activityToFeedEvent(row: ActivityRow): FeedEvent {
 }
 
 /** Merge on-chain events (primary — richer labels) with platform rows, newest first.
- *  Duplicates are dropped by tx hash; rows without a hash always survive. Pure. */
+ *  Duplicates are dropped by tx hash, and the same row (by id) is never listed twice — a row
+ *  without a hash is otherwise kept, and merging the same history a second time doubled it. Pure. */
 export function mergeFeedEvents(primary: FeedEvent[], secondary: FeedEvent[], cap = 120): FeedEvent[] {
   const seen = new Set(primary.map((e) => e.txHash).filter(Boolean));
-  const merged = [...primary, ...secondary.filter((e) => !e.txHash || !seen.has(e.txHash))];
+  const ids = new Set(primary.map((e) => e.id));
+  const merged = [...primary, ...secondary.filter((e) => !ids.has(e.id) && (!e.txHash || !seen.has(e.txHash)))];
   return merged.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)).slice(0, cap);
 }
 

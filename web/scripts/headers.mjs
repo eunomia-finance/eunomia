@@ -60,7 +60,8 @@ const csp = [
   `script-src 'self' ${hashes.join(" ")} https://static.cloudflareinsights.com`,
   // React and framer-motion write style attributes; fonts come from two hosts.
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.fontshare.com",
-  "font-src 'self' data: https://fonts.gstatic.com https://cdn.fontshare.com",
+  // fonts.reown.com: the WalletConnect window (Reown AppKit) loads its own typeface from there.
+  "font-src 'self' data: https://fonts.gstatic.com https://cdn.fontshare.com https://fonts.reown.com",
   "img-src 'self' data: blob: https:",
   `connect-src ${connect.join(" ")}`,
   "frame-src https://verify.walletconnect.org https://verify.walletconnect.com https://secure.walletconnect.org",
