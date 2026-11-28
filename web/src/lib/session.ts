@@ -8,7 +8,8 @@
 import { StrKey } from "@stellar/stellar-sdk";
 import type { Session } from "./treasuryClient";
 import type { Treasury } from "./userTreasury";
-import { setSession, type PayResult } from "./userTreasury";
+import { tx } from "./i18n";
+import { setSession,type PayResult } from "./userTreasury";
 
 /** Whether a stored session is still active (the contract uses the same `<` rule). */
 export function sessionIsActive(
@@ -35,7 +36,10 @@ export async function registerAgentKey(
   if (!isValidAgentKey(pk)) {
     return {
       ok: false,
-      errorMessage: "That is not a Stellar public key (G…, 56 characters) — copy it from `eunomia-mcp init`.",
+      errorMessage: tx(
+        "That is not a Stellar public key (G…, 56 characters) — copy it from `eunomia-mcp init`.",
+        "Bu bir Stellar adresi değil (G…, 56 karakter) — `eunomia-mcp init` komutunun yazdığı adresi kopyala.",
+      ),
     };
   }
   const validUntil = BigInt(Math.floor(Date.now() / 1000) + Math.round(durationHours * 3600));

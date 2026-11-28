@@ -5,6 +5,7 @@
 // balance. (Premium visual pass is a later phase with Gemini; this is the functional layer.)
 import { useCallback, useEffect, useState } from "react";
 import { Asset, BASE_FEE, Horizon, Operation, TransactionBuilder } from "@stellar/stellar-sdk";
+import { tx, useLang } from "../lib/i18n";
 import { EXPLORER, HORIZON_URL, NETWORK_LABEL, NETWORK_PASSPHRASE, shortAddr } from "../config";
 
 const NET = NETWORK_LABEL.toLowerCase();
@@ -20,6 +21,7 @@ const server = new Horizon.Server(HORIZON_URL);
 type Status = { kind: "idle" | "info" | "success" | "error"; msg: string; hash?: string };
 
 export default function Wallet() {
+  useLang();
   const address = useWalletAddress();
   const [balance, setBalance] = useState<number | null>(null);
   const [balanceError, setBalanceError] = useState(false);
@@ -69,7 +71,7 @@ export default function Wallet() {
 
   const connect = useCallback(async () => {
     setConnecting(true);
-    setStatus({ kind: "info", msg: "Choose a wallet…" });
+    setStatus({ kind: "info", msg: tx("Choose a wallet…", "Bir cüzdan seç…") });
     try {
       await kitConnect();
       setStatus({ kind: "idle", msg: "" });
@@ -93,7 +95,7 @@ export default function Wallet() {
   const send = useCallback(async () => {
     if (!address) return;
     if (!isValidPaymentDest(dest)) {
-      setStatus({ kind: "error", msg: "Enter a valid destination address (G… or M…)." });
+      setStatus({ kind: "error", msg: tx("Enter a valid destination address (G… or M…).", "Geçerli bir hedef adres gir (G… ya da M…).") });
       return;
     }
     const parsed = parseXlmAmount(amount);
@@ -102,7 +104,7 @@ export default function Wallet() {
       return;
     }
     setBusy(true);
-    setStatus({ kind: "info", msg: "Building transaction…" });
+    setStatus({ kind: "info", msg: tx("Building transaction…", "İşlem hazırlanıyor…") });
     try {
       const to = dest.trim();
       // A payment to an account that does not exist yet fails with op_no_destination; the
@@ -117,11 +119,11 @@ export default function Wallet() {
         }
       }
       if (!exists && Number(amount.trim()) < 1) {
-        setStatus({ kind: "error", msg: "This account does not exist yet — send at least 1 XLM to create it." });
+        setStatus({ kind: "error", msg: tx("This account does not exist yet — send at least 1 XLM to create it.", "Bu hesap henüz yok — açmak için en az 1 XLM gönder.") });
         return;
       }
       const source = await server.loadAccount(address);
-      const tx = new TransactionBuilder(source, {
+      const built = new TransactionBuilder(source, {
         fee: BASE_FEE,
         networkPassphrase: NETWORK_PASSPHRASE,
       })
@@ -133,16 +135,16 @@ export default function Wallet() {
         .setTimeout(180)
         .build();
 
-      setStatus({ kind: "info", msg: "Awaiting wallet signature…" });
-      const { signedTxXdr } = await kit.signTransaction(tx.toXDR(), {
+      setStatus({ kind: "info", msg: tx("Awaiting wallet signature…", "Cüzdan imzası bekleniyor…") });
+      const { signedTxXdr } = await kit.signTransaction(built.toXDR(), {
         networkPassphrase: NETWORK_PASSPHRASE,
         address,
       });
 
-      setStatus({ kind: "info", msg: `Submitting to ${NET}…` });
+      setStatus({ kind: "info", msg: tx(`Submitting to ${NET}…`, `${NET} ağına gönderiliyor…`) });
       const toSubmit = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
       const res = await server.submitTransaction(toSubmit);
-      setStatus({ kind: "success", msg: `Payment sent — confirmed on ${NET} ✓`, hash: res.hash });
+      setStatus({ kind: "success", msg: tx(`Payment sent — confirmed on ${NET} ✓`, `Ödeme gönderildi — ${NET} üzerinde onaylandı ✓`), hash: res.hash });
       setAmount("");
       setDest("");
       await loadBalance(address);
@@ -160,10 +162,10 @@ export default function Wallet() {
     <div style={wrap}>
       <div style={card}>
         <h1 style={{ margin: 0, fontSize: 27, letterSpacing: "-0.02em", fontFamily: "'Questrial', system-ui, sans-serif", fontWeight: 500 }}>
-          <span style={{ color: "var(--ink)" }}>◭</span> Wallet
+          <span style={{ color: "var(--ink)" }}>◭</span> {tx("Wallet", "Cüzdan")}
         </h1>
         <p style={{ color: "var(--ink-2)", marginTop: 6, fontSize: 14 }}>
-          Connect any Stellar wallet, view your {NET} XLM balance, and send a payment.
+          {tx(`Connect any Stellar wallet, view your ${NET} XLM balance, and send a payment.`, `İstediğin Stellar cüzdanını bağla, ${NET} XLM bakiyeni gör, ödeme gönder.`)}
         </p>
 
         {!address ? (
@@ -172,22 +174,22 @@ export default function Wallet() {
             onClick={connect}
             disabled={connecting}
           >
-            {connecting ? "Connecting…" : "Connect a wallet"}
+            {connecting ? tx("Connecting…", "Bağlanıyor…") : tx("Connect a wallet", "Cüzdan bağla")}
           </button>
         ) : (
           <>
             <div style={row}>
               <div>
-                <div style={label}>Connected</div>
+                <div style={label}>{tx("Connected", "Bağlı")}</div>
                 <div style={mono}>{shortAddr(address)}</div>
               </div>
               <button style={ghostBtn} onClick={disconnect}>
-                Disconnect
+                {tx("Disconnect", "Bağlantıyı kes")}
               </button>
             </div>
 
             <div style={balanceBox}>
-              <div style={label}>Balance</div>
+              <div style={label}>{tx("Balance", "Bakiye")}</div>
               <div style={{ fontSize: 28, fontWeight: 600 }}>
                 {balanceError
                   ? "—"
@@ -197,11 +199,11 @@ export default function Wallet() {
               </div>
               {balanceError && (
                 <div style={{ color: "var(--red)", fontSize: 12.5, marginTop: 4 }}>
-                  Couldn't read your balance — tap refresh to retry.
+                  {tx("Couldn't read your balance — tap refresh to retry.", "Bakiyen okunamadı — yenile'ye basıp tekrar dene.")}
                 </div>
               )}
-              <button style={linkBtn} onClick={() => loadBalance(address)} aria-label="Refresh balance">
-                ↻ Refresh
+              <button style={linkBtn} onClick={() => loadBalance(address)} aria-label={tx("Refresh balance", "Bakiyeyi yenile")}>
+                ↻ {tx("Refresh", "Yenile")}
               </button>
             </div>
 
@@ -209,28 +211,28 @@ export default function Wallet() {
               // This form builds a classic payment with the wallet as source, which a smart
               // wallet cannot be — every attempt would fail.
               <p style={{ color: "var(--ink-2)", marginTop: 18, fontSize: 13.5 }}>
-                This is a passkey wallet — it moves funds through your treasury, not from here.
+                {tx("This is a passkey wallet — it moves funds through your treasury, not from here.", "Bu bir passkey cüzdanı — parayı buradan değil, kasan üzerinden hareket ettirir.")}
               </p>
             ) : (
               <div style={{ marginTop: 18 }}>
-                <div style={label}>Send XLM ({NET})</div>
+                <div style={label}>{tx(`Send XLM (${NET})`, `XLM gönder (${NET})`)}</div>
                 <input
                   style={input}
-                  placeholder="Destination address (G…)"
-                  aria-label="Destination address"
+                  placeholder={tx("Destination address (G…)", "Hedef adres (G…)")}
+                  aria-label={tx("Destination address", "Hedef adres")}
                   value={dest}
                   onChange={(e) => setDest(e.target.value)}
                 />
                 <input
                   style={input}
-                  placeholder="Amount (XLM)"
-                  aria-label="Amount in XLM"
+                  placeholder={tx("Amount (XLM)", "Tutar (XLM)")}
+                  aria-label={tx("Amount in XLM", "XLM tutarı")}
                   inputMode="decimal"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                 />
                 <button style={{ ...primaryBtn, opacity: busy ? 0.6 : 1 }} onClick={send} disabled={busy}>
-                  {busy ? "Sending…" : "Send payment"}
+                  {busy ? tx("Sending…", "Gönderiliyor…") : tx("Send payment", "Ödeme gönder")}
                 </button>
               </div>
             )}
@@ -244,7 +246,7 @@ export default function Wallet() {
               <>
                 {" "}
                 <a style={{ color: statusColor }} href={`${EXPLORER}/tx/${status.hash}`} target="_blank" rel="noreferrer">
-                  view tx ↗
+                  {tx("view tx ↗", "tx gör ↗")}
                 </a>
               </>
             )}

@@ -3,11 +3,13 @@
 // only drops the device-local mapping — the contract itself lives on.
 import { useEffect, useRef, useState } from "react";
 import { shortAddr } from "../../config";
+import { tx, useLang } from "../../lib/i18n";
 import { useTreasury } from "../../state/useTreasury";
 
 // `onNew` moves the shell to a treasury-scoped view: the creation wizard only renders there,
 // so "New treasury" pressed on Wallet or Activity would otherwise change nothing on screen.
 export default function TreasurySwitcher({ onNew }: { onNew?: () => void }) {
+  useLang();
   const { address, treasuryId, treasuries, switchTreasury, forgetTreasury, startNewTreasury } = useTreasury();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -41,13 +43,13 @@ export default function TreasurySwitcher({ onNew }: { onNew?: () => void }) {
               type="button"
             >
               <span style={{ flex: 1 }}>{shortAddr(t.id)}</span>
-              {!t.registered && <span className="is-unreg">not registered</span>}
+              {!t.registered && <span className="is-unreg">{tx("not registered", "kayıtlı değil")}</span>}
               {t.id === treasuryId && <span className="is-current">✓</span>}
               <span
                 className="tswitch__forget"
                 role="button"
                 tabIndex={0}
-                title="Forget on this device only — the contract stays on-chain"
+                title={tx("Forget on this device only — the contract stays on-chain", "Sadece bu cihazdan unut — kontrat zincirde kalır")}
                 onClick={(e) => {
                   e.stopPropagation();
                   forgetTreasury(t.id);
@@ -59,7 +61,7 @@ export default function TreasurySwitcher({ onNew }: { onNew?: () => void }) {
                   }
                 }}
               >
-                forget
+                {tx("forget", "unut")}
               </span>
             </button>
           ))}
@@ -72,7 +74,7 @@ export default function TreasurySwitcher({ onNew }: { onNew?: () => void }) {
             }}
             type="button"
           >
-            ＋ New treasury
+            ＋ {tx("New treasury", "Yeni kasa")}
           </button>
         </div>
       )}

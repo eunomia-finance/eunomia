@@ -4,6 +4,7 @@
 // useTreasuryActivity in the parent, which also feeds the counters, so both always agree.
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { EXPLORER, shortAddr } from "../../config";
+import { tx, useLang } from "../../lib/i18n";
 import type { FeedEvent } from "../../lib/events";
 import type { DayBucket } from "../../lib/insights";
 import { amountOf, verdictOf, whenOf } from "./ledgerFormat";
@@ -21,6 +22,7 @@ export default function RecentActivity({
   week?: DayBucket[];
   onViewAll: () => void;
 }) {
+  useLang();
   const reduce = useReducedMotion();
   const shown = rows.slice(0, SHOW);
   const allowed = rows.filter((e) => e.kind === "paid").length;
@@ -32,25 +34,25 @@ export default function RecentActivity({
   return (
     <section className="panel ledger">
       <div className="ledger__head">
-        <div className="eyebrow">What your rules did</div>
+        <div className="eyebrow">{tx("What your rules did", "Kuralların ne yaptı")}</div>
         {rows.length > 0 && (
           <div className="ledger__counts">
-            <span className="count"><i className="mark mark--ok" />{allowed} allowed</span>
-            <span className="count"><i className="mark mark--no" />{blocked} blocked</span>
+            <span className="count"><i className="mark mark--ok" />{allowed} {tx("allowed", "ödendi")}</span>
+            <span className="count"><i className="mark mark--no" />{blocked} {tx("blocked", "reddedildi")}</span>
           </div>
         )}
       </div>
       <div className="ledger__row ledger__row--head">
-        <span className="eyebrow">Time</span>
-        <span className="eyebrow">Verdict</span>
-        <span className="eyebrow">What</span>
-        <span className="eyebrow sm-hide" style={{ textAlign: "right" }}>Amount</span>
-        <span className="eyebrow sm-hide" style={{ textAlign: "right" }}>Proof</span>
+        <span className="eyebrow">{tx("Time", "Saat")}</span>
+        <span className="eyebrow">{tx("Verdict", "Karar")}</span>
+        <span className="eyebrow">{tx("What", "Ne")}</span>
+        <span className="eyebrow sm-hide" style={{ textAlign: "right" }}>{tx("Amount", "Tutar")}</span>
+        <span className="eyebrow sm-hide" style={{ textAlign: "right" }}>{tx("Proof", "Kanıt")}</span>
       </div>
 
       {shown.length === 0 ? (
         <div className="ledger__empty">
-          Nothing decided yet. The first payment your agent tries lands here — allowed or refused.
+          {tx("Nothing decided yet. The first payment your agent tries lands here — allowed or refused.", "Henüz karar yok. Ajanın denediği ilk ödeme buraya düşer: ödendi ya da reddedildi.")}
         </div>
       ) : (
         <AnimatePresence initial={false}>
@@ -95,21 +97,21 @@ export default function RecentActivity({
 
       {week && (
         <div className="ledger__foot">
-          <span className="eyebrow">Seven days</span>
+          <span className="eyebrow">{tx("Seven days", "Yedi gün")}</span>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 12, alignItems: "end", height: 30 }}>
             {week.map((b) => (
-              <div key={b.day} style={{ display: "flex", gap: 3, alignItems: "flex-end", height: "100%" }} title={`${b.day}: ${b.allowed} allowed · ${b.blocked} blocked`}>
+              <div key={b.day} style={{ display: "flex", gap: 3, alignItems: "flex-end", height: "100%" }} title={tx(`${b.day}: ${b.allowed} allowed · ${b.blocked} blocked`, `${b.day}: ${b.allowed} ödendi · ${b.blocked} reddedildi`)}>
                 <span className="mark mark--ok" style={{ width: 10, height: Math.max(3, (b.allowed / maxDay) * 28) }} />
                 <span className="mark mark--no" style={{ width: 10, height: Math.max(3, (b.blocked / maxDay) * 28) }} />
               </div>
             ))}
           </div>
           <span className="num">
-            {weekAllowed} allowed · {weekBlocked} blocked
+            {weekAllowed} {tx("allowed", "ödendi")} · {weekBlocked} {tx("blocked", "reddedildi")}
             {rows.length > SHOW && (
               <>
                 {" · "}
-                <button className="linkbtn" onClick={onViewAll} type="button">every decision</button>
+                <button className="linkbtn" onClick={onViewAll} type="button">{tx("every decision", "her karar")}</button>
               </>
             )}
           </span>

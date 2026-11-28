@@ -6,6 +6,7 @@ import WalletChip from "../WalletChip";
 import TreasurySwitcher from "./TreasurySwitcher";
 import { APP_PAGES, type AppPage, type View } from "../../lib/routes";
 import { setLang, tx, useLang } from "../../lib/i18n";
+import { useTheme } from "../landing/useTheme";
 import "./shell.css";
 import "./ledger.css";
 
@@ -29,6 +30,7 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const lang = useLang();
+  const { theme, toggle } = useTheme();
   return (
     <div className="shell">
       <header className="shell__top">
@@ -48,6 +50,17 @@ export default function AppShell({
             <button className={lang === "tr" ? "is-on" : ""} onClick={() => setLang("tr")} aria-pressed={lang === "tr"} type="button">TR</button>
             <button className={lang === "en" ? "is-on" : ""} onClick={() => setLang("en")} aria-pressed={lang === "en"} type="button">EN</button>
           </div>
+          {/* The same switch the landing carries, with the same sweep: the new palette opens
+              as a circle from where the button was pressed (useTheme). */}
+          <button
+            className="shell__theme"
+            onClick={(e) => toggle({ clientX: e.clientX, clientY: e.clientY })}
+            aria-label={theme === "dark" ? tx("Switch to the light theme", "Açık temaya geç") : tx("Switch to the dark theme", "Koyu temaya geç")}
+            title={theme === "dark" ? tx("Light theme", "Açık tema") : tx("Dark theme", "Koyu tema")}
+            type="button"
+          >
+            {theme === "dark" ? "☀" : "☾"}
+          </button>
           <TreasurySwitcher onNew={() => onGo("overview")} />
           <WalletChip onWalletView={() => onGo("wallet")} />
         </div>

@@ -3,6 +3,7 @@
 // backbone for Level 4's "10+ user wallet interactions". Logging never blocks the UX.
 import { supabase, supabaseConfigured } from "./supabase";
 import type { FeedEvent } from "./events";
+import { tx } from "./i18n";
 
 /** Every verb the app can log. The database's CHECK allowlist
  *  (supabase/migrations/0005_activity_action_verbs.sql) must carry the same set —
@@ -78,18 +79,18 @@ export function activityToFeedEvent(row: ActivityRow): FeedEvent {
   const amt = row.amount_xlm == null ? null : Number(row.amount_xlm);
   const amtTxt = amt != null && !Number.isNaN(amt) ? ` · ${amt} XLM` : "";
   const map: Record<string, { kind: string; label: string }> = {
-    deploy: { kind: "deploy", label: `${who} created a treasury` },
-    fund: { kind: "fund", label: `${who} funded a treasury${amtTxt}` },
-    whitelist: { kind: "whitelist", label: `${who} approved a payee` },
+    deploy: { kind: "deploy", label: tx(`${who} created a treasury`, `${who} bir kasa oluşturdu`) },
+    fund: { kind: "fund", label: tx(`${who} funded a treasury${amtTxt}`, `${who} kasaya para yatırdı${amtTxt}`) },
+    whitelist: { kind: "whitelist", label: tx(`${who} approved a payee`, `${who} bir alıcıyı onayladı`) },
     pay: { kind: "paid", label: `Payment from ${who}'s treasury${amtTxt}` },
     agent_pay: { kind: "paid", label: `Leash-signed agent payment · ${who}${amtTxt}` },
-    reject: { kind: "blocked", label: `Payment blocked by ${who}'s rules${amtTxt}` },
+    reject: { kind: "blocked", label: tx(`Payment blocked by ${who}'s rules${amtTxt}`, `Ödeme reddedildi — ${who} kuralları${amtTxt}`) },
     session_start: { kind: "leash", label: `${who} started a Leash` },
     session_revoke: { kind: "leash", label: `${who} revoked a Leash` },
-    pause: { kind: "lifecycle", label: `${who} paused their treasury` },
-    withdraw: { kind: "lifecycle", label: `${who} withdrew from their treasury` },
-    limits: { kind: "lifecycle", label: `${who} updated treasury limits` },
-    register: { kind: "lifecycle", label: `${who} backed up their treasury` },
+    pause: { kind: "lifecycle", label: tx(`${who} paused their treasury`, `${who} kasasını durdurdu`) },
+    withdraw: { kind: "lifecycle", label: tx(`${who} withdrew from their treasury`, `${who} kasasından para çekti`) },
+    limits: { kind: "lifecycle", label: tx(`${who} updated treasury limits`, `${who} kasa sınırlarını güncelledi`) },
+    register: { kind: "lifecycle", label: tx(`${who} backed up their treasury`, `${who} kasasını yedekledi`) },
   };
   const m = map[row.action] ?? { kind: row.action, label: `${who} · ${row.action}` };
   return {

@@ -3,6 +3,7 @@
 // (z 1000) and the switcher dropdown (z 1200); closes on backdrop tap or Escape.
 import { useEffect } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { tx, useLang } from "../../lib/i18n";
 
 const EASE = [0.2, 0.7, 0.3, 1] as const;
 
@@ -17,6 +18,7 @@ export default function BottomSheet({
   title: string;
   children: React.ReactNode;
 }) {
+  useLang();
   const reduce = useReducedMotion();
 
   useEffect(() => {
@@ -55,7 +57,7 @@ export default function BottomSheet({
             <div style={grabber} />
             <div style={titleRow}>
               <span style={titleStyle}>{title}</span>
-              <button style={closeBtn} onClick={onClose} type="button" aria-label="Close">
+              <button style={closeBtn} onClick={onClose} type="button" aria-label={tx("Close", "Kapat")}>
                 ✕
               </button>
             </div>

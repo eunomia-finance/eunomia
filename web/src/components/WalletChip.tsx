@@ -3,10 +3,11 @@
 // the landing nav so the connection reads the same everywhere.
 import { useContext, useEffect, useRef, useState } from "react";
 import { shortAddr } from "../config";
+import { tx, useLang } from "../lib/i18n";
 import { connect as kitConnect, disconnect as kitDisconnect, wcConfigured } from "../lib/walletKit";
 import { useWalletAddress } from "../lib/useWalletAddress";
 import { currentDevice } from "../lib/funnel";
-import { MOBILE_WALLET_HINT } from "../lib/walletDevice";
+import { mobileWalletHint } from "../lib/walletDevice";
 import { ToastContext } from "../state/toastContext";
 import "./appnav.css";
 
@@ -17,6 +18,7 @@ export default function WalletChip({
   onWalletView?: () => void;
   variant?: "solid" | "ghost";
 }) {
+  useLang();
   const address = useWalletAddress();
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -40,7 +42,7 @@ export default function WalletChip({
     // On a phone the modal leads with WalletConnect (issue #9) — pairing happens in the
     // wallet app, and it must be on this build's network, so say that before the modal opens.
     if (currentDevice() === "mobile" && wcConfigured) {
-      toastApi?.toast("info", MOBILE_WALLET_HINT);
+      toastApi?.toast("info", mobileWalletHint());
     }
     try {
       await kitConnect();
@@ -70,7 +72,7 @@ export default function WalletChip({
         disabled={connecting}
         type="button"
       >
-        {connecting ? "Connecting…" : "Connect wallet"}
+        {connecting ? tx("Connecting…", "Bağlanıyor…") : tx("Connect wallet", "Cüzdanı bağla")}
       </button>
     );
   }
@@ -83,7 +85,7 @@ export default function WalletChip({
       {menuOpen && (
         <div className="anav__menu">
           <button onClick={copy} type="button">
-            {copied ? "Copied ✓" : "Copy address"}
+            {copied ? tx("Copied ✓", "Kopyalandı ✓") : tx("Copy address", "Adresi kopyala")}
           </button>
           {onWalletView && (
             <button
@@ -93,7 +95,7 @@ export default function WalletChip({
               }}
               type="button"
             >
-              Wallet details
+              {tx("Wallet details", "Cüzdan ayrıntıları")}
             </button>
           )}
           <button
@@ -103,7 +105,7 @@ export default function WalletChip({
             }}
             type="button"
           >
-            Disconnect
+            {tx("Disconnect", "Bağlantıyı kes")}
           </button>
         </div>
       )}

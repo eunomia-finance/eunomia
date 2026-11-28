@@ -1,3 +1,7 @@
+// These tests assert the English sentences; the app language otherwise follows the machine locale.
+import { resetLangForTest } from "./i18n";
+resetLangForTest("en");
+
 import { describe, it, expect } from "vitest";
 import { buildActivityRow } from "./activity";
 

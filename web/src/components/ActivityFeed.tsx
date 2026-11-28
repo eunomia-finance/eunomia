@@ -10,6 +10,7 @@ import { fetchActivityHistory, mergeFeedEvents, subscribeActivity } from "../lib
 import { filterFeed, type FeedFilter } from "../lib/feedFilter";
 import { getTreasuryId } from "../lib/treasuryStore";
 import { useWalletAddress } from "../lib/useWalletAddress";
+import { tx, useLang } from "../lib/i18n";
 import { whenOf } from "./shell/ledgerFormat";
 
 const POLL_MS = 6000; // ~1 ledger
@@ -19,18 +20,19 @@ const PAGE = 30; // rows revealed per "Load more"
 // The kind column. Only two kinds carry colour — a refusal writes in red, a payment the
 // rules let through gets the green mark — the rest are neutral words.
 function kindOf(kind: string): { cls: string; text: string; mark: string | null } {
-  if (kind === "blocked") return { cls: "ledger__kind is-no", text: "Blocked", mark: "mark--no" };
-  if (kind === "paid") return { cls: "ledger__kind", text: "Allowed", mark: "mark--ok" };
-  if (kind === "fund") return { cls: "ledger__kind", text: "Funded", mark: null };
-  if (kind === "deploy") return { cls: "ledger__kind", text: "Created", mark: null };
-  if (kind === "whitelist" || kind === "payee_add") return { cls: "ledger__kind", text: "Payee +", mark: null };
-  if (kind === "payee_rm") return { cls: "ledger__kind", text: "Payee −", mark: null };
-  if (kind === "leash") return { cls: "ledger__kind", text: "Leash", mark: null };
-  if (kind === "revoked") return { cls: "ledger__kind", text: "Revoked", mark: null };
+  if (kind === "blocked") return { cls: "ledger__kind is-no", text: tx("Blocked", "Reddedildi"), mark: "mark--no" };
+  if (kind === "paid") return { cls: "ledger__kind", text: tx("Allowed", "Ödendi"), mark: "mark--ok" };
+  if (kind === "fund") return { cls: "ledger__kind", text: tx("Funded", "Para yatırıldı"), mark: null };
+  if (kind === "deploy") return { cls: "ledger__kind", text: tx("Created", "Oluşturuldu"), mark: null };
+  if (kind === "whitelist" || kind === "payee_add") return { cls: "ledger__kind", text: tx("Payee +", "Alıcı +"), mark: null };
+  if (kind === "payee_rm") return { cls: "ledger__kind", text: tx("Payee −", "Alıcı −"), mark: null };
+  if (kind === "leash") return { cls: "ledger__kind", text: tx("Leash", "Yetki"), mark: null };
+  if (kind === "revoked") return { cls: "ledger__kind", text: tx("Revoked", "İptal edildi"), mark: null };
   return { cls: "ledger__kind", text: kind.replace(/_/g, " "), mark: null };
 }
 
 export default function ActivityFeed({ filter }: { filter?: FeedFilter }) {
+  useLang();
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [state, setState] = useState<"connecting" | "live" | "error">("connecting");
   const [visible, setVisible] = useState(PAGE);
@@ -119,31 +121,31 @@ export default function ActivityFeed({ filter }: { filter?: FeedFilter }) {
     <section className="panel ledger">
       <div className="ledger__head">
         <div>
-          <div className="eyebrow">Every decision on Eunomia</div>
-          <div className="panel__title" style={{ marginTop: 4 }}>Activity</div>
+          <div className="eyebrow">{tx("Every decision on Eunomia", "Eunomia'daki her karar")}</div>
+          <div className="panel__title" style={{ marginTop: 4 }}>{tx("Activity", "Hareketler")}</div>
         </div>
         <span className="count">
           <i className={`mark ${state === "live" ? "mark--ok" : state === "error" ? "mark--no" : "mark--ink"}`} style={{ borderRadius: "50%", width: 7, height: 7 }} />
-          {state === "live" ? "live" : state === "connecting" ? "connecting" : "offline — retrying"}
+          {state === "live" ? tx("live", "canlı") : state === "connecting" ? tx("connecting", "bağlanıyor") : tx("offline — retrying", "çevrimdışı — tekrar deniyor")}
         </span>
       </div>
       <div className="ledger__row ledger__row--feed ledger__row--head">
-        <span className="eyebrow">Time</span>
-        <span className="eyebrow">Kind</span>
-        <span className="eyebrow sm-hide">Treasury</span>
-        <span className="eyebrow">What</span>
-        <span className="eyebrow sm-hide" style={{ textAlign: "right" }}>Proof</span>
+        <span className="eyebrow">{tx("Time", "Saat")}</span>
+        <span className="eyebrow">{tx("Kind", "Tür")}</span>
+        <span className="eyebrow sm-hide">{tx("Treasury", "Kasa")}</span>
+        <span className="eyebrow">{tx("What", "Ne")}</span>
+        <span className="eyebrow sm-hide" style={{ textAlign: "right" }}>{tx("Proof", "Kanıt")}</span>
       </div>
 
       {shown.list.length === 0 ? (
         <div className="ledger__empty">
           {state === "error"
-            ? "Couldn't reach the network — retrying…"
+            ? tx("Couldn't reach the network — retrying…", "Ağa ulaşılamadı, tekrar deniyor…")
             : state === "connecting"
-              ? "Loading platform activity…"
+              ? tx("Loading platform activity…", "Hareketler yükleniyor…")
               : filter && events.length > 0
-                ? "Nothing matches these filters."
-                : "No activity yet — the first treasury action lands here live."}
+                ? tx("Nothing matches these filters.", "Bu filtrelere uyan bir şey yok.")
+                : tx("No activity yet — the first treasury action lands here live.", "Henüz hareket yok. İlk kasa hareketi buraya canlı düşer.")}
         </div>
       ) : (
         shown.list.map((e) => {
@@ -171,8 +173,8 @@ export default function ActivityFeed({ filter }: { filter?: FeedFilter }) {
       )}
       {shown.total > visible && (
         <div className="ledger__more">
-          <span>{shown.total - shown.list.length} older</span>
-          <button onClick={() => setVisible((v) => v + PAGE)} type="button">Load more</button>
+          <span>{shown.total - shown.list.length} {tx("older", "eski")}</span>
+          <button onClick={() => setVisible((v) => v + PAGE)} type="button">{tx("Load more", "Daha fazla")}</button>
         </div>
       )}
     </section>

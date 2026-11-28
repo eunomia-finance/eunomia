@@ -2,6 +2,7 @@
 // we cursor-poll the RPC's getEvents for the contracts a view follows and surface them as
 // a live activity feed.
 import { rpc, scValToNative } from "@stellar/stellar-sdk";
+import { tx } from "./i18n";
 
 export interface FeedEvent {
   id: string;
@@ -37,23 +38,26 @@ export function formatEvent(topics: unknown[], data: unknown): { kind: string; l
     case "paid":
       return { kind, label: `Agent paid ${xlm(d?.[1])} XLM to ${short(d?.[0])} · task ${topics[1]}` };
     case "attested":
-      return { kind, label: `ZK compliance attested · period ${bytesToInt(d?.[1])}` };
+      return { kind, label: tx(`ZK compliance attested · period ${bytesToInt(d?.[1])}`, `ZK uyumluluk kanıtlandı · dönem ${bytesToInt(d?.[1])}`) };
     case "escrowed":
-      return { kind, label: `Escrow #${topics[1]} opened · ${xlm(d?.[1])} XLM for ${short(d?.[0])}` };
+      return { kind, label: tx(
+          `Escrow #${topics[1]} opened · ${xlm(d?.[1])} XLM for ${short(d?.[0])}`,
+          `Emanet #${topics[1]} açıldı · ${xlm(d?.[1])} XLM · ${short(d?.[0])} için`,
+        ) };
     case "released":
-      return { kind, label: `Escrow #${topics[1]} released to ${short(d?.[0])}` };
+      return { kind, label: tx(`Escrow #${topics[1]} released to ${short(d?.[0])}`, `Emanet #${topics[1]} bırakıldı · ${short(d?.[0])}`) };
     case "refunded":
-      return { kind, label: `Escrow #${topics[1]} refunded` };
+      return { kind, label: tx(`Escrow #${topics[1]} refunded`, `Emanet #${topics[1]} iade edildi`) };
     case "payee_add":
-      return { kind, label: `Payee approved: ${short(data)}` };
+      return { kind, label: tx(`Payee approved: ${short(data)}`, `Alıcı onaylandı: ${short(data)}`) };
     case "payee_rm":
-      return { kind, label: `Payee removed: ${short(data)}` };
+      return { kind, label: tx(`Payee removed: ${short(data)}`, `Alıcı kaldırıldı: ${short(data)}`) };
     case "paused":
-      return { kind, label: data ? "Treasury paused" : "Treasury resumed" };
+      return { kind, label: data ? tx("Treasury paused", "Kasa durduruldu") : tx("Treasury resumed", "Kasa devam ediyor") };
     case "revoked":
       return { kind, label: "Leash revoked" };
     case "agent":
-      return { kind, label: `Root agent rotated to ${short(data)}` };
+      return { kind, label: tx(`Root agent rotated to ${short(data)}`, `Kök ajan değişti: ${short(data)}`) };
     default:
       return { kind, label: kind };
   }

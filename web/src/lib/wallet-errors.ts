@@ -1,6 +1,7 @@
 // Wallet error classification — pure functions, so they're unit-testable. Map raw
 // wallet/SDK errors into the three surfaced error types: wallet not installed,
 // request rejected, and insufficient balance.
+import { tx } from "./i18n";
 
 export function errText(e: unknown): string {
   if (e && typeof e === "object" && "message" in e) return String((e as { message: unknown }).message);
@@ -11,20 +12,24 @@ export function errText(e: unknown): string {
 export function connectErr(e: unknown): string {
   const m = errText(e).toLowerCase();
   if (m.includes("not available") || m.includes("not installed") || m.includes("install")) {
-    return "That wallet isn't installed — pick another option.";
+    return tx("That wallet isn't installed — pick another option.", "Bu cüzdan kurulu değil — başka bir seçenek seç.");
   }
   if (
     m.includes("reject") || m.includes("denied") || m.includes("declin") ||
     m.includes("close") || m.includes("cancel")
   ) {
-    return "Connection cancelled.";
+    return tx("Connection cancelled.", "Bağlantı iptal edildi.");
   }
-  return errText(e) || "Couldn't connect a wallet.";
+  return errText(e) || tx("Couldn't connect a wallet.", "Cüzdan bağlanamadı.");
 }
 
 /** The user-facing text for a wallet session the wallet no longer honours. */
 export const STALE_SESSION_MSG =
   "Wallet connection expired — reconnect your wallet and try again.";
+
+/** The same sentence in the current language (the constant above stays English). */
+export const staleSessionMsg = (): string =>
+  tx(STALE_SESSION_MSG, "Cüzdan bağlantısının süresi doldu — cüzdanını yeniden bağla, sonra tekrar dene.");
 
 /** A WalletConnect session the wallet dropped (deleted, expired or never paired). The app
  *  keeps signing against a topic that no longer exists, so nothing ever opens on the phone.
@@ -42,25 +47,25 @@ export function isStaleSessionError(e: unknown): boolean {
 
 /** send: insufficient balance (type 3) or signature rejected (type 2). */
 export function sendErr(e: unknown): string {
-  if (isStaleSessionError(e)) return STALE_SESSION_MSG;
+  if (isStaleSessionError(e)) return staleSessionMsg();
   const codes = (e as {
     response?: { data?: { extras?: { result_codes?: { operations?: string[]; transaction?: string } } } };
   })?.response?.data?.extras?.result_codes;
   const opCodes = codes?.operations?.join(", ") || codes?.transaction || "";
   if (opCodes.includes("underfunded") || opCodes.toLowerCase().includes("insufficient")) {
-    return "Insufficient balance for this payment.";
+    return tx("Insufficient balance for this payment.", "Bu ödeme için bakiye yetersiz.");
   }
   const m = errText(e).toLowerCase();
   if (m.includes("account not found") || m.includes("account does not exist")) {
-    return "Your wallet has no XLM yet — send some XLM to it first.";
+    return tx("Your wallet has no XLM yet — send some XLM to it first.", "Cüzdanında henüz XLM yok — önce biraz XLM gönder.");
   }
   if (m.includes("underfunded") || m.includes("insufficient balance")) {
-    return "Insufficient balance for this payment.";
+    return tx("Insufficient balance for this payment.", "Bu ödeme için bakiye yetersiz.");
   }
   if (m.includes("reject") || m.includes("denied") || m.includes("declin") || m.includes("cancel")) {
-    return "Signature rejected in your wallet.";
+    return tx("Signature rejected in your wallet.", "İmzayı cüzdanda reddettin.");
   }
-  return opCodes || errText(e) || "Transaction failed.";
+  return opCodes || errText(e) || tx("Transaction failed.", "İşlem başarısız oldu.");
 }
 
 /** On-chain policy rejections (`Error(Contract, #N)`) → human-readable messages.
@@ -85,13 +90,40 @@ export const CONTRACT_ERRORS: Record<number, string> = {
   17: "Outside the task budget — this agent may only pay the payees the owner approved for the task.",
 };
 
+/** Turkish for CONTRACT_ERRORS, code for code. */
+const CONTRACT_ERRORS_TR: Record<number, string> = {
+  1: "Tutar sıfırdan büyük olmalı.",
+  2: "Alıcı onaylı değil — izin listesinde yok.",
+  3: "Tek ödeme sınırı aşıldı — ödeme kasadan hiç çıkmadı.",
+  4: "Bugünkü günlük sınır aşıldı — ödeme kasadan hiç çıkmadı.",
+  5: "Alıcının itibar puanı gereken eşiğin altında.",
+  6: "Serbest bakiye yetmiyor — para açık emanetlerde kilitli.",
+  7: "Emanet bulunamadı — zaten bırakılmış ya da iade edilmiş olabilir.",
+  8: "Emanetin son tarihi daha geçmedi — iade henüz yapılamaz.",
+  9: "Kasa durdurulmuş — sahibi harcamayı geçici olarak dondurdu.",
+  10: "Ajanın yetki tavanı aşıldı — ödeme kasadan hiç çıkmadı.",
+  11: "Geçersiz sınırlar — ikisi de pozitif olmalı, tek ödeme günlüğü geçemez.",
+  12: "Emanetin son tarihi gelecekte olmalı.",
+  13: "Alıcı bu tokeni henüz tutamıyor — hesabına önce bir trustline lazım.",
+  14: "Bu alıcının aylık tavanı aşıldı — ödeme kasadan hiç çıkmadı.",
+  15: "Bu ayın bütçesi aşıldı — ödeme kasadan hiç çıkmadı.",
+  16: "Kasa mevcut tavanı aşardı — bu beta her kasada sınırlı tutar tutuyor.",
+  17: "Görev bütçesinin dışında — ajan yalnız sahibinin görev için onayladığı alıcılara ödeme yapabilir.",
+};
+
+/** A contract rejection's text in the current language; undefined for an unknown code. */
+export function contractMsg(code: number): string | undefined {
+  const en = CONTRACT_ERRORS[code];
+  return en === undefined ? undefined : tx(en, CONTRACT_ERRORS_TR[code] ?? en);
+}
+
 /** Parse a contract guardrail rejection out of a raw error message. Returns null
  *  when the failure isn't a contract error, so callers' retry logic stays intact. */
 export function contractErr(msg: string): { errorCode: number; errorMessage: string } | null {
   const m = msg.match(/Error\(Contract,\s*#?(\d+)\)/);
   if (!m) return null;
   const code = Number(m[1]);
-  return { errorCode: code, errorMessage: CONTRACT_ERRORS[code] ?? `Contract error #${code}` };
+  return { errorCode: code, errorMessage: contractMsg(code) ?? tx(`Contract error #${code}`, `Sözleşme hatası #${code}`) };
 }
 
 /** A failed `deposit`, worded for the person depositing. The treasury itself only refuses a
@@ -101,7 +133,10 @@ export function depositErr(msg: string, unit: string): string | null {
   const ce = contractErr(msg);
   if (!ce) return null;
   if (ce.errorCode === 1 || ce.errorCode === 16) return ce.errorMessage;
-  if (ce.errorCode === 10) return `Your wallet doesn't hold that much ${unit}.`;
-  if (ce.errorCode === 13) return `Your wallet can't hold ${unit} yet — it needs a ${unit} trustline first.`;
-  return `The ${unit} token refused the deposit (#${ce.errorCode}).`;
+  if (ce.errorCode === 10) return tx(`Your wallet doesn't hold that much ${unit}.`, `Cüzdanında o kadar ${unit} yok.`);
+  if (ce.errorCode === 13) return tx(
+      `Your wallet can't hold ${unit} yet — it needs a ${unit} trustline first.`,
+      `Cüzdanın henüz ${unit} tutamıyor — önce bir ${unit} trustline lazım.`,
+    );
+  return tx(`The ${unit} token refused the deposit (#${ce.errorCode}).`, `${unit} tokeni yatırmayı reddetti (#${ce.errorCode}).`);
 }

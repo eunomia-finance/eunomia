@@ -9,15 +9,16 @@
 import { useEffect, useState } from "react";
 import type { FeedEvent } from "./events";
 import { fetchAgentExceptions, type ExceptionRequest } from "./exceptions";
-import { CONTRACT_ERRORS } from "./wallet-errors";
+import { contractMsg } from "./wallet-errors";
+import { tx } from "./i18n";
 
 const short = (a: string) => (a.length > 10 ? `${a.slice(0, 4)}…${a.slice(-4)}` : a);
 
 const why = (codes: number[]): string => {
   const first = codes[0];
-  if (first === undefined) return "Refused by your rules";
-  const text = CONTRACT_ERRORS[first];
-  if (!text) return `Refused — contract error #${first}`;
+  if (first === undefined) return tx("Refused by your rules", "Kuralların reddetti");
+  const text = contractMsg(first);
+  if (!text) return tx(`Refused — contract error #${first}`, `Reddedildi — sözleşme hatası #${first}`);
   // The table writes full sentences; a ledger row is not one.
   return text.replace(/\.$/, "");
 };
@@ -28,7 +29,10 @@ export function rejectionsToFeed(reqs: ExceptionRequest[], treasuryId: string): 
     id: `x-${r.id}`,
     kind: "blocked",
     // Dot-separated, not dashed: the contract's own wording already carries an em dash.
-    label: `Agent payment refused · ${why(r.reasonCodes)} · ${short(r.payee)}`,
+    label: tx(
+      `Agent payment refused · ${why(r.reasonCodes)} · ${short(r.payee)}`,
+      `Ajanın ödemesi reddedildi · ${why(r.reasonCodes)} · ${short(r.payee)}`,
+    ),
     // The request's own transaction is the proof, but Horizon's account-data view doesn't
     // carry it; the entry is the evidence and the Agent page links the account.
     txHash: "",

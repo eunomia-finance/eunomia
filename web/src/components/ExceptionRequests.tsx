@@ -14,7 +14,8 @@ import { EXPLORER, NETWORK_PASSPHRASE, RPC_URL, fmtXlm } from "../config";
 import { exceptionStatus, fetchAgentExceptions, ownerActionFor, type ExceptionRequest } from "../lib/exceptions";
 import { Client } from "../lib/treasuryClient";
 import { useNow } from "../lib/useNow";
-import { CONTRACT_ERRORS } from "../lib/wallet-errors";
+import { tx, useLang } from "../lib/i18n";
+import { contractMsg } from "../lib/wallet-errors";
 import { useTreasury } from "../state/useTreasury";
 
 interface Row extends ExceptionRequest {
@@ -22,6 +23,7 @@ interface Row extends ExceptionRequest {
 }
 
 export default function ExceptionRequests({ agent }: { agent: string }) {
+  useLang();
   const t = useTreasury();
   const treasuryId = t.treasuryId;
   // Rows and errors are tagged with the agent + treasury they were read for, so a switch
@@ -57,7 +59,7 @@ export default function ExceptionRequests({ agent }: { agent: string }) {
         if (!cancelled) setLoaded({ key: readKey, rows: withPayee, err: "" });
       } catch (e) {
         if (!cancelled) {
-          const msg = e instanceof Error ? e.message : "Could not read the agent's requests.";
+          const msg = e instanceof Error ? e.message : tx("Could not read the agent's requests.", "Ajanın istekleri okunamadı.");
           // A failed refresh keeps the rows already read for this same treasury.
           setLoaded((prev) => ({ key: readKey, rows: prev.key === readKey ? prev.rows : [], err: msg }));
         }
@@ -75,13 +77,14 @@ export default function ExceptionRequests({ agent }: { agent: string }) {
   return (
     <section className="panel panel--pad">
       <div className="panel__head">
-        <div className="eyebrow">Waiting for you</div>
-        {pending > 0 && <span className="pill pill--rule">{pending} pending</span>}
+        <div className="eyebrow">{tx("Waiting for you", "Seni bekleyenler")}</div>
+        {pending > 0 && <span className="pill pill--rule">{pending} {tx("pending", "bekliyor")}</span>}
       </div>
       <div className="panel__note">
-        Your agent asked to pay outside your rules. Each request sits on the agent's own Stellar account;
-        resolving one is an on-chain change to your rules, and it counts as allowed only once Stellar would
-        accept the payment.
+        {tx(
+          "Your agent asked to pay outside your rules. Each request sits on the agent's own Stellar account; resolving one is an on-chain change to your rules, and it counts as allowed only once Stellar would accept the payment.",
+          "Ajanın kuralların dışında bir ödeme istedi. Her istek ajanın kendi Stellar hesabında durur. Birini çözmek kurallarda zincir üstünde bir değişiklik demek. Stellar ödemeyi kabul edene kadar ödendi sayılmaz.",
+        )}
       </div>
       {err && <div className="err">{err}</div>}
       {rows.map((r) => {
@@ -104,11 +107,11 @@ export default function ExceptionRequests({ agent }: { agent: string }) {
                 {fmtXlm(r.amount)} {t.tokenCode}
               </span>
               <span className={status === "resolved" ? "pill pill--ok" : "pill pill--rule"}>
-                {status === "resolved" ? "allowed now" : "pending"}
+                {status === "resolved" ? tx("allowed now", "artık ödenebilir") : tx("pending", "bekliyor")}
               </span>
             </div>
             <div className="panel__kv">
-              <span>To</span>
+              <span>{tx("To", "Alıcı")}</span>
               <a
                 className="num"
                 style={{ wordBreak: "break-all", textAlign: "right" }}
@@ -121,31 +124,33 @@ export default function ExceptionRequests({ agent }: { agent: string }) {
             </div>
             <ul style={{ margin: 0, padding: "0 0 0 18px", fontSize: 13, lineHeight: 1.5, color: "var(--ink-2)" }}>
               {r.reasonCodes.map((c) => (
-                <li key={c}>{CONTRACT_ERRORS[c] ?? `Contract error #${c}`}</li>
+                <li key={c}>{contractMsg(c) ?? tx(`Contract error #${c}`, `Kontrat hatası #${c}`)}</li>
               ))}
             </ul>
             <div className="ledger__when">
-              {new Date(r.requestedAt * 1000).toLocaleString()} · task #{r.taskId.toString()} ·{" "}
-              <a className="linkbtn" href={`${EXPLORER}/account/${agent}`} target="_blank" rel="noreferrer">agent account ↗</a>
+              {new Date(r.requestedAt * 1000).toLocaleString()} · {tx("task", "görev")} #{r.taskId.toString()} ·{" "}
+              <a className="linkbtn" href={`${EXPLORER}/account/${agent}`} target="_blank" rel="noreferrer">{tx("agent account", "ajan hesabı")} ↗</a>
             </div>
             {status === "resolved" ? (
-              <div className="panel__note">The agent can pay this now; it clears the request when it does.</div>
+              <div className="panel__note">{tx("The agent can pay this now; it clears the request when it does.", "Ajan bunu şimdi ödeyebilir; ödeyince isteği kendisi kapatır.")}</div>
             ) : primary?.kind === "whitelist" ? (
               <>
                 <label className="lab">
-                  <span className="eyebrow">An address your treasury does not pay yet</span>
+                  <span className="eyebrow">{tx("An address your treasury does not pay yet", "Kasanın henüz ödemediği bir adres")}</span>
                   <input
                     className="field field--mono"
-                    aria-label="The address you mean to pay"
-                    placeholder="Paste the address you mean to pay, from your own source"
+                    aria-label={tx("The address you mean to pay", "Ödemek istediğin adres")}
+                    placeholder={tx("Paste the address you mean to pay, from your own source", "Ödemek istediğin adresi kendi kaynağından yapıştır")}
                     spellCheck={false}
                     value={pasted[r.id] ?? ""}
                     onChange={(e) => setPasted((p) => ({ ...p, [r.id]: e.target.value }))}
                   />
                   <span className="panel__note">
-                    Your agent wrote the address above, and approving it is permanent. Approve only when the address
-                    you got from the payee yourself matches it
-                    {(pasted[r.id] ?? "").trim() && (pasted[r.id] ?? "").trim() !== r.payee ? " — this one does not." : "."}
+                    {tx(
+                      "Your agent wrote the address above, and approving it is permanent. Approve only when the address you got from the payee yourself matches it",
+                      "Yukarıdaki adresi ajanın yazdı ve onayı kalıcı. Sadece alıcıdan kendin aldığın adresle aynıysa onayla",
+                    )}
+                    {(pasted[r.id] ?? "").trim() && (pasted[r.id] ?? "").trim() !== r.payee ? tx(" — this one does not.", " — bu uymuyor.") : "."}
                   </span>
                 </label>
                 <div>
@@ -155,18 +160,18 @@ export default function ExceptionRequests({ agent }: { agent: string }) {
                     disabled={!!t.busy || (pasted[r.id] ?? "").trim() !== r.payee}
                     type="button"
                   >
-                    {t.busy === "whitelist" ? "Approving…" : "Approve this payee"}
+                    {t.busy === "whitelist" ? tx("Approving…", "Onaylanıyor…") : tx("Approve this payee", "Bu alıcıyı onayla")}
                   </button>
                 </div>
               </>
             ) : primary?.kind === "pause" ? (
               <div>
                 <button className="btn" onClick={() => void t.togglePause()} disabled={!!t.busy} type="button">
-                  {t.busy === "pause" ? "Resuming…" : "Resume treasury"}
+                  {t.busy === "pause" ? tx("Resuming…", "Devam ettiriliyor…") : tx("Resume treasury", "Kasayı devam ettir")}
                 </button>
               </div>
             ) : primary ? (
-              <div className="panel__note">{primary.label}. Nothing else changes until you do.</div>
+              <div className="panel__note">{tx(`${primary.label}. Nothing else changes until you do.`, `${primary.label}. Sen yapana kadar başka bir şey değişmez.`)}</div>
             ) : null}
           </div>
         );

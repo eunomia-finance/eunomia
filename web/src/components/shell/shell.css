@@ -18,19 +18,25 @@
    what is written on a gold fill is forest. The palette has no red; --red is a brick chosen
    to sit with it, light on the dark ground (6.0:1) and dark on ivory (6.4:1).
 
-   The app has one look: the old light/dark switch is gone with the cream theme it switched
-   from. `.is-light` flips the same variables for an ivory card, so everything inside it —
-   pills, bars, links — follows without a second set of rules. */
+   Two themes, as the product always had, switched by the same data-theme attribute and the
+   same circular sweep (landing/useTheme.ts). Dark is the forest app above. Light turns it
+   inside out: an ivory ground with near-white cards. In both, `.is-contrast` is the one card
+   on a page that takes the other theme's surface — ivory in the dark app, forest in the light
+   one — by flipping the same variables, so what is inside it follows without a second set of
+   rules. `--fill` is what a bar or ring is filled with: gold where the ground is dark, forest
+   where it is ivory (gold on ivory is 2:1). */
 .shell{
-  --bg: #16291f;
-  --surface: #1f3a2e;
-  --ink: #f4efe6;
-  --ink-2: #a9b7ac;
+  --bg: #f4efe6;
+  --surface: #fbf8f1;
+  --ink: #16291f;
+  --ink-2: #5f6e64;
   --green: #c9a86a;
-  --ok: #2f5140;
-  --red: #e2a394;
-  --line: rgba(244, 239, 230, 0.14);
-  --raise: rgba(244, 239, 230, 0.06);
+  --fill: #1f3a2e;
+  --ok: #dce6d4;
+  --red: #9c3d2a;
+  --line: rgba(31, 58, 46, 0.16);
+  --raise: rgba(31, 58, 46, 0.05);
+  --field: #fffdf8;
   --rail: #1f3a2e;
   --rail-raise: #2a4a3b;
   --rail-ink: #f4efe6;
@@ -46,17 +52,37 @@
   font-family:var(--body);
 }
 
-.shell .is-light{
+:root[data-theme="dark"] .shell,
+.shell .is-contrast,
+.shell .verdict{
+  --bg: #16291f;
+  --surface: #1f3a2e;
+  --ink: #f4efe6;
+  --ink-2: #a9b7ac;
+  --fill: #c9a86a;
+  --ok: #2f5140;
+  --red: #e2a394;
+  --line: rgba(244, 239, 230, 0.14);
+  --raise: rgba(244, 239, 230, 0.06);
+  --field: rgba(244, 239, 230, 0.06);
+}
+
+:root[data-theme="dark"] .shell .is-contrast,
+:root[data-theme="dark"] .shell .verdict{
   --bg: #f4efe6;
   --surface: #f4efe6;
   --ink: #16291f;
   --ink-2: #5f6e64;
+  --fill: #1f3a2e;
   --ok: #dce6d4;
   --red: #9c3d2a;
   --line: rgba(31, 58, 46, 0.16);
   --raise: rgba(31, 58, 46, 0.05);
-  color:var(--ink);
+  --field: #fffdf8;
 }
+
+.shell .is-contrast,
+.shell .verdict{ background:var(--surface); color:var(--ink); }
 
 .shell ::selection{ background:var(--green); color:#16291f; }
 
@@ -467,16 +493,22 @@
   padding:18px 32px; border-bottom:none; background:var(--bg);
 }
 .shell__brand{ margin:0; justify-self:start; color:var(--ink); }
-.shell__pill{ display:flex; gap:4px; padding:5px; border-radius:100px; background:var(--surface); }
+.shell__pill{ display:flex; gap:4px; padding:5px; border-radius:100px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); }
 .shell__pill .shell__item{
   width:auto; padding:9px 17px; border-radius:100px; font-size:14px; font-weight:500;
   color:var(--ink-2); white-space:nowrap;
 }
 .shell__pill .shell__item:hover{ color:var(--ink); background:var(--raise); }
-.shell__pill .shell__item.is-active{ color:#16291f; background:#f4efe6; font-weight:500; }
+.shell__pill .shell__item.is-active{ color:var(--bg); background:var(--ink); font-weight:500; }
 .shell__pill .shell__item.is-active::before{ content:none; }
 .shell__right{ display:flex; align-items:center; justify-content:flex-end; gap:10px; min-width:0; }
-.shell__lang{ display:flex; padding:3px; border-radius:100px; background:var(--surface); }
+.shell__lang{ display:flex; padding:3px; border-radius:100px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); }
+.shell__theme{
+  width:34px; height:34px; border-radius:50%; border:none; cursor:pointer; flex:none;
+  display:grid; place-items:center; background:var(--surface); color:var(--ink);
+  box-shadow:inset 0 0 0 1px var(--line); font-size:15px; line-height:1;
+}
+.shell__theme:hover{ background:var(--raise); }
 .shell__lang button{
   border:none; background:none; cursor:pointer; padding:6px 10px; border-radius:100px;
   font:500 12px/1 var(--body); color:var(--ink-2);
@@ -515,3 +547,19 @@
 @media(max-width:560px){
   .shell__brand{ font-size:0; gap:0; } /* the mark alone: the wallet chip needs the room */
 }
+
+/* ---- outside the shell, inside the app --------------------------------------------
+   The feedback pill and the toasts are mounted beside .shell, so they cannot read its
+   variables; while the app is on screen they take its palette here, per theme. */
+body:has(.shell) .feedback-fab{ background:#1f3a2e; border-color:#1f3a2e; color:#f4efe6; box-shadow:0 8px 24px -10px rgba(22,41,31,.4); }
+:root[data-theme="dark"] body:has(.shell) .feedback-fab{ background:#f4efe6; border-color:#f4efe6; color:#16291f; box-shadow:0 8px 24px -10px rgba(0,0,0,.5); }
+body:has(.shell) .toast{ background:#fbf8f1; color:#16291f; border-color:rgba(31,58,46,.16); box-shadow:0 16px 40px -18px rgba(22,41,31,.35); }
+body:has(.shell) .toast::before{ border-color:rgba(31,58,46,.16); }
+body:has(.shell) .toast[data-toast-kind="success"]::before{ background:#c9a86a; border-color:#c9a86a; }
+body:has(.shell) .toast[data-toast-kind="error"]::before{ border:1.5px solid #9c3d2a; }
+:root[data-theme="dark"] body:has(.shell) .toast{ background:#1f3a2e; color:#f4efe6; border-color:rgba(244,239,230,.16); box-shadow:0 16px 40px -18px rgba(0,0,0,.5); }
+:root[data-theme="dark"] body:has(.shell) .toast::before{ border-color:rgba(244,239,230,.16); }
+:root[data-theme="dark"] body:has(.shell) .toast[data-toast-kind="success"]::before{ background:#c9a86a; border-color:#c9a86a; }
+:root[data-theme="dark"] body:has(.shell) .toast[data-toast-kind="error"]::before{ border-color:#e2a394; }
+/* Room for the feedback pill, which floats over the bottom-right corner. */
+@media(min-width:641px){ .shell__foot{ padding-right:190px; } }

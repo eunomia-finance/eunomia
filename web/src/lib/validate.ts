@@ -3,16 +3,34 @@
 // is caught with a clear message BEFORE we build a transaction, instead of surfacing an
 // opaque SDK/Horizon error (or, for empty limit fields, a raw toStroops(NaN) throw).
 import { StrKey } from "@stellar/stellar-sdk";
+import { tx } from "./i18n";
 
 export type AmountResult = { ok: true; value: number } | { ok: false; msg: string };
+
+// The English field names callers pass in, as they read in a Turkish sentence.
+const LABEL_TR: Record<string, string> = {
+  amount: "tutar",
+  "daily limit": "günlük sınır",
+  "per-payment limit": "tek ödeme sınırı",
+  "Leash cap": "yetki tavanı",
+  "session cap": "yetki tavanı",
+  "starting funds": "başlangıç parası",
+  duration: "süre",
+  "monthly limit": "aylık sınır",
+  "payee cap": "alıcı tavanı",
+};
 
 /** Parse an XLM amount that must be a finite, strictly-positive number. */
 export function parseXlmAmount(raw: string, label = "amount"): AmountResult {
   const s = raw.trim();
-  if (!s) return { ok: false, msg: `Enter ${aOrAn(label)}.` };
+  const trLabel = LABEL_TR[label] ?? label;
+  if (!s) return { ok: false, msg: tx(`Enter ${aOrAn(label)}.`, `Bir ${trLabel} gir.`) };
   const value = Number(s);
   if (!Number.isFinite(value) || value <= 0) {
-    return { ok: false, msg: `Enter a valid ${label} greater than zero.` };
+    return {
+      ok: false,
+      msg: tx(`Enter a valid ${label} greater than zero.`, `Sıfırdan büyük, geçerli bir ${trLabel} gir.`),
+    };
   }
   return { ok: true, value };
 }
@@ -40,15 +58,21 @@ export const MAX_BATCH = 16;
  *  periods to move forward. The contract refuses such a policy; this says so first, in
  *  language that suggests the fix. */
 export function checkLimits(daily: number, perTask: number): { ok: true } | { ok: false; msg: string } {
-  if (perTask > daily) return { ok: false, msg: "Per-payment limit can't exceed the daily limit." };
+  if (perTask > daily) {
+    return { ok: false, msg: tx("Per-payment limit can't exceed the daily limit.", "Tek ödeme sınırı günlük sınırı geçemez.") };
+  }
   if (daily > MAX_BATCH * perTask) {
     const lowest = Math.ceil(daily / MAX_BATCH);
     return {
       ok: false,
-      msg:
+      msg: tx(
         `A daily limit above ${MAX_BATCH}x the per-payment limit can't be proved compliant, ` +
-        `because a day could hold more payments than one proof covers. Raise the per-payment ` +
-        `limit to at least ${lowest}, or lower the daily limit to ${MAX_BATCH * perTask}.`,
+          `because a day could hold more payments than one proof covers. Raise the per-payment ` +
+          `limit to at least ${lowest}, or lower the daily limit to ${MAX_BATCH * perTask}.`,
+        `Günlük sınır, tek ödeme sınırının ${MAX_BATCH} katından fazla olamaz — bir gün tek bir ` +
+          `kanıtın kapsadığından fazla ödeme alabilir. Tek ödeme sınırını en az ${lowest} yap ` +
+          `ya da günlük sınırı ${MAX_BATCH * perTask} değerine indir.`,
+      ),
     };
   }
   return { ok: true };

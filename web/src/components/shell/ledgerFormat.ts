@@ -2,27 +2,29 @@
 // kind gets, how the clock column reads, how an amount is written. Pure functions — kept
 // out of the component files so fast refresh keeps working.
 import type { FeedEvent } from "../../lib/events";
+import { getLang, tx } from "../../lib/i18n";
 
 export function verdictOf(kind: string): { cls: string; text: string } {
-  if (kind === "blocked") return { cls: "pill pill--no", text: "Blocked" };
-  if (kind === "paid") return { cls: "pill pill--ok", text: "Allowed" };
-  if (kind === "fund") return { cls: "pill pill--rule", text: "Funded" };
-  if (kind === "deploy") return { cls: "pill pill--rule", text: "Created" };
-  if (kind === "whitelist") return { cls: "pill pill--rule", text: "Payee" };
-  if (kind === "leash" || kind === "revoked") return { cls: "pill pill--rule", text: "Leash" };
-  return { cls: "pill pill--rule", text: "Rule" };
+  if (kind === "blocked") return { cls: "pill pill--no", text: tx("Blocked", "Reddedildi") };
+  if (kind === "paid") return { cls: "pill pill--ok", text: tx("Allowed", "Ödendi") };
+  if (kind === "fund") return { cls: "pill pill--rule", text: tx("Funded", "Para yatırıldı") };
+  if (kind === "deploy") return { cls: "pill pill--rule", text: tx("Created", "Oluşturuldu") };
+  if (kind === "whitelist") return { cls: "pill pill--rule", text: tx("Payee", "Alıcı") };
+  if (kind === "leash" || kind === "revoked") return { cls: "pill pill--rule", text: tx("Leash", "Yetki") };
+  return { cls: "pill pill--rule", text: tx("Rule", "Kural") };
 }
 
 /** HH:MM for today, "Mon 16:51" for this week, the date beyond — the ledger's clock. */
 export function whenOf(iso: string, now = new Date()): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  const hm = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const loc = getLang() === "tr" ? "tr-TR" : [];
+  const hm = d.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" });
   const sameDay = d.toDateString() === now.toDateString();
   if (sameDay) return hm;
   const days = (now.getTime() - d.getTime()) / 86_400_000;
-  if (days < 7) return `${d.toLocaleDateString([], { weekday: "short" })} ${hm}`;
-  return d.toLocaleDateString([], { day: "2-digit", month: "short" });
+  if (days < 7) return `${d.toLocaleDateString(loc, { weekday: "short" })} ${hm}`;
+  return d.toLocaleDateString(loc, { day: "2-digit", month: "short" });
 }
 
 export function amountOf(e: FeedEvent): string {

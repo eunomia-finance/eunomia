@@ -19,32 +19,23 @@
 .shell .panel__kv .num{ font-size:14px; color:var(--ink); }
 .shell .panel__note{ font-size:13px; color:var(--ink-2); line-height:1.5; }
 
-/* the one dark panel */
+/* the one contrasting panel: forest on the ivory app, ivory on the forest one (shell.css) */
 .shell .verdict{
-  padding:22px 24px 20px; border-radius:14px; background:var(--ink); color:var(--bg);
-  box-shadow:0 24px 60px -30px rgba(31,58,46,.55);
+  padding:22px 24px 20px; border-radius:18px;
   display:grid; grid-template-columns:minmax(0,1fr) auto; gap:24px; align-items:end;
 }
-.shell .verdict .eyebrow{ color:#a9b7ac; }
+.shell .verdict .eyebrow{ color:var(--ink-2); }
 .shell .verdict__amount{ font-family:var(--display); font-size:56px; line-height:1; letter-spacing:-.02em; }
 .shell .verdict__line{ display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; }
 .shell .verdict__to{ font-family:var(--code); font-size:16px; }
-.shell .verdict__arrow{ font-size:15px; color:#a9b7ac; }
-.shell .verdict__why{ font-size:13.5px; color:#f4efe6; line-height:1.5; }
+.shell .verdict__arrow{ font-size:15px; color:var(--ink-2); }
+.shell .verdict__why{ font-size:13.5px; color:var(--ink); line-height:1.5; }
 .shell .verdict__why .num{ font-size:13px; }
 .shell .verdict__side{ display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
-.shell .verdict__tx{ font-family:var(--code); font-size:12px; color:#a9b7ac; text-decoration:none; }
-.shell .verdict__tx:hover{ color:var(--bg); }
-.shell .verdict .bar{ background:rgba(244,239,230,.14); }
-.shell .verdict--quiet{ background:var(--surface); color:var(--ink); box-shadow:none; border:1px solid var(--line); }
+.shell .verdict__tx{ font-family:var(--code); font-size:12px; color:var(--ink-2); text-decoration:none; }
+.shell .verdict__tx:hover{ color:var(--ink); }
 .shell .verdict--quiet .eyebrow{ color:var(--ink-2); }
 .shell .verdict--quiet .verdict__why{ color:var(--ink-2); }
-:root[data-theme="dark"] .shell .verdict{ background:#f4efe6; color:#16291f; }
-:root[data-theme="dark"] .shell .verdict .verdict__why{ color:#1f3a2e; }
-:root[data-theme="dark"] .shell .verdict .bar{ background:rgba(21,42,3,.14); }
-:root[data-theme="dark"] .shell .verdict .btn--inv{ color:#16291f; border-color:rgba(21,42,3,.3); }
-:root[data-theme="dark"] .shell .verdict .btn--inv:hover{ background:rgba(21,42,3,.08); }
-:root[data-theme="dark"] .shell .verdict .verdict__tx{ color:#5f6e64; }
 
 /* verdict marks */
 .shell .pill{
@@ -155,19 +146,26 @@
   .shell .ledger__foot{ grid-template-columns:minmax(0,1fr); }
 }
 
-/* ---- 2026-11-28 --------------------------------------------------------------- */
+/* ---- 2026-11-28: the forest palette, two themes ---------------------------------
+   Everything below reads the theme variables (shell.css), so it holds in the dark app, the
+   light app and inside a `.is-contrast` card without a rule of its own for each. */
 .shell .pill--ok{ background:var(--ok); color:var(--ink); }
-.shell .bar__fill{ background:var(--ink); }
-.shell .verdict .bar__fill{ background:var(--green); }
+.shell .pill--no{ background:color-mix(in oklab, var(--red) 16%, transparent); padding-left:9px; }
+.shell .bar{ background:color-mix(in oklab, var(--ink) 12%, transparent); }
+.shell .bar__fill,
+.shell .bar__fill--ink{ background:var(--fill); }
+.shell .field{ background:var(--field); }
+.shell .btn--inv, .shell .btn--inv:hover{ background:transparent; color:var(--ink); border-color:color-mix(in oklab, var(--ink) 30%, transparent); font-weight:500; }
+.shell .btn--inv:hover{ background:var(--raise); opacity:1; }
 /* The one primary action on a screen. Gold is a fill: what is written on it is forest. */
 .shell .btn--gold, .shell .btn--gold:hover{ background:var(--green); color:#16291f; border-color:var(--green); border-radius:100px; padding:11px 18px; }
 .shell .btn--gold:hover{ opacity:.9; }
 .shell .danger-link{ background:none; border:none; padding:0; cursor:pointer; font:inherit; font-size:13px; color:var(--red); text-decoration:underline; text-underline-offset:3px; text-align:left; }
 
 /* Where the owner is, and what comes next. Four steps from an open treasury to an agent
-   that has bought something; the one to do now is the light cell, and it carries the only
-   button. Gone once all four are true. */
-.shell .journey{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border-radius:14px; overflow:hidden; background:var(--rail); color:var(--rail-ink); }
+   that has bought something; the one to do now is the ivory cell, and it carries the only
+   button. Gone once all four are true. The strip is forest in both themes. */
+.shell .journey{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border-radius:18px; overflow:hidden; background:var(--rail); color:var(--rail-ink); }
 .shell .journey__step{ padding:16px 18px 18px; display:flex; flex-direction:column; gap:6px; min-width:0; border-right:1px solid rgba(244,239,230,.12); }
 .shell .journey__step:last-child{ border-right:none; }
 .shell .journey__n{ font-family:var(--code); font-size:11.5px; color:var(--rail-ink-2); }
@@ -179,57 +177,24 @@
 .shell .journey__step.is-now .journey__n,
 .shell .journey__step.is-now .journey__d{ color:#5f6e64; }
 .shell .journey__cta{ margin-top:8px; }
+/* On the ivory ground the ivory cell would melt into the page: there it is the gold one. */
+:root:not([data-theme="dark"]) .shell .journey__step.is-now{ background:var(--green); }
+:root:not([data-theme="dark"]) .shell .journey__step.is-now .journey__n,
+:root:not([data-theme="dark"]) .shell .journey__step.is-now .journey__d{ color:#3a3220; }
+:root:not([data-theme="dark"]) .shell .journey__step.is-now .btn--gold{ background:#16291f; color:#f4efe6; border-color:#16291f; }
 
-.shell .figures{ display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:16px; }
 .shell .figure__big{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; font-family:var(--code); font-weight:500; font-size:46px; line-height:1; letter-spacing:-.03em; color:var(--ink); }
 .shell .figure__big small{ font-size:16px; font-weight:400; letter-spacing:0; color:var(--ink-2); }
-.shell .figure__big--sm{ font-size:34px; }
-
-@media(max-width:860px){
-  .shell .journey{ grid-template-columns:minmax(0,1fr); }
-  .shell .journey__step{ border-right:none; border-bottom:1px solid rgba(244,239,230,.12); }
-  .shell .journey__step:not(.is-now) .journey__d{ display:none; }
-  .shell .figures{ grid-template-columns:minmax(0,1fr); }
-  .shell .figure__big{ font-size:38px; }
-}
-
-/* ---- the forest app, 2026-11-28 --------------------------------------------------
-   The one panel a page wants read is ivory: the verdict, and any `.is-light` card. It flips
-   the variables, so what is inside follows. */
-.shell .verdict{
-  --bg:#f4efe6; --surface:#f4efe6; --ink:#16291f; --ink-2:#5f6e64; --ok:#dce6d4; --red:#9c3d2a;
-  --line:rgba(31,58,46,.16); --raise:rgba(31,58,46,.05);
-  background:#f4efe6; color:#16291f; box-shadow:none;
-}
-.shell .verdict .eyebrow,
-.shell .verdict__arrow,
-.shell .verdict__tx{ color:#5f6e64; }
-.shell .verdict__tx:hover{ color:#16291f; }
-.shell .verdict__why{ color:#16291f; }
-.shell .verdict .bar{ background:rgba(31,58,46,.12); }
-.shell .verdict .bar__fill{ background:#1f3a2e; }
-.shell .btn--inv, .shell .btn--inv:hover{ color:#16291f; border-color:rgba(31,58,46,.3); }
-.shell .btn--inv:hover{ background:rgba(31,58,46,.07); }
-.shell .verdict--quiet{ background:var(--surface); color:var(--ink); }
-
-/* Buttons on the dark ground: the default is an ivory fill, a ghost is an outline. */
-.shell .bar{ background:rgba(244,239,230,.12); }
-.shell .is-light .bar{ background:rgba(31,58,46,.12); }
-.shell .bar__fill{ background:var(--green); }
-.shell .is-light .bar__fill{ background:#1f3a2e; }
-.shell .field{ background:rgba(244,239,230,.06); }
-.shell .is-light .field{ background:#fbf8f1; }
-.shell .journey__step.is-now{ background:#f4efe6; color:#16291f; }
-.shell .journey{ background:var(--surface); }
 
 /* Overview: three cards under the steps — the treasury, the agent, and what happened. */
 .shell .trio{ display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.25fr); gap:16px; align-items:stretch; }
-.shell .trio > .panel{ padding:24px; display:flex; flex-direction:column; gap:12px; border:none; border-radius:18px; }
+.shell .trio > .panel{ padding:24px; display:flex; flex-direction:column; gap:12px; border-radius:18px; }
+.shell .trio > .panel.is-contrast{ border-color:transparent; }
 .shell .trio .figure__big{ font-size:56px; margin-top:6px; }
 .shell .card__foot{ margin-top:auto; padding-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 .shell .ring{
   --p:0; width:128px; height:128px; border-radius:50%; flex:none; display:grid; place-items:center;
-  background:conic-gradient(var(--green) calc(var(--p) * 1%), rgba(244,239,230,.12) 0);
+  background:conic-gradient(var(--fill) calc(var(--p) * 1%), color-mix(in oklab, var(--ink) 12%, transparent) 0);
 }
 .shell .ring > div{ width:100px; height:100px; border-radius:50%; background:var(--surface); display:grid; place-items:center; align-content:center; text-align:center; font-family:var(--code); font-weight:500; font-size:20px; line-height:1.15; }
 .shell .ring small{ display:block; margin-top:4px; font-family:var(--body); font-weight:400; font-size:11px; color:var(--ink-2); }
@@ -242,11 +207,15 @@
 .shell .feedline b{ display:block; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .shell .feedline small{ display:block; margin-top:3px; font-size:12px; color:var(--ink-2); }
 .shell .feedline > div:last-child{ text-align:right; flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
-.shell .pill--no{ background:color-mix(in oklab, var(--red) 16%, transparent); padding-left:9px; }
 
 @media(max-width:1180px){
   .shell .trio{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
   .shell .trio > .panel:last-child{ grid-column:1 / -1; }
+}
+@media(max-width:860px){
+  .shell .journey{ grid-template-columns:minmax(0,1fr); }
+  .shell .journey__step{ border-right:none; border-bottom:1px solid rgba(244,239,230,.12); }
+  .shell .journey__step:not(.is-now) .journey__d{ display:none; }
 }
 @media(max-width:760px){
   .shell .trio{ grid-template-columns:minmax(0,1fr); }

@@ -13,6 +13,9 @@ const KEY = "eunomia_lang";
 const listeners = new Set<() => void>();
 
 function initial(): Lang {
+  // Tests assert the English sentences. On a machine whose own language is Turkish they
+  // would otherwise start in Turkish — which is how this was found.
+  if (import.meta.env?.MODE === "test") return "en";
   try {
     const saved = typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
     if (saved === "en" || saved === "tr") return saved;

@@ -2,7 +2,7 @@
 // `@stellar/stellar-sdk/contract` Client expects (the same return shape as
 // `basicNodeSigner`): `(xdr, opts?) => Promise<{ signedTxXdr, signerAddress }>`.
 // Kept pure (the kit is injected) so it unit-tests without the kit's DOM-bound init.
-import { isStaleSessionError, STALE_SESSION_MSG } from "./wallet-errors";
+import { isStaleSessionError, staleSessionMsg } from "./wallet-errors";
 
 export interface KitSigner {
   signTransaction(
@@ -39,7 +39,7 @@ export function makeWalletSigner(
       } catch (e) {
         if (!isStaleSessionError(e)) throw e;
         onStaleSession?.();
-        throw new Error(STALE_SESSION_MSG, { cause: e });
+        throw new Error(staleSessionMsg(), { cause: e });
       }
     },
   };

@@ -4,21 +4,24 @@
 import { useMemo, useState } from "react";
 import ActivityFeed from "../components/ActivityFeed";
 import { KIND_GROUPS, type FeedFilter, type KindGroup } from "../lib/feedFilter";
+import { tx, useLang } from "../lib/i18n";
 import { useTreasury } from "../state/useTreasury";
 
-const GROUP_LABEL: Record<KindGroup, string> = {
-  payments: "Allowed",
-  blocked: "Blocked",
-  fund: "Funded",
-  deploy: "Created",
-  whitelist: "Payees",
-  leash: "Leash",
-  lifecycle: "Lifecycle",
+const groupLabel = (): Record<KindGroup, string> => ({
+  payments: tx("Allowed", "Ödendi"),
+  blocked: tx("Blocked", "Reddedildi"),
+  fund: tx("Funded", "Para yatırıldı"),
+  deploy: tx("Created", "Oluşturuldu"),
+  whitelist: tx("Payees", "Alıcılar"),
+  leash: tx("Leash", "Yetki"),
+  lifecycle: tx("Lifecycle", "Yaşam döngüsü"),
   zk: "ZK",
-};
+});
 
 export default function ActivityPage() {
+  useLang();
   const t = useTreasury();
+  const labels = groupLabel();
   const [active, setActive] = useState<Set<KindGroup>>(new Set());
   const [mineOnly, setMineOnly] = useState(false);
 
@@ -47,25 +50,27 @@ export default function ActivityPage() {
           you are looking at should be visible while you read it, not scrolled off. */}
       <div className="page__side">
         <section className="panel panel--pad">
-          <div className="eyebrow">Show</div>
+          <div className="eyebrow">{tx("Show", "Göster")}</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <button className={`chip${active.size === 0 ? " is-on" : ""}`} onClick={() => setActive(new Set())} type="button">
-              All
+              {tx("All", "Hepsi")}
             </button>
             {(Object.keys(KIND_GROUPS) as KindGroup[]).map((g) => (
               <button key={g} className={`chip${active.has(g) ? " is-on" : ""}`} onClick={() => toggle(g)} type="button">
-                {GROUP_LABEL[g]}
+                {labels[g]}
               </button>
             ))}
           </div>
           {t.treasuryId && (
             <button className={`chip${mineOnly ? " is-on" : ""}`} style={{ width: "100%", marginTop: 4 }} onClick={() => setMineOnly((m) => !m)} type="button">
-              my treasury only
+              {tx("my treasury only", "sadece benim kasam")}
             </button>
           )}
           <div className="panel__note">
-            Every treasury action across Eunomia — full history, streamed live. On-chain events from your own
-            treasury ride on top.
+            {tx(
+              "Every treasury action across Eunomia — full history, streamed live. On-chain events from your own treasury ride on top.",
+              "Eunomia'daki her kasa hareketi, tüm geçmişiyle canlı akar. Kendi kasanın zincir olayları da üstüne eklenir.",
+            )}
           </div>
         </section>
       </div>

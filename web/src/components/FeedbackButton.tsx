@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { tx, useLang } from "../lib/i18n";
 
 // Feedback funnels to ONE channel — the Google Form (name + email + wallet + rating) — so
 // every response lands in a single sheet (risein Level 5 evidence) instead of splitting
@@ -10,9 +11,10 @@ const FEEDBACK_FORM_URL = "https://forms.gle/7gzJWwte52SmbXei7";
 // handler (Chrome's default "pop-ups and redirects: blocked"), so window.open returned
 // null and the button silently did nothing. Anchor navigation is never popup-blocked.
 export default function FeedbackButton() {
+  useLang();
   return (
     <a className="feedback-fab" style={fab} href={FEEDBACK_FORM_URL} target="_blank" rel="noopener noreferrer">
-      Share feedback
+      {tx("Share feedback", "Görüş bildir")}
     </a>
   );
 }

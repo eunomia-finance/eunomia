@@ -418,7 +418,7 @@ export default function Overview({ onGo }: { onGo: (v: View) => void }) {
         </motion.section>
 
         {/* WHAT HAPPENED — the one ivory card: the latest things the rules decided */}
-        <motion.section className="panel is-light" {...fadeUp(0.12)}>
+        <motion.section className="panel is-contrast" {...fadeUp(0.12)}>
           <div className="panel__head">
             <div className="eyebrow">{tx("What your rules did", "Kuralların ne yaptı")}</div>
             <button className="linkbtn" onClick={() => onGo("activity")} type="button">{tx("All", "Tümü")}</button>

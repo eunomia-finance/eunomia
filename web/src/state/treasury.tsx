@@ -43,6 +43,7 @@ import {
   createAgentAccount,
   OWNER_MIN_XLM,
   planAgentSetup,
+  stepLabel,
   type SetupStep,
 } from "../lib/agentSetup";
 import { rememberPayee } from "../lib/payees";
@@ -54,6 +55,7 @@ import { tokenCodeOf, tokenIdOf } from "../lib/token";
 import { isValidAgentKey, registerAgentKey, sessionIsActive } from "../lib/session";
 import { discoverTreasuries, registerTreasury } from "../lib/registry";
 import { mergeTreasuries } from "../lib/treasuryList";
+import { tx } from "../lib/i18n";
 import { useToast } from "./toastContext";
 import type { BudgetRequest } from "../lib/budgetRequestCodec";
 import {
@@ -131,9 +133,9 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
       // administers, or a contract that only claims the victim does — and the victim would
       // fund it. Fails closed: unknown code or ownership is refused.
       const refusal = !ours
-        ? "That contract isn't a Eunomia treasury, so it wasn't opened."
+        ? tx("That contract isn't a Eunomia treasury, so it wasn't opened.", "Bu sözleşme bir Eunomia kasası değil, o yüzden açılmadı.")
         : !isOwnedBy(st, addr)
-          ? "That treasury is administered by a different wallet, so it wasn't opened."
+          ? tx("That treasury is administered by a different wallet, so it wasn't opened.", "Bu kasayı başka bir cüzdan yönetiyor, o yüzden açılmadı.")
           : null;
       if (refusal) {
         setState(null);
@@ -163,7 +165,13 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
       // that could not even build its source account looked identical to a treasury that
       // genuinely is not on chain.
       console.error("[treasury] could not read", id, e);
-      toast("error", `Could not read this treasury — it may not exist on ${NETWORK_LABEL.toLowerCase()}.`);
+      toast(
+        "error",
+        tx(
+          `Could not read this treasury — it may not exist on ${NETWORK_LABEL.toLowerCase()}.`,
+          `Bu kasa okunamadı — ${NETWORK_LABEL.toLowerCase()} ağında olmayabilir.`,
+        ),
+      );
     } finally {
       if (!stale()) setLoading(false);
     }
@@ -224,7 +232,13 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
         setTreasuryId(address, latest);
         setTreasuryIdState(latest);
         syncLocalIds(address);
-        toast("success", `Recovered your treasury from the on-chain registry ✓ (${shortAddr(latest)})`);
+        toast(
+          "success",
+          tx(
+            `Recovered your treasury from the on-chain registry ✓ (${shortAddr(latest)})`,
+            `Kasan zincirdeki kayıttan geri geldi ✓ (${shortAddr(latest)})`,
+          ),
+        );
       }
     })();
     return () => {
@@ -254,7 +268,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
 
   const deploy = useCallback(
     async (daily: string, perTask: string, extra: DeployExtras = {}): Promise<ActionOutcome> => {
-      if (!address) return fail("Connect a wallet first.");
+      if (!address) return fail(tx("Connect a wallet first.", "Önce bir cüzdan bağla."));
       // Validate before the wallet popup — an empty/NaN field would otherwise reach
       // toStroops(NaN) and throw an opaque "must be a non-negative number".
       const dailyLimit = parseXlmAmount(daily, "daily limit");
@@ -266,18 +280,23 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
       const coherent = checkLimits(dailyLimit.value, perTaskLimit.value);
       if (!coherent.ok) return invalid(coherent.msg);
       const payee = (extra.payee ?? "").trim();
-      if (payee && !isValidPaymentDest(payee)) return invalid("That payee isn't a Stellar account address (G…).");
+      if (payee && !isValidPaymentDest(payee)) return invalid(tx("That payee isn't a Stellar account address (G…).", "Bu alıcı bir Stellar hesap adresi değil (G…)."));
       const agentKey = (extra.agentKey ?? "").trim();
       let leash: TreasurySetup["leash"];
       if (agentKey) {
         if (!isValidAgentKey(agentKey)) {
-          return invalid("That is not a Stellar public key (G…, 56 characters) — copy it from `eunomia-mcp init`.");
+          return invalid(
+            tx(
+              "That is not a Stellar public key (G…, 56 characters) — copy it from `eunomia-mcp init`.",
+              "Bu bir Stellar adresi değil (G…, 56 karakter) — `eunomia-mcp init` komutunun yazdığı adresi kopyala.",
+            ),
+          );
         }
         const cap = parseXlmAmount(extra.capXlm ?? "", "Leash cap");
         if (!cap.ok) return invalid(cap.msg);
         const hours = Number(extra.hours ?? "");
-        if (!Number.isFinite(hours) || hours <= 0) return invalid("Enter how many hours the Leash lasts.");
-        if (cap.value > dailyLimit.value) return invalid("The Leash cap can't be above the daily limit.");
+        if (!Number.isFinite(hours) || hours <= 0) return invalid(tx("Enter how many hours the Leash lasts.", "Yetkinin kaç saat süreceğini gir."));
+        if (cap.value > dailyLimit.value) return invalid(tx("The Leash cap can't be above the daily limit.", "Yetki tavanı günlük sınırı geçemez."));
         leash = { agent: agentKey, capXlm: cap.value, hours };
       }
       // Starting funds are not checked against the displayed balance on purpose: a smart
@@ -289,7 +308,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
       const fund = parseOptionalXlmAmount(code === "USDC" ? "" : (extra.fundXlm ?? ""), "starting funds");
       if (!fund.ok) return invalid(fund.msg);
       setBusy("deploy");
-      toast("info", "Creating your treasury — one confirmation in your wallet…");
+      toast("info", tx("Creating your treasury — one confirmation in your wallet…", "Kasan oluşturuluyor — cüzdanında tek onay yeterli…"));
       try {
         // One signature: deploy + policy + payee + Leash + funding + registry, atomically.
         const id = await createTreasury(await executorFor(address), {
@@ -314,12 +333,15 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
         if (leash) void logActivity({ walletAddress: address, treasuryId: id, action: "session_start" });
         if (fund.value > 0) void refreshWalletXlm(address);
         const parts = [
-          fund.value > 0 ? `funded with ${fund.value} XLM` : null,
-          payee ? "first payee approved" : null,
-          leash ? "Leash started" : null,
-          "backed up on Stellar",
+          fund.value > 0 ? tx(`funded with ${fund.value} XLM`, `${fund.value} XLM yatırıldı`) : null,
+          payee ? tx("first payee approved", "ilk alıcı onaylandı") : null,
+          leash ? tx("Leash started", "ajanın yetkisi başladı") : null,
+          tx("backed up on Stellar", "Stellar'da yedeklendi"),
         ].filter(Boolean);
-        const msg = `Treasury created ✓${parts.length ? " — " + parts.join(", ") : ""}. One signature.`;
+        const msg =
+          tx("Treasury created ✓", "Kasa oluşturuldu ✓") +
+          (parts.length ? " — " + parts.join(", ") : "") +
+          tx(". One signature.", ". Tek imza.");
         toast("success", msg);
         return { ok: true, msg };
       } catch (e) {
@@ -335,13 +357,18 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
 
   const openExisting = useCallback(
     (raw: string): ActionOutcome => {
-      if (!address) return fail("Connect a wallet first.");
+      if (!address) return fail(tx("Connect a wallet first.", "Önce bir cüzdan bağla."));
       const id = raw.trim();
       // An empty field is not a malformed ID — telling someone their blank input "doesn't look
       // like a contract ID" reads as if the page rejected something they never typed.
-      if (!id) return invalid("Paste your treasury ID to open it.");
+      if (!id) return invalid(tx("Paste your treasury ID to open it.", "Açmak için kasa ID'sini yapıştır."));
       if (!isValidContractId(id)) {
-        return invalid("That doesn't look like a treasury contract ID — it starts with C and is 56 characters long.");
+        return invalid(
+          tx(
+            "That doesn't look like a treasury contract ID — it starts with C and is 56 characters long.",
+            "Bu bir kasa sözleşme ID'sine benzemiyor — C ile başlar, 56 karakterdir.",
+          ),
+        );
       }
       setTreasuryId(address, id);
       setTreasuryIdState(id);
@@ -354,22 +381,22 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
 
   const fund = useCallback(
     async (amount: string): Promise<ActionOutcome> => {
-      if (!address || !treasuryId) return fail("No treasury open.");
+      if (!address || !treasuryId) return fail(tx("No treasury open.", "Açık kasa yok."));
       // A deposit moves the treasury's own token, so the unit is the treasury's, never a
       // choice: XLM sent into a USDC treasury would sit there for good.
       const unit = tokenCodeOf(state?.token);
       const amt = parseXlmAmount(amount);
       if (!amt.ok) return invalid(amt.msg);
       setBusy("fund");
-      toast("info", "Funding — confirm in your wallet…");
+      toast("info", tx("Funding — confirm in your wallet…", "Para yatırılıyor — cüzdanında onayla…"));
       try {
         const hash = await fundTreasury(treasuryId, await executorFor(address), amt.value, unit);
         void logActivity({ walletAddress: address, treasuryId, action: "fund", txHash: hash, amountXlm: amt.value });
-        toast("success", "Funded ✓", { hash });
+        toast("success", tx("Funded ✓", "Para yatırıldı ✓"), { hash });
         bump();
         await loadState(treasuryId, address);
         void refreshWalletXlm(address);
-        return { ok: true, msg: "Funded ✓", hash };
+        return { ok: true, msg: tx("Funded ✓", "Para yatırıldı ✓"), hash };
       } catch (e) {
         const msg = sendErr(e);
         toast("error", msg);
@@ -383,16 +410,16 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
 
   const whitelist = useCallback(
     async (payeeAddr: string): Promise<ActionOutcome> => {
-      if (!address || !treasuryId) return fail("No treasury open.");
+      if (!address || !treasuryId) return fail(tx("No treasury open.", "Açık kasa yok."));
       const p = payeeAddr.trim();
-      if (!p) return invalid("Enter a payee address.");
+      if (!p) return invalid(tx("Enter a payee address.", "Bir alıcı adresi gir."));
       setBusy("whitelist");
-      toast("info", "Approving payee — confirm in your wallet…");
+      toast("info", tx("Approving payee — confirm in your wallet…", "Alıcı onaylanıyor — cüzdanında onayla…"));
       try {
         const t = makeTreasury(treasuryId, await executorFor(address));
         await addPayee(t, p);
         void logActivity({ walletAddress: address, treasuryId, action: "whitelist" });
-        const msg = `Payee approved: ${shortAddr(p)}`;
+        const msg = tx(`Payee approved: ${shortAddr(p)}`, `Alıcı onaylandı: ${shortAddr(p)}`);
         toast("success", msg);
         bump();
         return { ok: true, msg };
@@ -409,13 +436,13 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
 
   const removePayeeAddr = useCallback(
     async (payeeAddr: string): Promise<ActionOutcome> => {
-      if (!address || !treasuryId) return fail("No treasury open.");
+      if (!address || !treasuryId) return fail(tx("No treasury open.", "Açık kasa yok."));
       setBusy("removePayee");
-      toast("info", "Removing payee — confirm in your wallet…");
+      toast("info", tx("Removing payee — confirm in your wallet…", "Alıcı kaldırılıyor — cüzdanında onayla…"));
       try {
         const t = makeTreasury(treasuryId, await executorFor(address));
         await removePayee(t, payeeAddr.trim());
-        const msg = `Payee removed: ${shortAddr(payeeAddr)}`;
+        const msg = tx(`Payee removed: ${shortAddr(payeeAddr)}`, `Alıcı kaldırıldı: ${shortAddr(payeeAddr)}`);
         toast("success", msg);
         bump();
         return { ok: true, msg };
@@ -432,20 +459,25 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
 
   const spend = useCallback(
     async (to: string, amount: string): Promise<ActionOutcome> => {
-      if (!address || !treasuryId) return fail("No treasury open.");
+      if (!address || !treasuryId) return fail(tx("No treasury open.", "Açık kasa yok."));
       const amt = parseXlmAmount(amount);
       if (!amt.ok) return invalid(amt.msg);
       // Single-spender rule: while the Leash is on, only the agent's key may pay.
       if (sessionActive) {
-        return invalid("Your agent is on the Leash — revoke it (Agent page) to pay with your wallet.");
+        return invalid(
+          tx(
+            "Your agent is on the Leash — revoke it (Agent page) to pay with your wallet.",
+            "Ajanının yetkisi açık — cüzdanınla ödemek için yetkiyi iptal et (Ajan sayfası).",
+          ),
+        );
       }
       setBusy("spend");
-      toast("info", "Sending payment — confirm in your wallet…");
+      toast("info", tx("Sending payment — confirm in your wallet…", "Ödeme gönderiliyor — cüzdanında onayla…"));
       try {
         const res = await pay(makeTreasury(treasuryId, await executorFor(address)), BigInt(Date.now()), to.trim(), amt.value);
         if (res.ok) {
           void logActivity({ walletAddress: address, treasuryId, action: "pay", txHash: res.hash, amountXlm: amt.value });
-          const msg = "Payment sent ✓";
+          const msg = tx("Payment sent ✓", "Ödeme gönderildi ✓");
           toast("success", msg, { hash: res.hash });
           bump();
           await loadState(treasuryId, address);
@@ -453,7 +485,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
         }
         trackViolation(treasuryId);
         void logActivity({ walletAddress: address, treasuryId, action: "reject", amountXlm: amt.value });
-        const msg = `Blocked by policy: ${res.errorMessage}`;
+        const msg = tx(`Blocked by policy: ${res.errorMessage}`, `Kurallara takıldı, reddedildi: ${res.errorMessage}`);
         toast("error", msg);
         await loadState(treasuryId, address);
         return fail(msg);
@@ -471,7 +503,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
 
   const startLeash = useCallback(
     async (cap: string, hours: string, agentPublicKey?: string): Promise<ActionOutcome> => {
-      if (!address || !treasuryId) return fail("No treasury open.");
+      if (!address || !treasuryId) return fail(tx("No treasury open.", "Açık kasa yok."));
       const capV = parseXlmAmount(cap, "session cap");
       if (!capV.ok) return invalid(capV.msg);
       const hoursV = parseXlmAmount(hours, "duration");
@@ -480,24 +512,37 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
       // nothing is generated or funded here.
       const externalKey = agentPublicKey?.trim() ?? "";
       if (!externalKey) {
-        return invalid("Paste your agent's public key — run `eunomia-mcp init` on the agent's machine to get one.");
+        return invalid(
+          tx(
+            "Paste your agent's public key — run `eunomia-mcp init` on the agent's machine to get one.",
+            "Ajanın adresini yapıştır — ajanın makinesinde `eunomia-mcp init` çalıştırınca çıkar.",
+          ),
+        );
       }
       if (!isValidAgentKey(externalKey)) {
-        return invalid("That is not a Stellar public key (G…, 56 characters) — copy it from `eunomia-mcp init`.");
+        return invalid(
+          tx(
+            "That is not a Stellar public key (G…, 56 characters) — copy it from `eunomia-mcp init`.",
+            "Bu bir Stellar adresi değil (G…, 56 karakter) — `eunomia-mcp init` komutunun yazdığı adresi kopyala.",
+          ),
+        );
       }
       setBusy("session");
-      toast("info", "Authorising your agent's key — confirm in your wallet…");
+      toast("info", tx("Authorising your agent's key — confirm in your wallet…", "Ajanın anahtarı yetkilendiriliyor — cüzdanında onayla…"));
       try {
         const t = makeTreasury(treasuryId, await executorFor(address));
         const res = await registerAgentKey(t, externalKey, capV.value, hoursV.value);
         if (res.ok) {
           void logActivity({ walletAddress: address, treasuryId, action: "session_start", txHash: res.hash });
-          const msg = "Leash on ✓ — your agent can now pay within the cap, from its own machine.";
+          const msg = tx(
+            "Leash on ✓ — your agent can now pay within the cap, from its own machine.",
+            "Yetki verildi ✓ — ajanın artık tavan içinde, kendi makinesinden ödeme yapabilir.",
+          );
           toast("success", msg, { hash: res.hash });
           await loadState(treasuryId, address);
           return { ok: true, msg, hash: res.hash };
         }
-        const msg = `Blocked: ${res.errorMessage}`;
+        const msg = tx(`Blocked: ${res.errorMessage}`, `Reddedildi: ${res.errorMessage}`);
         toast("error", msg);
         return fail(msg);
       } catch (e) {
@@ -523,17 +568,27 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
       opts: { catalog: boolean },
       onSteps: (steps: SetupStep[]) => void,
     ): Promise<ActionOutcome> => {
-      if (!address || !treasuryId) return fail("No treasury open.");
+      if (!address || !treasuryId) return fail(tx("No treasury open.", "Açık kasa yok."));
       const capV = parseXlmAmount(cap, "session cap");
       if (!capV.ok) return invalid(capV.msg);
       const hoursV = parseXlmAmount(hours, "duration");
       if (!hoursV.ok) return invalid(hoursV.msg);
       const agent = agentPublicKey.trim();
-      if (!agent) return invalid("Paste your agent's public key — the command on this page prints it.");
+      if (!agent) return invalid(tx("Paste your agent's public key — the command on this page prints it.", "Ajanın adresini yapıştır — bu sayfadaki komut onu yazdırır."));
       if (!isValidAgentKey(agent)) {
-        return invalid("That is not a Stellar public key (G…, 56 characters) — copy it from what the command printed.");
+        return invalid(
+          tx(
+            "That is not a Stellar public key (G…, 56 characters) — copy it from what the command printed.",
+            "Bu bir Stellar adresi değil (G…, 56 karakter) — komutun yazdığı adresi kopyala.",
+          ),
+        );
       }
-      if (agent === address) return invalid("That is your own wallet's address — paste the key the command printed for the agent.");
+      if (agent === address) return invalid(
+          tx(
+            "That is your own wallet's address — paste the key the command printed for the agent.",
+            "Bu kendi cüzdanının adresi — komutun ajan için yazdığı adresi yapıştır.",
+          ),
+        );
       setBusy("session");
       let steps: SetupStep[] = [];
       const mark = (id: string, status: SetupStep["status"]) => {
@@ -556,7 +611,10 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
         if (!accountExists && ownerIsWallet) {
           const xlm = await getXlmBalance(address);
           if (xlm === null || xlm < OWNER_MIN_XLM) {
-            const msg = `Your wallet needs about ${OWNER_MIN_XLM} XLM to open the agent's account — it holds ${(xlm ?? 0).toFixed(2)}.`;
+            const msg = tx(
+              `Your wallet needs about ${OWNER_MIN_XLM} XLM to open the agent's account — it holds ${(xlm ?? 0).toFixed(2)}.`,
+              `Ajanın hesabını açmak için cüzdanında yaklaşık ${OWNER_MIN_XLM} XLM olmalı — şu an ${(xlm ?? 0).toFixed(2)} var.`,
+            );
             toast("error", msg);
             return fail(msg);
           }
@@ -566,7 +624,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
           if (step.status !== "todo") continue;
           current = step.id;
           mark(step.id, "signing");
-          toast("info", `${step.label} — confirm in your wallet…`);
+          toast("info", tx(`${stepLabel(step)} — confirm in your wallet…`, `${stepLabel(step)} — cüzdanında onayla…`));
           if (step.kind === "account") {
             await createAgentAccount(address, agent);
           } else if (step.kind === "payee" && step.address) {
@@ -586,14 +644,22 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
         await loadState(treasuryId, address);
         const waiting = steps.some((s) => s.status === "manual");
         const msg = waiting
-          ? "Leash on ✓ — the agent can pay as soon as its account holds some XLM."
-          : "Agent connected ✓ — restart your AI client and ask it for something.";
+          ? tx(
+              "Leash on ✓ — the agent can pay as soon as its account holds some XLM.",
+              "Yetki verildi ✓ — ajanın hesabına biraz XLM gelince ödeme yapabilir.",
+            )
+          : tx(
+              "Agent connected ✓ — restart your AI client and ask it for something.",
+              "Ajan bağlandı ✓ — yapay zekâ istemcini yeniden başlat, ajandan bir şey iste.",
+            );
         toast("success", msg, leashHash ? { hash: leashHash } : undefined);
         return { ok: true, msg, hash: leashHash };
       } catch (e) {
         if (current) mark(current, "failed");
-        const raw = e instanceof Error && e.message.startsWith("Blocked:") ? e.message : sendErr(e);
-        const msg = `${/[.!?…]$/.test(raw.trim()) ? raw.trim() : `${raw.trim()}.`} Press Connect agent again to continue from this step.`;
+        // The thrown text keeps its English "Blocked:" prefix (matched here); it is shown translated.
+        const blocked = e instanceof Error && e.message.startsWith("Blocked:");
+        const raw = blocked ? tx("Blocked:", "Reddedildi:") + (e as Error).message.slice("Blocked:".length) : sendErr(e);
+        const msg = `${/[.!?…]$/.test(raw.trim()) ? raw.trim() : `${raw.trim()}.`} ${tx("Press Connect agent again to continue from this step.", "Kaldığın yerden devam etmek için Ajanı bağla'ya yeniden bas.")}`;
         toast("error", msg);
         bump();
         return fail(msg);
@@ -608,22 +674,25 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
   // card that calls this has already checked the agent's signature and the treasury it names.
   const approveBudget = useCallback(
     async (r: BudgetRequest): Promise<ActionOutcome> => {
-      if (!address || !treasuryId) return fail("No treasury open.");
-      if (r.treasury !== treasuryId) return invalid("This request is for a different treasury — open that one first.");
+      if (!address || !treasuryId) return fail(tx("No treasury open.", "Açık kasa yok."));
+      if (r.treasury !== treasuryId) return invalid(tx("This request is for a different treasury — open that one first.", "Bu istek başka bir kasa için — önce onu aç."));
       setBusy("session");
-      toast("info", "Approving the agent's budget — confirm in your wallet…");
+      toast("info", tx("Approving the agent's budget — confirm in your wallet…", "Ajanın bütçesi onaylanıyor — cüzdanında onayla…"));
       try {
         const t = makeTreasury(treasuryId, await executorFor(address));
         const validUntil = BigInt(Math.floor(Date.now() / 1000) + r.hours * 3600);
         const res = await setTaskBudget(t, r.agent, validUntil, r.limit, r.payees);
         if (res.ok) {
           void logActivity({ walletAddress: address, treasuryId, action: "session_start", txHash: res.hash });
-          const msg = "Budget approved ✓ — the agent can pay inside it, only to the payees it named.";
+          const msg = tx(
+            "Budget approved ✓ — the agent can pay inside it, only to the payees it named.",
+            "Bütçe onaylandı ✓ — ajan bunun içinde, yalnız belirttiği alıcılara ödeme yapabilir.",
+          );
           toast("success", msg, { hash: res.hash });
           await loadState(treasuryId, address);
           return { ok: true, msg, hash: res.hash };
         }
-        const msg = `Blocked: ${res.errorMessage}`;
+        const msg = tx(`Blocked: ${res.errorMessage}`, `Reddedildi: ${res.errorMessage}`);
         toast("error", msg);
         return fail(msg);
       } catch (e) {
@@ -638,20 +707,20 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
   );
 
   const revokeLeash = useCallback(async (): Promise<ActionOutcome> => {
-    if (!address || !treasuryId) return fail("No treasury open.");
+    if (!address || !treasuryId) return fail(tx("No treasury open.", "Açık kasa yok."));
     setBusy("revoke");
-    toast("info", "Revoking the Leash — confirm in your wallet…");
+    toast("info", tx("Revoking the Leash — confirm in your wallet…", "Ajanın yetkisi iptal ediliyor — cüzdanında onayla…"));
     try {
       const t = makeTreasury(treasuryId, await executorFor(address));
       const res = await revokeSession(t);
       if (res.ok) {
         void logActivity({ walletAddress: address, treasuryId, action: "session_revoke", txHash: res.hash });
-        const msg = "Leash revoked ✓ — your wallet is the spender again.";
+        const msg = tx("Leash revoked ✓ — your wallet is the spender again.", "Yetki iptal edildi ✓ — harcayan yine senin cüzdanın.");
         toast("success", msg, { hash: res.hash });
         await loadState(treasuryId, address);
         return { ok: true, msg, hash: res.hash };
       }
-      const msg = `Blocked: ${res.errorMessage}`;
+      const msg = tx(`Blocked: ${res.errorMessage}`, `Reddedildi: ${res.errorMessage}`);
       toast("error", msg);
       return fail(msg);
     } catch (e) {
@@ -664,21 +733,28 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
   }, [address, treasuryId, loadState, toast]);
 
   const togglePause = useCallback(async (): Promise<ActionOutcome> => {
-    if (!address || !treasuryId || !lifecycle) return fail("No treasury open.");
+    if (!address || !treasuryId || !lifecycle) return fail(tx("No treasury open.", "Açık kasa yok."));
     const next = !lifecycle.paused;
     setBusy("pause");
-    toast("info", `${next ? "Pausing" : "Resuming"} — confirm in your wallet…`);
+    toast(
+      "info",
+      next
+        ? tx("Pausing — confirm in your wallet…", "Durduruluyor — cüzdanında onayla…")
+        : tx("Resuming — confirm in your wallet…", "Devam ettiriliyor — cüzdanında onayla…"),
+    );
     try {
       const t = makeTreasury(treasuryId, await executorFor(address));
       const res = await setPaused(t, next);
       if (res.ok) {
         void logActivity({ walletAddress: address, treasuryId, action: "pause" });
-        const msg = next ? "Treasury paused — spending is frozen." : "Treasury resumed ✓";
+        const msg = next
+          ? tx("Treasury paused — spending is frozen.", "Kasa durduruldu — harcama donduruldu.")
+          : tx("Treasury resumed ✓", "Kasa devam ediyor ✓");
         toast("success", msg, { hash: res.hash });
         await loadState(treasuryId, address);
         return { ok: true, msg, hash: res.hash };
       }
-      const msg = res.errorMessage ?? "Pause toggle failed.";
+      const msg = res.errorMessage ?? tx("Pause toggle failed.", "Durdurma / devam ettirme olmadı.");
       toast("error", msg);
       return fail(msg);
     } catch (e) {
@@ -692,23 +768,23 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
 
   const withdraw = useCallback(
     async (to: string, amount: string): Promise<ActionOutcome> => {
-      if (!address || !treasuryId) return fail("No treasury open.");
+      if (!address || !treasuryId) return fail(tx("No treasury open.", "Açık kasa yok."));
       const amt = parseXlmAmount(amount);
       if (!amt.ok) return invalid(amt.msg);
       setBusy("withdraw");
-      toast("info", "Withdrawing — confirm in your wallet…");
+      toast("info", tx("Withdrawing — confirm in your wallet…", "Para çekiliyor — cüzdanında onayla…"));
       try {
         const t = makeTreasury(treasuryId, await executorFor(address));
         const res = await adminWithdraw(t, to.trim() || address, amt.value);
         if (res.ok) {
           void logActivity({ walletAddress: address, treasuryId, action: "withdraw", txHash: res.hash, amountXlm: amt.value });
-          toast("success", "Withdrawn ✓", { hash: res.hash });
+          toast("success", tx("Withdrawn ✓", "Para çekildi ✓"), { hash: res.hash });
           bump();
           await loadState(treasuryId, address);
           void refreshWalletXlm(address);
-          return { ok: true, msg: "Withdrawn ✓", hash: res.hash };
+          return { ok: true, msg: tx("Withdrawn ✓", "Para çekildi ✓"), hash: res.hash };
         }
-        const msg = `Blocked: ${res.errorMessage}`;
+        const msg = tx(`Blocked: ${res.errorMessage}`, `Reddedildi: ${res.errorMessage}`);
         toast("error", msg);
         return fail(msg);
       } catch (e) {
@@ -724,7 +800,7 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
 
   const updateLimits = useCallback(
     async (daily: string, perTask: string): Promise<ActionOutcome> => {
-      if (!address || !treasuryId) return fail("No treasury open.");
+      if (!address || !treasuryId) return fail(tx("No treasury open.", "Açık kasa yok."));
       const dailyLimit = parseXlmAmount(daily, "daily limit");
       if (!dailyLimit.ok) return invalid(dailyLimit.msg);
       const perTaskLimit = parseXlmAmount(perTask, "per-payment limit");
@@ -732,18 +808,18 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
       const coherent = checkLimits(dailyLimit.value, perTaskLimit.value);
       if (!coherent.ok) return invalid(coherent.msg);
       setBusy("limits");
-      toast("info", "Updating limits — confirm in your wallet…");
+      toast("info", tx("Updating limits — confirm in your wallet…", "Sınırlar güncelleniyor — cüzdanında onayla…"));
       try {
         const t = makeTreasury(treasuryId, await executorFor(address));
         const res = await setLimits(t, dailyLimit.value, perTaskLimit.value);
         if (res.ok) {
           void logActivity({ walletAddress: address, treasuryId, action: "limits" });
-          const msg = "Limits updated ✓ — effective immediately.";
+          const msg = tx("Limits updated ✓ — effective immediately.", "Sınırlar güncellendi ✓ — hemen geçerli.");
           toast("success", msg, { hash: res.hash });
           await loadState(treasuryId, address);
           return { ok: true, msg, hash: res.hash };
         }
-        const msg = `Blocked: ${res.errorMessage}`;
+        const msg = tx(`Blocked: ${res.errorMessage}`, `Reddedildi: ${res.errorMessage}`);
         toast("error", msg);
         return fail(msg);
       } catch (e) {
@@ -760,21 +836,24 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
   // v4: the monthly budget and per-payee monthly caps. Same shape as updateLimits.
   const updateMonthly = useCallback(
     async (limit: string): Promise<ActionOutcome> => {
-      if (!address || !treasuryId) return fail("No treasury open.");
+      if (!address || !treasuryId) return fail(tx("No treasury open.", "Açık kasa yok."));
       const v = limit.trim() === "" || limit.trim() === "0" ? { ok: true as const, value: 0 } : parseXlmAmount(limit, "monthly limit");
       if (!v.ok) return invalid(v.msg);
       setBusy("monthly");
-      toast("info", "Updating the monthly limit — confirm in your wallet…");
+      toast("info", tx("Updating the monthly limit — confirm in your wallet…", "Aylık sınır güncelleniyor — cüzdanında onayla…"));
       try {
         const res = await setMonthlyLimit(makeTreasury(treasuryId, await executorFor(address)), v.value);
         if (res.ok) {
           void logActivity({ walletAddress: address, treasuryId, action: "limits" });
-          const msg = v.value === 0 ? "Monthly limit removed ✓" : "Monthly limit set ✓ — counted from the start of this UTC month.";
+          const msg =
+            v.value === 0
+              ? tx("Monthly limit removed ✓", "Aylık sınır kaldırıldı ✓")
+              : tx("Monthly limit set ✓ — counted from the start of this UTC month.", "Aylık sınır ayarlandı ✓ — bu UTC ayının başından itibaren sayılır.");
           toast("success", msg, { hash: res.hash });
           await loadState(treasuryId, address);
           return { ok: true, msg, hash: res.hash };
         }
-        const msg = `Blocked: ${res.errorMessage}`;
+        const msg = tx(`Blocked: ${res.errorMessage}`, `Reddedildi: ${res.errorMessage}`);
         toast("error", msg);
         return fail(msg);
       } catch (e) {
@@ -790,23 +869,29 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
 
   const capPayee = useCallback(
     async (payee: string, cap: string): Promise<ActionOutcome> => {
-      if (!address || !treasuryId) return fail("No treasury open.");
+      if (!address || !treasuryId) return fail(tx("No treasury open.", "Açık kasa yok."));
       const p = payee.trim();
-      if (!isValidPaymentDest(p)) return invalid("That is not a Stellar address (G… or C…).");
+      if (!isValidPaymentDest(p)) return invalid(tx("That is not a Stellar address (G… or C…).", "Bu bir Stellar adresi değil (G… ya da C…)."));
       const v = cap.trim() === "" || cap.trim() === "0" ? { ok: true as const, value: 0 } : parseXlmAmount(cap, "payee cap");
       if (!v.ok) return invalid(v.msg);
       setBusy("monthly");
-      toast("info", "Setting the payee's monthly cap — confirm in your wallet…");
+      toast("info", tx("Setting the payee's monthly cap — confirm in your wallet…", "Alıcının aylık tavanı ayarlanıyor — cüzdanında onayla…"));
       try {
         const res = await setPayeeCap(makeTreasury(treasuryId, await executorFor(address)), p, v.value);
         if (res.ok) {
           void logActivity({ walletAddress: address, treasuryId, action: "limits" });
-          const msg = v.value === 0 ? "Payee cap removed ✓" : `Cap set ✓ — ${shortAddr(p)} can receive at most that per month.`;
+          const msg =
+            v.value === 0
+              ? tx("Payee cap removed ✓", "Alıcı tavanı kaldırıldı ✓")
+              : tx(
+                  `Cap set ✓ — ${shortAddr(p)} can receive at most that per month.`,
+                  `Tavan ayarlandı ✓ — ${shortAddr(p)} ayda en fazla bu kadar alabilir.`,
+                );
           toast("success", msg, { hash: res.hash });
           await loadState(treasuryId, address);
           return { ok: true, msg, hash: res.hash };
         }
-        const msg = `Blocked: ${res.errorMessage}`;
+        const msg = tx(`Blocked: ${res.errorMessage}`, `Reddedildi: ${res.errorMessage}`);
         toast("error", msg);
         return fail(msg);
       } catch (e) {
@@ -822,14 +907,14 @@ export function TreasuryProvider({ children }: { children: React.ReactNode }) {
 
   // Catch-up registration for a treasury whose deploy-time registration was skipped.
   const registerActive = useCallback(async (): Promise<ActionOutcome> => {
-    if (!address || !treasuryId) return fail("No treasury open.");
+    if (!address || !treasuryId) return fail(tx("No treasury open.", "Açık kasa yok."));
     setBusy("register");
-    toast("info", "Backing up on Stellar — confirm in your wallet…");
+    toast("info", tx("Backing up on Stellar — confirm in your wallet…", "Stellar'da yedekleniyor — cüzdanında onayla…"));
     try {
       await registerTreasury(await executorFor(address), treasuryId);
       setRegistryIds((ids) => (ids.includes(treasuryId) ? ids : [...ids, treasuryId]));
       void logActivity({ walletAddress: address, treasuryId, action: "register" });
-      const msg = "Backed up on Stellar ✓ — open it from any device.";
+      const msg = tx("Backed up on Stellar ✓ — open it from any device.", "Stellar'da yedeklendi ✓ — her cihazdan açabilirsin.");
       toast("success", msg);
       return { ok: true, msg };
     } catch (e) {

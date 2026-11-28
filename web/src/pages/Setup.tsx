@@ -339,7 +339,7 @@ export default function Setup() {
 
       {/* What that single signature does. */}
       <div className="page__side">
-        <section className="panel panel--pad is-light" style={{ border: "none" }}>
+        <section className="panel panel--pad is-contrast" style={{ border: "none" }}>
           <div className="eyebrow">{tx("One signature does all of this", "Tek imza bunların hepsini yapar")}</div>
           <ol style={{ margin: 0, padding: "0 0 0 18px", display: "flex", flexDirection: "column", gap: 8, fontSize: 13.5, lineHeight: 1.5 }}>
             <li>
