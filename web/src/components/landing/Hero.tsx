@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { passkeyCapability, type PasskeyCapability } from "../../lib/passkeySupport";
 import { useWalletAddress } from "../../lib/useWalletAddress";
 import { errText } from "../../lib/wallet-errors";
+import { tx, useLang } from "../../lib/i18n";
 import { TRACTION } from "./traction";
 import Words from "./Words";
 import { useTheme } from "./useTheme";
@@ -52,6 +53,7 @@ export default function Hero({
   onRecover: () => void;
 }) {
   const { theme, toggle } = useTheme();
+  useLang();
   const address = useWalletAddress();
   const [capability, setCapability] = useState<PasskeyCapability>("none");
   const [busy, setBusy] = useState<"create" | "signin" | null>(null);
@@ -181,8 +183,15 @@ export default function Hero({
               // The chip in the nav names the wallet; disconnecting there brings the
               // create / sign-in pair back.
               <button className="lp__cta" onClick={onEnter} type="button">
-                Open your treasury
-                <span className="lp__cta-hint">signed in with your passkey</span>
+                {tx("Open your treasury", "Kasanı aç")}
+                {/* A passkey wallet is a contract (C…); anything else came from a wallet app.
+                    The hint used to say "passkey" to both, and an owner who had just paired
+                    Varial over WalletConnect read it as a second sign-in still to do. */}
+                <span className="lp__cta-hint">
+                  {address.startsWith("C")
+                    ? tx("signed in with your passkey", "passkey ile giriş yapıldı")
+                    : tx("your wallet is connected — tap to go in", "cüzdanın bağlı — girmek için dokun")}
+                </span>
               </button>
             ) : (
               <>
