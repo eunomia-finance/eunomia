@@ -26,6 +26,9 @@ function initial(): Lang {
 }
 
 let current: Lang = initial();
+// The page has to say which language it is in from the first paint, not only after a switch:
+// CSS uppercases by it, and without it a Turkish "ödendi" became "ÖDENDI" instead of "ÖDENDİ".
+if (typeof document !== "undefined") document.documentElement.lang = current;
 
 export const getLang = (): Lang => current;
 
