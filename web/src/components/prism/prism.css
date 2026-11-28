@@ -1,0 +1,212 @@
+/* The landing page. Two layouts share these rules: the moving one (.pz, fixed layers over a
+   WebGL canvas) and the still one (.pzs, the same words in normal flow).
+
+   Palette: Forest #1F3A2E · Ivory #F4EFE6 · Champagne Gold #C9A86A, roughly 60 / 30 / 10.
+   Gold is a surface in exactly one place per screen — the door into the app.
+   Motion tokens: LAND, POP, SHIFT, LEAVE. Nothing else eases. */
+.pz, .pzs{
+  --forest:#1F3A2E; --forest-deep:#14261D; --ivory:#F4EFE6; --gold:#C9A86A;
+  --ink:var(--ivory); --ink-2:rgba(244,239,230,.64); --line:rgba(244,239,230,.2);
+  --e-land:cubic-bezier(.16,1,.3,1); --e-pop:cubic-bezier(.34,1.56,.64,1);
+  --e-shift:cubic-bezier(.76,0,.24,1); --e-leave:cubic-bezier(.7,0,.84,0);
+  --display:"Questrial", system-ui, sans-serif; --body:"Geist", system-ui, -apple-system, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  position:relative; z-index:1; color:var(--ink); font-family:var(--body);
+  -webkit-font-smoothing:antialiased;
+}
+.pz.is-light{ --ink:#16291F; --ink-2:rgba(22,41,31,.66); --line:rgba(22,41,31,.2); }
+.pz *, .pzs *{ box-sizing:border-box; }
+/* :where — a reset must not outrank the classes that follow */
+:where(.pz, .pzs) a{ color:inherit; }
+:where(.pz, .pzs) button{ font:inherit; color:inherit; }
+
+html.pz-locked, html.pz-locked body{ overflow:hidden; }
+/* the scene owns the screen: the app's own page furniture stays out of it */
+body:has(.pz) .feedback-fab{ display:none; }
+body:has(.pz){ background:#0c1712; }
+body:has(.pzs){ background:#0f1d16; }
+
+.pz__gl{ position:fixed; inset:0; width:100vw; height:100vh; display:block; z-index:0; clip-path:circle(0vmax at 50% 50%); }
+.pz__track{ position:relative; z-index:0; }
+.pz-fx{ position:fixed; z-index:3; pointer-events:none; }
+.pz-fx a, .pz-fx button, .pz-fx input{ pointer-events:auto; }
+.pz-mono{ font-family:var(--mono); font-size:11.5px; letter-spacing:.02em; line-height:1.5; }
+.pz-sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.pz [data-el=cap], .pz [data-el=more], .pz [data-el=rule], .pz [data-el=rail], .pz [data-el=next], .pz [data-el=hero],
+.pz [data-el=proof], .pz [data-el=call], .pz [data-el=call-ui], .pz [data-el=foot], .pz [data-el=proof-row]{ opacity:0; visibility:hidden; }
+.pz [data-el=proof], .pz [data-el=call]{ opacity:1; }
+.pz [data-arrive]{ transform:translateY(-120%); opacity:0; display:inline-flex; }
+
+/* ---------- loader ---------- */
+.pz__loader{ position:fixed; inset:0; z-index:5; pointer-events:none; }
+/* 60vmin wide; shifted so the mark's circle — 79.1% along it — sits on the screen's centre */
+.pz__loader svg{ position:absolute; top:50%; left:50%; width:60vmin; height:calc(60vmin / 2.2); margin-top:calc(60vmin / -4.4); margin-left:calc(60vmin * -.791); overflow:visible; }
+.pz__loader path, .pz__loader circle, .pz__loader line{ fill:none; stroke:var(--ivory); stroke-width:1; vector-effect:non-scaling-stroke; }
+.pz__count{ position:absolute; left:28px; bottom:24px; color:var(--ink-2); }
+
+/* ---------- top bar ---------- */
+.pz__top{ top:0; left:0; right:0; height:76px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 28px; transition:color .4s var(--e-shift); }
+.pz__brand{ justify-self:start; display:inline-flex; align-items:center; gap:11px; background:none; border:0; padding:0; cursor:pointer;
+  font-family:"Kalnia", Georgia, serif; font-weight:500; font-size:20px; letter-spacing:-.014em; }
+.pz__nav{ display:flex; gap:30px; font-size:14px; }
+.pz__nav button, .pz__nav a{ background:none; border:0; padding:6px 0; cursor:pointer; text-decoration:none; opacity:.78; transition:opacity .3s var(--e-land); }
+.pz__nav button:hover, .pz__nav a:hover{ opacity:1; }
+.pz__top-end{ justify-self:end; display:flex; gap:12px; align-items:center; }
+
+.pz-lang{ display:inline-flex; padding:3px; border:1px solid var(--line); border-radius:100px; }
+.pz-lang button{ background:none; border:0; cursor:pointer; padding:5px 10px; border-radius:100px; font-size:11.5px; font-weight:600; letter-spacing:.04em; opacity:.6; }
+.pz-lang button.is-on{ background:var(--ink); color:var(--forest-deep); opacity:1; }
+.pz.is-light .pz-lang button.is-on{ color:var(--ivory); }
+
+.pz-btn{ display:inline-flex; align-items:center; gap:10px; padding:15px 24px; border-radius:100px; border:1px solid transparent; cursor:pointer;
+  font-weight:600; font-size:15px; text-decoration:none; white-space:nowrap; transition:transform .3s var(--e-pop), background .3s var(--e-land); }
+.pz-btn:active{ transform:scale(.97); }
+.pz-btn--gold{ background:var(--gold); color:#16291F !important; }
+.pz-btn--gold:hover{ background:#d6b97f; }
+.pz-btn--gold span{ transition:transform .3s var(--e-land); }
+.pz-btn--gold:hover span{ transform:translateX(4px); }
+.pz-btn--line{ border-color:var(--line); }
+.pz-btn--line:hover{ background:rgba(244,239,230,.08); }
+.pz.is-light .pz-btn--line:hover{ background:rgba(22,41,31,.06); }
+.pz-btn--sm{ padding:9px 16px; font-size:13.5px; }
+
+/* ---------- rail ---------- */
+.pz__rail{ left:28px; top:50%; margin-top:-74px; display:flex; flex-direction:column; gap:9px; transition:color .4s var(--e-shift); }
+.pz__rail button{ display:flex; align-items:center; gap:8px; background:none; border:0; padding:0; cursor:pointer; opacity:.4; font:inherit; text-transform:uppercase; transition:opacity .4s var(--e-land); }
+.pz__rail i{ display:block; height:1px; width:6px; background:currentColor; transition:width .5s var(--e-land); }
+.pz__rail button.is-on{ opacity:1; }
+.pz__rail button.is-on i{ width:22px; }
+
+/* ---------- hero ---------- */
+.pz__hero-a{ left:72px; bottom:44px; width:min(470px, 38vw); }
+.pz__hero-b{ right:40px; bottom:44px; width:min(560px, 44vw); }
+.pz__badges{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.pz-badge{ display:inline-flex; align-items:center; gap:8px; padding:5px 11px; border-radius:100px; border:1px solid var(--line); font-size:12px; color:var(--ink-2); white-space:nowrap; }
+.pz-badge--live{ color:var(--ink); }
+.pz-badge--live i{ width:7px; height:7px; border-radius:50%; background:#7fd49a; box-shadow:0 0 0 0 rgba(127,212,154,.6); animation:pz-live 2.4s var(--e-land) infinite; }
+@keyframes pz-live{ 0%{ box-shadow:0 0 0 0 rgba(127,212,154,.55); } 70%, 100%{ box-shadow:0 0 0 9px rgba(127,212,154,0); } }
+.pz__lede{ margin:0 0 20px; font-size:16.5px; line-height:1.5; color:var(--ink-2); text-wrap:pretty; }
+.pz__actions{ display:flex; gap:10px; flex-wrap:wrap; }
+
+.pz-cmd{ border:1px solid var(--line); border-radius:16px; background:rgba(12,23,18,.66); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); overflow:hidden; }
+.pz-cmd__tabs{ display:flex; gap:2px; padding:8px 10px 0; border-bottom:1px solid var(--line); }
+.pz-cmd__tabs button{ background:none; border:0; cursor:pointer; padding:8px 12px 10px; font-size:12.5px; font-weight:500; opacity:.6; border-bottom:2px solid transparent; margin-bottom:-1px; }
+.pz-cmd__tabs button.is-on{ opacity:1; border-bottom-color:var(--gold); }
+.pz-cmd__line{ display:flex; align-items:center; gap:12px; padding:14px 14px 12px 16px; }
+.pz-cmd code{ flex:1; min-width:0; font-family:var(--mono); font-size:12.5px; line-height:1.6; overflow-wrap:anywhere; }
+.pz-cmd code i{ font-style:normal; color:var(--gold); margin-right:8px; }
+.pz-cmd code b{ font-weight:500; color:var(--gold); }
+.pz-cmd__copy{ flex:none; background:none; border:1px solid var(--line); border-radius:9px; padding:7px 12px; cursor:pointer; font-size:12.5px; font-weight:600; transition:background .3s var(--e-land); }
+.pz-cmd__copy:hover{ background:rgba(244,239,230,.1); }
+.pz-cmd__note{ padding:0 16px 13px; font-size:12.5px; color:var(--ink-2); }
+.pz__with{ display:flex; gap:16px; align-items:center; margin-top:12px; color:var(--ink-2); flex-wrap:wrap; }
+.pz__with b{ font-weight:500; color:var(--ink); }
+
+/* ---------- shared: the numbered eyebrow ---------- */
+.pz__eyebrow{ display:flex; align-items:center; gap:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-2); margin-bottom:12px; }
+.pz__num{ background:var(--gold); color:#16291F; padding:1px 6px; border-radius:4px; letter-spacing:.02em; }
+
+/* ---------- services caption ---------- */
+.pz__cap{ left:72px; bottom:34px; width:min(680px, 70vw); }
+.pz__cap h2{ margin:0; font-family:var(--display); font-weight:400; font-size:clamp(30px, 3.6vw, 54px); line-height:1; letter-spacing:-.015em; overflow:hidden; padding-bottom:.1em; }
+.pz__cap h2 span{ display:inline-block; white-space:pre; }
+.pz__cap-sub{ margin-top:8px; color:var(--ink-2); }
+.pz__more{ right:40px; bottom:38px; color:var(--ink-2); }
+
+/* ---------- rules ---------- */
+/* the words behind are as tall as a line of this is long: the block reads on its own ground */
+.pz__rule{ right:6vw; top:24vh; width:min(430px, 36vw); padding:22px 24px 24px; border:1px solid var(--line); border-radius:16px;
+  background:rgba(12,23,18,.9); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); }
+.pz__rule h3{ margin:0 0 16px; font-family:var(--display); font-weight:400; font-size:clamp(28px, 2.9vw, 44px); line-height:1.06; letter-spacing:-.012em; text-wrap:balance; }
+.pz__rule p{ margin:0; font-size:15.5px; line-height:1.6; color:rgba(244,239,230,.84); text-wrap:pretty; }
+
+/* ---------- proof ---------- */
+.pz__proof{ left:max(72px, 11vw); top:15vh; width:min(680px, 52vw); }
+.pz__proof h2{ margin:0 0 26px; font-family:var(--display); font-weight:400; font-size:clamp(26px, 2.7vw, 40px); line-height:1.2; letter-spacing:-.012em; }
+.pz__lbl{ display:block; width:max-content; max-width:100%; background:#16291F; color:var(--ivory); padding:3px 12px; margin-bottom:5px; clip-path:inset(0 100% 0 0); }
+.pz__proof [data-el=proof-line]{ clip-path:inset(0 100% 0 0); }
+.pz__rows{ display:flex; flex-direction:column; }
+.pz__row{ display:grid; grid-template-columns:190px minmax(0,1fr); gap:18px; padding:13px 0; border-top:1px solid var(--line); }
+.pz__row > span{ text-transform:uppercase; letter-spacing:.06em; color:var(--ink-2); padding-top:2px; }
+.pz__row p{ margin:0; font-size:15px; line-height:1.55; text-wrap:pretty; }
+.pz__row a{ font-family:var(--mono); font-size:12.5px; white-space:nowrap; text-underline-offset:3px; }
+.pz__stamp{ position:fixed; left:max(72px, 11vw); bottom:3vh; font-family:"Kalnia", Georgia, serif; font-weight:500; font-size:clamp(60px, 10.5vw, 170px); line-height:1; letter-spacing:.04em;
+  color:transparent; -webkit-text-stroke:1px rgba(22,41,31,.5); white-space:nowrap; }
+.pz__stamp span{ display:inline-block; opacity:0; }
+
+/* ---------- next ---------- */
+.pz__next{ left:max(72px, 11vw); top:22vh; width:min(980px, 78vw); }
+.pz__next h2{ margin:0 0 30px; font-family:var(--display); font-weight:400; font-size:clamp(48px, 6vw, 92px); line-height:1; letter-spacing:-.02em; }
+.pz__ghosts{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:16px; }
+/* outlines only, and faint: these are not on sale */
+.pz__ghost{ height:190px; border:1px dashed rgba(22,41,31,.34); border-radius:18px; padding:18px 20px; display:flex; flex-direction:column; justify-content:space-between; opacity:.62; }
+.pz__ghost span{ align-self:flex-start; border:1px solid rgba(22,41,31,.34); border-radius:100px; padding:2px 9px; text-transform:uppercase; letter-spacing:.08em; }
+.pz__ghost b{ font-family:var(--display); font-weight:400; font-size:clamp(22px, 2.2vw, 32px); }
+.pz__next p{ margin:20px 0 0; font-size:15px; color:var(--ink-2); max-width:56ch; }
+
+/* ---------- the call ---------- */
+.pz__call{ inset:0; }
+.pz__vlines i{ position:absolute; top:0; width:1px; height:100%; background:rgba(244,239,230,.15); transform-origin:top; transform:scaleY(0); }
+.pz__call-ui{ position:absolute; left:72px; top:24vh; width:min(520px, 42vw); }
+.pz__call-ui h2{ margin:0 0 16px; font-family:var(--display); font-weight:400; font-size:clamp(40px, 4.8vw, 72px); line-height:1.02; letter-spacing:-.02em; text-wrap:balance; }
+/* the layer that is faded in carries the position: a transform on it would otherwise become
+   the containing block of an absolutely placed child, and the links would land off screen */
+.pz__foot{ position:absolute; left:72px; right:40px; bottom:26px; }
+.pz-foot{ display:flex; flex-direction:column; gap:18px; }
+.pz-foot__cols{ display:grid; grid-template-columns:repeat(3, 190px); gap:14px; font-size:13.5px; }
+.pz-foot__cols div{ display:flex; flex-direction:column; gap:5px; }
+.pz-foot__cols a{ text-decoration:none; opacity:.82; }
+.pz-foot__cols a:hover{ opacity:1; text-decoration:underline; text-underline-offset:3px; }
+.pz-foot__h{ font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-2); margin-bottom:3px; }
+.pz-foot__line{ display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap; padding-top:14px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-2); }
+
+@media (max-width:1100px){
+  .pz__nav{ display:none; }
+  .pz__top{ grid-template-columns:1fr auto; }
+}
+
+/* ---------- waiting for the scene's chunk: the same dark ground, nothing else ---------- */
+.pz-boot{ position:fixed; inset:0; background:#0c1712; }
+
+/* ====================== the still page ====================== */
+.pzs{ background:#0f1d16; min-height:100vh; }
+.pzs__top{ position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px; background:rgba(15,29,22,.9); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+.pzs__mark-short{ display:none; }
+.pzs__act{ padding:64px 20px; max-width:1040px; margin:0 auto; }
+.pzs__hero{ padding-top:40px; }
+.pzs h1{ margin:0 0 18px; font-family:var(--display); font-weight:400; font-size:clamp(38px, 9vw, 76px); line-height:1.04; letter-spacing:-.022em; text-wrap:balance; }
+.pzs h2{ margin:0 0 22px; font-family:var(--display); font-weight:400; font-size:clamp(30px, 6vw, 54px); line-height:1.08; letter-spacing:-.018em; text-wrap:balance; }
+.pzs h3{ margin:0 0 8px; font-family:var(--display); font-weight:400; font-size:23px; line-height:1.15; }
+.pzs__mark{ margin:44px 0 36px; color:var(--ivory); max-width:100%; overflow:hidden; }
+.pzs__mark svg{ max-width:100%; height:auto; }
+.pzs__cards{ display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:12px; }
+.pzs__card{ display:flex; flex-direction:column; gap:14px; padding:20px; border:1px solid var(--line); border-radius:16px; background:var(--forest-deep); }
+.pzs__card > span{ color:var(--ink-2); overflow-wrap:anywhere; }
+.pzs__card b{ font-family:var(--mono); font-weight:500; font-size:44px; line-height:1; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.pzs__card small{ font-size:12px; color:var(--ink-2); font-weight:400; }
+.pzs__card strong{ font-family:var(--display); font-weight:400; font-size:24px; padding-top:12px; border-top:2px solid var(--gold); }
+.pzs__note{ margin:16px 0 0; color:var(--ink-2); font-size:14px; }
+.pzs__rules{ display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:28px 24px; }
+.pzs__rules p{ margin:0; color:var(--ink-2); font-size:15px; line-height:1.6; }
+.pzs__word{ display:block; font-family:"Kalnia", Georgia, serif; font-weight:500; font-size:34px; letter-spacing:.02em; margin-bottom:10px; color:var(--gold); }
+.pzs__act--ivory{ max-width:none; background:var(--ivory); --ink:#16291F; --ink-2:rgba(22,41,31,.66); --line:rgba(22,41,31,.2); color:var(--ink); }
+.pzs__act--ivory > *{ max-width:1000px; margin-left:auto; margin-right:auto; }
+.pzs__act--ivory h2{ margin-bottom:22px; }
+.pzs__call .pz-foot{ margin-top:56px; }
+.pzs .pz__row{ grid-template-columns:minmax(0,1fr); gap:4px; }
+@media (min-width:720px){ .pzs .pz__row{ grid-template-columns:190px minmax(0,1fr); gap:18px; } }
+@media (max-width:560px){
+  .pzs__mark-full{ display:none; }
+  .pzs__mark-short{ display:block; }
+  .pzs .pz__brand{ font-size:0; gap:0; }
+  .pzs .pz__ghosts{ grid-template-columns:minmax(0,1fr); }
+  .pzs .pz__ghost{ height:auto; gap:26px; }
+  .pzs .pz-foot__cols{ grid-template-columns:minmax(0,1fr); }
+}
+
+/* ---------- the refused payment, drawn ---------- */
+.pz__meter{ position:fixed; right:7vw; top:27vh; width:min(400px, 28vw); opacity:0; visibility:hidden; }
+.pz-meter{ display:block; width:100%; height:auto; overflow:visible; color:var(--ink); }
+.pz-meter text{ font-family:var(--mono); font-size:11.5px; fill:var(--ink-2); letter-spacing:.02em; }
+.pz-meter .pz-meter__v{ fill:var(--ink); font-weight:600; }
+.pzs .pz-meter{ max-width:400px; margin:28px 0 8px; }

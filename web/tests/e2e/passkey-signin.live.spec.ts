@@ -43,10 +43,11 @@ test.describe.serial("Live passkey sign-in", () => {
     });
 
     await enableVirtualPasskey(page);
-    await page.goto("/");
+    // The doors are in the app's gate now (the landing page has one button, which leads here).
+    await page.goto("/#overview");
 
     // 1. First visit: create. The virtual authenticator stores a discoverable credential.
-    await page.getByRole("button", { name: /create your treasury with a passkey/i }).first().click();
+    await page.getByRole("button", { name: /start with a passkey/i }).first().click();
     const saved = page.getByRole("button", { name: /i saved it/i });
     await saved.waitFor({ state: "visible", timeout: 120_000 });
     await saved.click();
@@ -58,17 +59,18 @@ test.describe.serial("Live passkey sign-in", () => {
     await page.reload();
     await expect.poll(() => sessionAddress(page), { timeout: 30_000 }).toBe(created);
 
-    // 3. A forgotten device (new browser, cleared site data): the landing must offer a way
+    // 3. A forgotten device (new browser, cleared site data): the gate must offer a way
     //    back in that does not mint a wallet.
     await page.evaluate(() => {
       sessionStorage.clear();
       localStorage.clear();
     });
-    await page.goto("/");
-    await expect(page.getByRole("button", { name: /create your treasury with a passkey/i }).first()).toBeVisible({
+    await page.goto("/#overview");
+    await page.reload();
+    await expect(page.getByRole("button", { name: /start with a passkey/i }).first()).toBeVisible({
       timeout: 60_000,
     });
-    await page.getByRole("button", { name: /sign in with your passkey/i }).first().click();
+    await page.getByRole("button", { name: /already made a treasury with a passkey/i }).first().click();
 
     // 4. Same wallet, no recovery-code modal, straight into the workspace.
     await expect(page).toHaveURL(/#(overview|setup)/, { timeout: 120_000 });

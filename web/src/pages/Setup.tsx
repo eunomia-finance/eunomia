@@ -8,7 +8,9 @@ import { useTreasury } from "../state/useTreasury";
 import { freshSalt, predictTreasuryId } from "../lib/createTreasury";
 import { needsFunding, MIN_XLM } from "../lib/funding";
 import { tx, useLang } from "../lib/i18n";
-import { passkeyCapability } from "../lib/passkeySupport";
+import { passkeyCapability, type PasskeyCapability } from "../lib/passkeySupport";
+import RecoverySetup from "../components/RecoverySetup";
+import RecoveryRestore from "../components/RecoveryRestore";
 import type { TokenCode } from "../lib/token";
 import { errText } from "../lib/wallet-errors";
 import { connectPasskey } from "../lib/walletKit";
@@ -47,12 +49,40 @@ export default function Setup() {
   const [openExisting, setOpenExisting] = useState(false);
   // The gate also has to let a passkey user back in: someone who lands on #overview with
   // no session (new browser, cleared storage) must not be funnelled into a wallet modal.
-  const [passkeys, setPasskeys] = useState(false);
+  const [passkeyKind, setPasskeyKind] = useState<PasskeyCapability>("none");
+  const passkeys = passkeyKind !== "none";
   const [signingIn, setSigningIn] = useState(false);
   const [signInErr, setSignInErr] = useState("");
   useEffect(() => {
-    void passkeyCapability(window).then((c) => setPasskeys(c !== "none"));
+    void passkeyCapability(window).then(setPasskeyKind);
   }, []);
+
+  // The landing page used to carry four doors (create with a passkey, sign in with one, "I
+  // have a wallet", restore) and builders stalled in front of them. It has one door now, and
+  // it leads here: this gate asks the one question that decides the rest — do you have a wallet.
+  const [creating, setCreating] = useState(false);
+  // A passkey wallet was just made: its recovery code has to be saved before anything else.
+  const [recoveryFor, setRecoveryFor] = useState<string | null>(null);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const createPasskey = async () => {
+    setSignInErr("");
+    setCreating(true);
+    try {
+      setRecoveryFor(await connectPasskey("create"));
+    } catch (e) {
+      setSignInErr(errText(e) || tx("Couldn't create your passkey. Try again.", "Passkey oluşturulamadı. Tekrar dene."));
+    } finally {
+      setCreating(false);
+    }
+  };
+  // Rendered in both states of this page: creating a passkey wallet connects it, which
+  // swaps the gate for the form underneath while the recovery step is still open.
+  const dialogs = (
+    <>
+      {recoveryFor && <RecoverySetup address={recoveryFor} onDone={() => setRecoveryFor(null)} />}
+      {restoreOpen && <RecoveryRestore onDone={() => setRestoreOpen(false)} onClose={() => setRestoreOpen(false)} />}
+    </>
+  );
 
   const signInPasskey = async () => {
     setSignInErr("");
@@ -94,33 +124,63 @@ export default function Setup() {
 
   // ---- connect gate -------------------------------------------------------------
   if (!t.address) {
+    const waiting = t.busy === "connect" || signingIn || creating;
     return (
-      <div style={{ minHeight: "70vh", display: "grid", placeItems: "center" }}>
-        <div style={{ maxWidth: 460, textAlign: "center", padding: "24px 16px", display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
-          <h1 className="panel__title" style={{ margin: 0, fontSize: 34, fontWeight: 400 }}>
-            {tx("Give your agent a budget — not your wallet.", "Ajanına cüzdanını değil, bütçe ver.")}
-          </h1>
-          <p className="panel__note" style={{ margin: 0, fontSize: 14.5 }}>
-            {tx(
-              "Set the rules once. Every payment is checked and enforced on Stellar — anything outside the rules is blocked, automatically.",
-              "Kuralları bir kez koy. Her ödeme Stellar'da denetlenir — kuralların dışındaki her şey kendiliğinden reddedilir.",
-            )}
-          </p>
-          {passkeys && (
-            <button className="btn btn--lg" onClick={() => void signInPasskey()} disabled={signingIn || t.busy === "connect"} type="button">
-              {signingIn ? tx("Opening…", "Açılıyor…") : tx("Sign in with your passkey", "Passkey ile gir")}
-            </button>
+      <div className="gate">
+        {dialogs}
+        <h1 className="gate__title">{tx("Give your agent a budget — not your wallet.", "Ajanına cüzdanını değil, bütçe ver.")}</h1>
+        <p className="gate__lede">
+          {tx(
+            "Set the rules once. Every payment is checked and enforced on Stellar — anything outside the rules is blocked, automatically.",
+            "Kuralları bir kez koy. Her ödeme Stellar'da denetlenir — kuralların dışındaki her şey kendiliğinden reddedilir.",
           )}
-          <button
-            className={passkeys ? "btn btn--ghost" : "btn btn--gold"}
-            onClick={() => void t.connect()}
-            disabled={t.busy === "connect" || signingIn}
-            type="button"
-          >
-            {t.busy === "connect" ? tx("Connecting…", "Bağlanıyor…") : tx("Connect wallet", "Cüzdanı bağla")}
-          </button>
-          {signInErr && <div className="err">{signInErr}</div>}
+        </p>
+
+        <div className={`gate__doors${passkeys ? "" : " gate__doors--one"}`}>
+          <section className="panel gate__door">
+            <div className="eyebrow">{tx("I have a wallet", "Cüzdanım var")}</div>
+            <p className="panel__note">
+              {tx(
+                "Freighter, Varial, Lobstr, xBull or a phone wallet. You sign with it; nothing moves without you.",
+                "Freighter, Varial, Lobstr, xBull ya da telefondaki cüzdan. İmzayı onunla atarsın; sen onaylamadan hiçbir şey olmaz.",
+              )}
+            </p>
+            <button className="btn btn--gold btn--lg" onClick={() => void t.connect()} disabled={waiting} type="button">
+              {t.busy === "connect" ? tx("Connecting…", "Bağlanıyor…") : tx("Connect wallet", "Cüzdanı bağla")}
+            </button>
+          </section>
+
+          {passkeys && (
+            <section className="panel gate__door">
+              <div className="eyebrow">{tx("I don't have a wallet", "Cüzdanım yok")}</div>
+              <p className="panel__note">
+                {passkeyKind === "platform"
+                  ? tx(
+                      "Your fingerprint, face or PIN opens one for you — a passkey. Nothing to install.",
+                      "Parmak izin, yüzün ya da PIN'in senin için bir tane açar: passkey. Kurman gereken bir şey yok.",
+                    )
+                  : tx("A passkey opens one for you: pair with your phone. Nothing to install.", "Passkey senin için bir tane açar: telefonunla eşleştir. Kurman gereken bir şey yok.")}
+              </p>
+              <button className="btn btn--lg" onClick={() => void createPasskey()} disabled={waiting} type="button">
+                {creating ? tx("Creating…", "Oluşturuluyor…") : tx("Start with a passkey", "Passkey ile başla")}
+              </button>
+            </section>
+          )}
         </div>
+
+        {/* The two ways back in for someone who already made a passkey treasury — quiet,
+            because a first visit needs neither. */}
+        {passkeys && (
+          <div className="gate__back">
+            <button className="linkbtn" onClick={() => void signInPasskey()} disabled={waiting} type="button">
+              {signingIn ? tx("Opening…", "Açılıyor…") : tx("I already made a treasury with a passkey — sign in", "Daha önce passkey ile kasa açtım — gir")}
+            </button>
+            <button className="linkbtn" onClick={() => setRestoreOpen(true)} disabled={waiting} type="button">
+              {tx("I lost my passkey — restore access", "Passkey'imi kaybettim — erişimi geri yükle")}
+            </button>
+          </div>
+        )}
+        {signInErr && <div className="err">{signInErr}</div>}
       </div>
     );
   }
@@ -135,6 +195,7 @@ export default function Setup() {
 
   return (
     <div className="page">
+      {dialogs}
       <div className="page__main">
         {t.creatingNew && t.treasuryId && (
           <div>

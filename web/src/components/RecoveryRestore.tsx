@@ -4,8 +4,8 @@
 // All behaviour lives in tested lib code (recoveryFlow / walletKit); this file
 // is presentation and sequencing only.
 import { useState } from "react";
-import { connectPasskeyRecovery } from "../../lib/walletKit";
-import { errText } from "../../lib/wallet-errors";
+import { connectPasskeyRecovery } from "../lib/walletKit";
+import { errText } from "../lib/wallet-errors";
 
 export default function RecoveryRestore({
   onDone,

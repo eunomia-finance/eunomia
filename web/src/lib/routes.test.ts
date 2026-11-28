@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hashForView, isAppPage, isLandingAnchor, viewFromHash } from "./routes";
+import { hashForView, isAppPage, viewFromHash } from "./routes";
 
 describe("viewFromHash", () => {
   it("maps each app page", () => {
@@ -42,19 +42,3 @@ describe("isAppPage", () => {
   });
 });
 
-describe("isLandingAnchor", () => {
-  it("recognises the landing section anchors", () => {
-    expect(isLandingAnchor("#how")).toBe(true);
-    // Every section the landing nav links to — a missing one made the router scroll back to
-    // the top the moment it was clicked.
-    for (const id of ["#proof", "#guarantees", "#privacy"]) expect(isLandingAnchor(id)).toBe(true);
-    expect(isLandingAnchor("how")).toBe(true);
-  });
-  it("rejects routes, unknown hashes and the empty hash", () => {
-    expect(isLandingAnchor("#overview")).toBe(false);
-    expect(isLandingAnchor("#workspace")).toBe(false);
-    expect(isLandingAnchor("#nope")).toBe(false);
-    expect(isLandingAnchor("")).toBe(false);
-    expect(isLandingAnchor("#")).toBe(false);
-  });
-});

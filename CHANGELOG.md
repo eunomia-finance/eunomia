@@ -7,6 +7,19 @@ deployed addresses and on-chain proofs in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## [Unreleased]
 
+- **Changed (the landing page, and the way in)** — the landing page is a new one: a WebGL
+  scene driven by the scroll, in the forest, ivory and gold of the app. Six acts — the one
+  sentence behind a glass prism; what an agent can buy today, as cards with the catalog's
+  prices; the four rules as words that flow around the camera; the proof on ivory, with the
+  refused mainnet payment drawn to scale; what is next, plainly marked as not live; and the
+  call, where the mark lands. Every figure is a catalog price or a mainnet transaction. A
+  phone, a browser without WebGL 2 and a reader who asked for reduced motion get the same
+  words as a still page; the scene and three.js are a separate chunk that the app never
+  loads. The page has one door now, **Open the app**, and the choice it used to ask up front
+  (four buttons) is made in the app's gate as one question: *I have a wallet* / *I don't*.
+  Creating a passkey wallet, saving its recovery code and restoring access moved there with
+  it. Also: the page declares its language from the first paint, so Turkish capitals are
+  right (`ÖDENDİ`, not `ÖDENDI`).
 - **Changed (the mark)** — the E with a detached middle arm is replaced. The new mark is an
   epsilon whose waist runs out into a line; a payment rides the line to a circle that an
   upright limit cuts in two — the slice inside the limit is solid (the budget the agent was

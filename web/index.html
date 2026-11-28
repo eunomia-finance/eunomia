@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#FCFFD5" />
+    <meta name="theme-color" content="#1F3A2E" />
     <meta name="description" content="Eunomia — the wallet your AI agent can't drain. A non-custodial, contract-bounded agent treasury on Stellar." />
 
     <!-- Open Graph / social share -->
@@ -49,16 +49,24 @@
         if (t !== "dark" && t !== "light") t = "light";
         document.documentElement.setAttribute("data-theme", t);
       } catch (e) { /* private mode: the light default stands */ }
+      /* Which page is about to open: the landing page is dark, the app follows the theme.
+         The splash below takes its colours from this, so neither opens on the other's. */
+      document.documentElement.setAttribute(
+        "data-boot",
+        /^#(overview|payments|agent|activity|settings|wallet|workspace|dashboard)$/.test(location.hash) ? "app" : "landing"
+      );
     </script>
     <style>
       html,body{background:#08080b}
       /* pre-hydration splash — painted instantly, replaced when React mounts.
          150ms fade-in delay keeps it invisible on fast loads.
-         The cream lives on .boot rather than on body: the landing opens cream but the
-         dashboard shell is still dark, and painting body cream would flash the wrong colour
-         under it. .boot covers the viewport, so nothing behind it is ever seen. */
+         The colour lives on .boot rather than on body, and follows the page that is opening
+         (data-boot, set above): forest for the landing page, the theme's ground for the app.
+         .boot covers the viewport, so nothing behind it is ever seen. */
       .boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-            background:#FCFFD5;color:#223E05;font-family:'Kalnia',Georgia,'Times New Roman',serif}
+            background:#0c1712;color:#F4EFE6;font-family:'Kalnia',Georgia,'Times New Roman',serif}
+      [data-boot="app"] .boot{background:#F4EFE6;color:#16291F}
+      [data-boot="app"][data-theme="dark"] .boot{background:#16291F;color:#F4EFE6}
       .boot__m{display:flex;align-items:center;gap:11px;font-size:24px;opacity:0;animation:bootin .5s ease .15s forwards}
       /* The mark itself, not a generic dot — the same shape the nav carries (the small-size
          drawing of lib/mark.ts, written out). The payment on its line is the part that pulses. */
@@ -71,7 +79,7 @@
   <body>
     <div id="root">
       <div class="boot"><div class="boot__m">
-        <svg class="boot__mk" viewBox="4 0 220 100" fill="#223E05" aria-hidden="true">
+        <svg class="boot__mk" viewBox="4 0 220 100" fill="currentColor" aria-hidden="true">
           <path d="M57.7 18A24 21 0 1 0 42.2 50.7L45.1 47.2A18 17.5 0 1 1 56.7 20ZM41.7 50.3A27 21 0 1 0 58.3 83.9L57.7 81.8A20.5 17.5 0 1 1 45.1 53.8ZM40.6 50.5L45.1 47.2Q58 47.9 78 48.2L78 52.8Q58 53.1 45.1 53.8ZM77.5 48.2H136.3V52.8H77.5ZM160 12.221A42.3 42.3 0 0 0 160 88.779ZM160 12.221A42.3 42.3 0 1 1 160 88.779L160 83.625A37.7 37.7 0 1 0 160 17.375ZM157.7 3h4.6v95h-4.6Z"/>
           <circle cx="55.8" cy="21.9" r="4.8"/><circle cx="56.2" cy="80.2" r="4.8"/>
           <circle class="boot__pay" cx="106" cy="50.5" r="9.5"/>

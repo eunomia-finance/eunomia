@@ -1,10 +1,9 @@
 import { Suspense, lazy, useEffect, useState, type ComponentType } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import Background from "./components/Background";
-import Landing from "./components/Landing";
+import PrismLanding from "./components/prism/PrismLanding";
 import FeedbackButton from "./components/FeedbackButton";
 import { logFunnel } from "./lib/funnel";
-import { hashForView, isLandingAnchor, viewFromHash, type View } from "./lib/routes";
+import { hashForView, viewFromHash, type View } from "./lib/routes";
 import { ToastProvider } from "./state/toast";
 import { TreasuryProvider } from "./state/treasury";
 
@@ -48,14 +47,11 @@ export default function App() {
   // and deploys can be read as a fraction of who actually arrived.
   useEffect(() => {
     logFunnel({ event: "page_view" });
-    if (!isLandingAnchor(window.location.hash)) normalizeHash(viewFromHash(window.location.hash));
+    normalizeHash(viewFromHash(window.location.hash));
   }, []);
 
   useEffect(() => {
     const onHash = () => {
-      // #proof / #how / … are landing sections, not routes — let the browser do its anchor
-      // jump instead of erasing the hash and scrolling back to the top.
-      if (isLandingAnchor(window.location.hash)) return;
       const v = viewFromHash(window.location.hash);
       normalizeHash(v);
       setView(v);
@@ -73,8 +69,6 @@ export default function App() {
 
   return (
     <>
-      <Background />
-
       <AnimatePresence mode="wait">
         {view === "landing" ? (
           <motion.div
@@ -84,7 +78,7 @@ export default function App() {
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.4, ease: [0.2, 0.7, 0.3, 1] }}
           >
-            <Landing onEnter={() => go("overview")} onWallet={() => go("wallet")} />
+            <PrismLanding onEnter={() => go("overview")} />
           </motion.div>
         ) : (
           // One key for the whole app — the shell persists across page switches; only

@@ -5,9 +5,9 @@
 // All behaviour lives in tested lib code (recoveryFlow / walletKit); this file
 // is presentation and sequencing only.
 import { useState } from "react";
-import { mintRecoveryCode } from "../../lib/recoveryFlow";
-import { activateRecovery } from "../../lib/walletKit";
-import { errText } from "../../lib/wallet-errors";
+import { mintRecoveryCode } from "../lib/recoveryFlow";
+import { activateRecovery } from "../lib/walletKit";
+import { errText } from "../lib/wallet-errors";
 
 export default function RecoverySetup({
   address,
